@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-demand = [1650, 2500, 1300, 1300, 1100, 1400]
+demand = [5050, 3000, 3000, 1300, 1100, 1400]
 months = len(demand)
 holding_cost = 5
 stockout_cost = 20
@@ -11,7 +11,7 @@ labor_per_unit = 0.5
 internal_production_cost = 10
 cost_supplier_A = 12
 cost_supplier_B = 15
-capacity_supplier_A = 100
+capacity_supplier_A = 1000
 capacity_supplier_B = 1000  # Tedarikçi B kapasitesi (örnek varsayılan)
 working_days = [22, 20, 23, 21, 22, 20]
 daily_hours = 8
@@ -26,13 +26,15 @@ internal_production = [pulp.LpVariable(f'internal_prod_{t}', lowBound=0, cat='In
 out_A = [pulp.LpVariable(f'out_A_{t}', lowBound=0, cat='Integer') for t in range(months)]
 out_B = [pulp.LpVariable(f'out_B_{t}', lowBound=0, cat='Integer') for t in range(months)]
 inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
+stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
 
 # Amaç fonksiyonu
 decision_model += pulp.lpSum([
     internal_production_cost * internal_production[t] +
     cost_supplier_A * out_A[t] +
     cost_supplier_B * out_B[t] +
-    holding_cost * inventory[t]
+    holding_cost * inventory[t] +
+    stockout_cost * stockout[t]
     for t in range(months)
 ])
 
@@ -59,23 +61,14 @@ for t in range(months):
         prev_inventory = 0
     else:
         prev_inventory = inventory[t-1]
-    decision_model += (internal_production[t] + out_A[t] + out_B[t] + prev_inventory - demand[t] == inventory[t])
+    decision_model += (internal_production[t] + out_A[t] + out_B[t] + prev_inventory + stockout[t] == demand[t] + inventory[t])
     decision_model += (internal_production[t] <= max_internal_production)
-    # Always use the cheaper supplier first, up to its capacity and remaining demand
-    if cost_supplier_A <= cost_supplier_B:
-        # A is cheaper
-        decision_model += (out_A[t] <= capacity_supplier_A)
-        decision_model += (out_A[t] <= demand[t] - internal_production[t])
-        decision_model += (out_A[t] >= 0)
-        decision_model += (out_B[t] == demand[t] - internal_production[t] - out_A[t])
-        decision_model += (out_B[t] >= 0)
-    else:
-        # B is cheaper
-        decision_model += (out_B[t] <= capacity_supplier_B)
-        decision_model += (out_B[t] <= demand[t] - internal_production[t])
-        decision_model += (out_B[t] >= 0)
-        decision_model += (out_A[t] == demand[t] - internal_production[t] - out_B[t])
-        decision_model += (out_A[t] >= 0)
+    # Supplier capacities
+    decision_model += (out_A[t] <= capacity_supplier_A)
+    decision_model += (out_B[t] <= capacity_supplier_B)
+    decision_model += (out_A[t] >= 0)
+    decision_model += (out_B[t] >= 0)
+    decision_model += (stockout[t] >= 0)
 
 # Modeli çöz
 solver = pulp.PULP_CBC_CMD(msg=0)
@@ -91,9 +84,10 @@ def print_results():
             int(internal_production[t].varValue),
             int(out_A[t].varValue),
             int(out_B[t].varValue),
-            int(inventory[t].varValue)
+            int(inventory[t].varValue),
+            int(stockout[t].varValue)
         ])
-    headers = ['Ay', 'İç Üretim', 'Tedarikçi A', 'Tedarikçi B', 'Stok']
+    headers = ['Ay', 'İç Üretim', 'Tedarikçi A', 'Tedarikçi B', 'Stok', 'Karşılanmayan Talep']
     print(tabulate(table, headers, tablefmt='github', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
 
@@ -110,6 +104,7 @@ def print_results():
     bottom_sum = [int(internal_production[t].varValue) + int(out_A[t].varValue) for t in range(months)]
     plt.bar(months_list, [int(out_B[t].varValue) for t in range(months)], bottom=bottom_sum, color='green', label='Tedarikçi B', alpha=0.7)
     plt.plot(months_list, [int(inventory[t].varValue) for t in range(months)], marker='d', label='Stok', color='red', linewidth=2)
+    plt.plot(months_list, [int(stockout[t].varValue) for t in range(months)], marker='x', label='Karşılanmayan Talep', color='black', linewidth=2)
     plt.xlabel('Ay')
     plt.ylabel('Adet')
     plt.title('Dış Kaynak Kullanımı Karşılaştırması')

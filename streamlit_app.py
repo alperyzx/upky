@@ -337,6 +337,7 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
     capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, 500)
     capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, 500)
     max_internal_production = st.number_input("İç Üretim Kapasitesi (adet)", 1, 20000, 1500)
+    stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, 20, key="m5_stockout")
     months = len(demand)
     if st.button("Modeli Çalıştır", key="m5_run"):
         decision_model = pulp.LpProblem('Dis_Kaynak_Karsilastirma', pulp.LpMinimize)
@@ -344,11 +345,13 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         out_A = [pulp.LpVariable(f'out_A_{t}', lowBound=0, cat='Integer') for t in range(months)]
         out_B = [pulp.LpVariable(f'out_B_{t}', lowBound=0, cat='Integer') for t in range(months)]
         inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
+        stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
         decision_model += pulp.lpSum([
             internal_production_cost * internal_production[t] +
             cost_supplier_A * out_A[t] +
             cost_supplier_B * out_B[t] +
-            holding_cost * inventory[t]
+            holding_cost * inventory[t] +
+            stockout_cost * stockout[t]
             for t in range(months)
         ])
         for t in range(months):
@@ -356,23 +359,13 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
                 prev_inventory = 0
             else:
                 prev_inventory = inventory[t-1]
-            decision_model += (internal_production[t] + out_A[t] + out_B[t] + prev_inventory - demand[t] == inventory[t])
+            decision_model += (internal_production[t] + out_A[t] + out_B[t] + prev_inventory + stockout[t] == demand[t] + inventory[t])
             decision_model += (internal_production[t] <= max_internal_production)
-            # Her zaman ucuz tedarikçiyi öncelikli kullan
-            if cost_supplier_A <= cost_supplier_B:
-                decision_model += (out_A[t] <= capacity_supplier_A)
-                decision_model += (out_A[t] <= demand[t] - internal_production[t])
-                decision_model += (out_A[t] >= 0)
-                decision_model += (out_B[t] == demand[t] - internal_production[t] - out_A[t])
-                decision_model += (out_B[t] >= 0)
-                decision_model += (out_B[t] <= capacity_supplier_B)
-            else:
-                decision_model += (out_B[t] <= capacity_supplier_B)
-                decision_model += (out_B[t] <= demand[t] - internal_production[t])
-                decision_model += (out_B[t] >= 0)
-                decision_model += (out_A[t] == demand[t] - internal_production[t] - out_B[t])
-                decision_model += (out_A[t] >= 0)
-                decision_model += (out_A[t] <= capacity_supplier_A)
+            decision_model += (out_A[t] <= capacity_supplier_A)
+            decision_model += (out_B[t] <= capacity_supplier_B)
+            decision_model += (out_A[t] >= 0)
+            decision_model += (out_B[t] >= 0)
+            decision_model += (stockout[t] >= 0)
         solver = pulp.PULP_CBC_CMD(msg=0)
         decision_model.solve(solver)
         table = []
@@ -382,9 +375,10 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
                 int(internal_production[t].varValue),
                 int(out_A[t].varValue),
                 int(out_B[t].varValue),
-                int(inventory[t].varValue)
+                int(inventory[t].varValue),
+                int(stockout[t].varValue)
             ])
-        df = pd.DataFrame(table, columns=['Ay', 'İç Üretim', 'Tedarikçi A', 'Tedarikçi B', 'Stok'])
+        df = pd.DataFrame(table, columns=['Ay', 'İç Üretim', 'Tedarikçi A', 'Tedarikçi B', 'Stok', 'Karşılanmayan Talep'])
         toplam_maliyet = pulp.value(decision_model.objective)
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True)
@@ -397,6 +391,7 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         bottom_sum = df['İç Üretim'] + df['Tedarikçi A']
         ax.bar(months_list, df['Tedarikçi B'], bottom=bottom_sum, color='green', label='Tedarikçi B', alpha=0.7)
         ax.plot(months_list, df['Stok'], marker='d', label='Stok', color='red', linewidth=2)
+        ax.plot(months_list, df['Karşılanmayan Talep'], marker='x', label='Karşılanmayan Talep', color='black', linewidth=2)
         ax.set_xlabel('Ay')
         ax.set_ylabel('Adet')
         ax.set_title('Dış Kaynak Kullanımı Karşılaştırması')
