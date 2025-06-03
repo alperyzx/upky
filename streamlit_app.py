@@ -206,8 +206,8 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
     working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", "22, 20, 23, 21, 22, 20")
     working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="m3_holding")
-    fixed_workers = st.number_input("Sabit İşçi Sayısı", 1, 200, 50, key="m3_workers")
-    production_rate = st.number_input("Üretim Hızı (adet/saat)", 0.1, 10.0, 2.0)
+    fixed_workers = st.number_input("Sabit İşçi Sayısı", 1, 200, 10, key="m3_workers")
+    production_rate = st.number_input("Üretim Hızı (adet/saat)", 0.1, 10.0, 1.0)
     daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8, key="m3_daily")
     months = len(demand)
     if st.button("Modeli Çalıştır", key="m3_run"):
