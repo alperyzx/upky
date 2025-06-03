@@ -328,14 +328,14 @@ if model == "Dinamik Programlama (Model 4)":
 
 if model == "Dış Kaynak Karşılaştırma (Model 5)":
     st.header("Dış Kaynak Kullanımı Karşılaştırma Modeli (Model 5)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "2000, 4200, 3500, 1300, 1100, 1400")
+    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "2000, 3000, 3500, 2500, 3000, 1400")
     demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="m5_holding")
     internal_production_cost = st.number_input("İç Üretim Maliyeti (TL)", 1, 100, 10)
     cost_supplier_A = st.number_input("Tedarikçi A Maliyeti (TL)", 1, 100, 15)
     cost_supplier_B = st.number_input("Tedarikçi B Maliyeti (TL)", 1, 100, 18)
-    capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, 500)
-    capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, 500)
+    capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, 800)
+    capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, 800)
     max_internal_production = st.number_input("İç Üretim Kapasitesi (adet)", 1, 20000, 1500)
     stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, 20, key="m5_stockout")
     months = len(demand)
