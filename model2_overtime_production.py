@@ -3,7 +3,7 @@ import pandas as pd
 
 # Parametreler
 months = 6
-demand = np.array([8000, 12000, 5000, 1300, 1100, 1400])
+demand = np.array([2000, 2500, 2500, 1300, 1100, 1400])
 working_days = np.array([22, 20, 23, 21, 22, 20])
 holding_cost = 5
 stockout_cost = 20

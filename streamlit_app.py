@@ -158,13 +158,13 @@ if model == "Karma Planlama Modeli (Model 1)":
 
 if model == "Fazla Mesaili Üretim (Model 2)":
     st.header("Fazla Mesaili Üretim Modeli (Model 2)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "8000, 12000, 5000, 1300, 1100, 1400")
+    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "2500, 2000, 2500, 3500, 3000, 2000")
     demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
     working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", "22, 20, 23, 21, 22, 20")
     working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="m2_holding")
     labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, 0.5, key="m2_labor")
-    fixed_workers = st.number_input("Sabit İşçi Sayısı", 1, 200, 25, key="m2_workers")
+    fixed_workers = st.number_input("Sabit İşçi Sayısı", 1, 200, 15, key="m2_workers")
     daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8, key="m2_daily")
     overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", 1.0, 5.0, 1.5)
     max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", 0, 100, 20)
@@ -323,13 +323,14 @@ if model == "Dinamik Programlama (Model 4)":
 
 if model == "Dış Kaynak Karşılaştırma (Model 5)":
     st.header("Dış Kaynak Kullanımı Karşılaştırma Modeli (Model 5)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "2000, 4200, 13500, 1300, 1100, 1400")
+    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "2000, 4200, 3500, 1300, 1100, 1400")
     demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="m5_holding")
     internal_production_cost = st.number_input("İç Üretim Maliyeti (TL)", 1, 100, 10)
     cost_supplier_A = st.number_input("Tedarikçi A Maliyeti (TL)", 1, 100, 15)
     cost_supplier_B = st.number_input("Tedarikçi B Maliyeti (TL)", 1, 100, 18)
     capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, 500)
+    capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, 500)
     max_internal_production = st.number_input("İç Üretim Kapasitesi (adet)", 1, 20000, 1500)
     months = len(demand)
     if st.button("Modeli Çalıştır", key="m5_run"):
@@ -351,8 +352,22 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
             else:
                 prev_inventory = inventory[t-1]
             decision_model += (internal_production[t] + out_A[t] + out_B[t] + prev_inventory - demand[t] == inventory[t])
-            decision_model += (out_A[t] <= capacity_supplier_A)
             decision_model += (internal_production[t] <= max_internal_production)
+            # Her zaman ucuz tedarikçiyi öncelikli kullan
+            if cost_supplier_A <= cost_supplier_B:
+                decision_model += (out_A[t] <= capacity_supplier_A)
+                decision_model += (out_A[t] <= demand[t] - internal_production[t])
+                decision_model += (out_A[t] >= 0)
+                decision_model += (out_B[t] == demand[t] - internal_production[t] - out_A[t])
+                decision_model += (out_B[t] >= 0)
+                decision_model += (out_B[t] <= capacity_supplier_B)
+            else:
+                decision_model += (out_B[t] <= capacity_supplier_B)
+                decision_model += (out_B[t] <= demand[t] - internal_production[t])
+                decision_model += (out_B[t] >= 0)
+                decision_model += (out_A[t] == demand[t] - internal_production[t] - out_B[t])
+                decision_model += (out_A[t] >= 0)
+                decision_model += (out_A[t] <= capacity_supplier_A)
         solver = pulp.PULP_CBC_CMD(msg=0)
         decision_model.solve(solver)
         table = []

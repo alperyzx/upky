@@ -3,15 +3,16 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-demand = [2000, 4200, 13500, 1300, 1100, 1400]
+demand = [1650, 2500, 1300, 1300, 1100, 1400]
 months = len(demand)
 holding_cost = 5
 stockout_cost = 20
 labor_per_unit = 0.5
 internal_production_cost = 10
-cost_supplier_A = 15
-cost_supplier_B = 18
-capacity_supplier_A = 500
+cost_supplier_A = 12
+cost_supplier_B = 15
+capacity_supplier_A = 100
+capacity_supplier_B = 1000  # Tedarikçi B kapasitesi (örnek varsayılan)
 working_days = [22, 20, 23, 21, 22, 20]
 daily_hours = 8
 max_internal_workers = 50
@@ -35,6 +36,22 @@ decision_model += pulp.lpSum([
     for t in range(months)
 ])
 
+# Determine which supplier is cheaper
+if cost_supplier_A <= cost_supplier_B:
+    cheaper_supplier = 'A'
+    cheaper_cost = cost_supplier_A
+    cheaper_capacity = capacity_supplier_A
+    expensive_supplier = 'B'
+    expensive_cost = cost_supplier_B
+    expensive_capacity = capacity_supplier_B
+else:
+    cheaper_supplier = 'B'
+    cheaper_cost = cost_supplier_B
+    cheaper_capacity = capacity_supplier_B
+    expensive_supplier = 'A'
+    expensive_cost = cost_supplier_A
+    expensive_capacity = capacity_supplier_A
+
 # Kısıtlar
 for t in range(months):
     # Talep karşılanmalı
@@ -43,10 +60,22 @@ for t in range(months):
     else:
         prev_inventory = inventory[t-1]
     decision_model += (internal_production[t] + out_A[t] + out_B[t] + prev_inventory - demand[t] == inventory[t])
-    # Tedarikçi A kapasite
-    decision_model += (out_A[t] <= capacity_supplier_A)
-    # İç üretim kapasitesi (sabit)
     decision_model += (internal_production[t] <= max_internal_production)
+    # Always use the cheaper supplier first, up to its capacity and remaining demand
+    if cost_supplier_A <= cost_supplier_B:
+        # A is cheaper
+        decision_model += (out_A[t] <= capacity_supplier_A)
+        decision_model += (out_A[t] <= demand[t] - internal_production[t])
+        decision_model += (out_A[t] >= 0)
+        decision_model += (out_B[t] == demand[t] - internal_production[t] - out_A[t])
+        decision_model += (out_B[t] >= 0)
+    else:
+        # B is cheaper
+        decision_model += (out_B[t] <= capacity_supplier_B)
+        decision_model += (out_B[t] <= demand[t] - internal_production[t])
+        decision_model += (out_B[t] >= 0)
+        decision_model += (out_A[t] == demand[t] - internal_production[t] - out_B[t])
+        decision_model += (out_A[t] >= 0)
 
 # Modeli çöz
 solver = pulp.PULP_CBC_CMD(msg=0)
