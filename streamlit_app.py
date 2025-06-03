@@ -162,17 +162,17 @@ if model == "Karma Planlama Modeli (Model 1)":
 
 if model == "Fazla Mesaili Üretim (Model 2)":
     st.header("Fazla Mesaili Üretim Modeli (Model 2)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "2500, 2000, 2500, 3500, 3000, 2000")
+    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "3500, 4000, 4500, 3500, 3500, 3000")
     demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
     working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", "22, 20, 23, 21, 22, 20")
     working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="m2_holding")
     labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, 0.5, key="m2_labor")
-    fixed_workers = st.number_input("Sabit İşçi Sayısı", 1, 200, 15, key="m2_workers")
+    fixed_workers = st.number_input("Sabit İşçi Sayısı", 1, 200, 10, key="m2_workers")
     daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8, key="m2_daily")
     overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", 1.0, 5.0, 1.5)
     max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", 0, 100, 20)
-    overtime_cost_per_hour = st.number_input("Fazla Mesai Saatlik Maliyeti (TL)", 1, 1000, 10)
+    overtime_cost_per_hour = st.number_input("Fazla Mesai Saatlik Maliyeti (TL)", 1, 1000, 15)
     stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, 20)
     normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", 1, 1000, 10)
     if st.button("Modeli Çalıştır", key="m2_run"):
