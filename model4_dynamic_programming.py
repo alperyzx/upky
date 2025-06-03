@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-demand = np.array([1000, 1200, 1500, 1300, 1100, 1400])
+# Talebi ve işçi parametrelerini kolayca değiştirin
+# Çok yüksek talep için örnek:
+demand = np.array([12000, 15000, 18000, 20000, 17000, 16000])
 working_days = np.array([22, 20, 23, 21, 22, 20])
 holding_cost = 5
 stockout_cost = 20
@@ -10,9 +12,9 @@ hiring_cost = 1000
 firing_cost = 800
 daily_hours = 8
 labor_per_unit = 0.5
-max_workers = 60
-min_workers = 40
-max_workforce_change = 5
+max_workers = 120  # Daha yüksek üst sınır
+min_workers = 30
+max_workforce_change = 20  # Daha hızlı işçi artışı
 months = len(demand)
 
 # Üretim kapasitesi: işçi * gün * saat / birim işgücü
@@ -32,15 +34,14 @@ for t in range(months):
         if cost_table[t, prev_w] < np.inf:
             for w in range(max(min_workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
                 capacity = prod_capacity(w, t)
-                prod = min(capacity, demand[t])
+                # Üretim kapasitesi işçiyle sınırlı, ancak üretim talebi kadar olmalı
+                if capacity < demand[t]:
+                    continue
                 inventory = capacity - demand[t]
-                # İşçi değişim maliyeti
                 hire = max(0, w - prev_w) * hiring_cost
                 fire = max(0, prev_w - w) * firing_cost
-                # Stok ve stoksuzluk maliyeti
-                holding = max(inventory, 0) * holding_cost
-                stockout = abs(min(inventory, 0)) * stockout_cost
-                total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout
+                holding = inventory * holding_cost
+                total_cost = cost_table[t, prev_w] + hire + fire + holding
                 if total_cost < cost_table[t+1, w]:
                     cost_table[t+1, w] = total_cost
                     backtrack[t+1, w] = prev_w
