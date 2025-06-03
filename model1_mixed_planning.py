@@ -2,19 +2,19 @@ import pulp
 import numpy as np
 
 # Örnek parametreler
-demand = [1000, 1200, 1500, 1300, 1100, 1400]
-working_days = [22, 20, 23, 21, 22, 20]
+demand = [12000, 12200, 1500, 1500, 2000, 1000]
+working_days = [20, 20, 23, 21, 22, 20]
 holding_cost = 5
 stockout_cost = 20
 outsourcing_cost = 15
 labor_per_unit = 0.5
 hiring_cost = 1000
-firing_cost = 800
+firing_cost = 800  # Düşük işçi çıkarma maliyeti
 daily_hours = 8
 overtime_limit = 20
-outsourcing_capacity = 500
+outsourcing_capacity = 5000
 min_internal_ratio = 0.70
-max_workforce_change = 5
+max_workforce_change = 10  # Daha hızlı işçi azaltımı
 max_outsourcing_ratio = 0.30
 
 T = len(demand)
@@ -51,10 +51,10 @@ for t in range(T):
         prev_inventory = inventory[t-1]
     decision_model += (internal_production[t] + outsourced_production[t] + prev_inventory - demand[t] == inventory[t])
 
-    # İç üretim oranı
-    decision_model += (internal_production[t] >= min_internal_ratio * demand[t])
-    # Fason üretim oranı
-    decision_model += (outsourced_production[t] <= max_outsourcing_ratio * demand[t])
+    # Toplam üretimin en az %70'i iç üretim olmalı
+    decision_model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
+    # Fason üretim toplam üretimin %Z'sini geçemez
+    decision_model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
     # Fason kapasite
     decision_model += (outsourced_production[t] <= outsourcing_capacity)
     # İç üretim kapasitesi (işçi * gün * saat / birim işgücü)
@@ -63,10 +63,12 @@ for t in range(T):
     if t > 0:
         decision_model += (workers[t] - workers[t-1] <= max_workforce_change)
         decision_model += (workers[t-1] - workers[t] <= max_workforce_change)
-        # İşe alma/çıkarma değişkenleri
         decision_model += (workers[t] - workers[t-1] == hired[t] - fired[t])
     else:
         decision_model += (hired[t] - fired[t] == workers[t])
+    # İşçi sayısı, iç üretim ihtiyacından fazla olamaz (yuvarlama payı ile)
+    decision_model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
+    decision_model += (workers[t] >= 0)
 
 # Modeli çöz
 solver = pulp.PULP_CBC_CMD(msg=0)
