@@ -3,7 +3,7 @@ import pandas as pd
 
 # Parametreler
 months = 6
-demand = np.array([2000, 2500, 2500, 1300, 1100, 1400])
+demand = np.array([5000 , 7000, 7500, 3500, 3000, 2000])
 working_days = np.array([22, 20, 23, 21, 22, 20])
 holding_cost = 5
 stockout_cost = 20
@@ -11,11 +11,12 @@ labor_per_unit = 0.5
 hiring_cost = 1000  # Kullanılmayacak
 firing_cost = 800   # Kullanılmayacak
 daily_hours = 8
-fixed_workers = 25
+fixed_workers = 15
 overtime_wage_multiplier = 1.5
 max_overtime_per_worker = 20  # saat/ay
-overtime_cost_per_hour = 100  # örnek: 100 TL/saat
+overtime_cost_per_hour = 10  # örnek: 100 TL/saat
 overtime_limit = fixed_workers * max_overtime_per_worker
+normal_hourly_wage = 10  # TL/saat
 
 def overtime_model():
     production = np.zeros(months)
@@ -30,14 +31,17 @@ def overtime_model():
         # Fazla mesaiyle üretilebilecek maksimum miktar
         max_overtime_total_hours = fixed_workers * max_overtime_per_worker
         max_overtime_units = max_overtime_total_hours / labor_per_unit
-        remaining_demand = demand[t] - prev_inventory
-        # Önce normal kapasiteyi kullan
-        if remaining_demand <= normal_prod:
-            prod = remaining_demand
+        # Kümülatif stok devriyle talep karşılanmalı
+        required = demand[t] - prev_inventory
+        if required <= 0:
+            prod = 0
+            ot_hours = 0
+        elif required <= normal_prod:
+            prod = required
             ot_hours = 0
         else:
             prod = normal_prod
-            extra_needed = remaining_demand - normal_prod
+            extra_needed = required - normal_prod
             overtime_units = min(extra_needed, max_overtime_units)
             ot_hours = overtime_units * labor_per_unit
             prod += overtime_units
@@ -46,14 +50,15 @@ def overtime_model():
         inventory[t] = prev_inventory + prod - demand[t]
         holding = max(inventory[t], 0) * holding_cost
         stockout = abs(min(inventory[t], 0)) * stockout_cost
-        overtime = ot_hours * overtime_wage_multiplier * overtime_cost_per_hour
-        cost += holding + stockout + overtime
+        normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
+        overtime_cost = ot_hours * overtime_wage_multiplier * overtime_cost_per_hour
+        cost += holding + stockout + overtime_cost + normal_labor_cost
         results.append([
-            t+1, prod, ot_hours, inventory[t], holding, stockout, overtime
+            t+1, prod, ot_hours, inventory[t], holding, stockout, overtime_cost, normal_labor_cost
         ])
         prev_inventory = inventory[t]
     df = pd.DataFrame(results, columns=[
-        'Ay', 'Üretim', 'Fazla Mesai (saat)', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti'
+        'Ay', 'Üretim', 'Fazla Mesai (saat)', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti'
     ])
     # Tabulate ile tabloyu ve toplam maliyeti göster
     from tabulate import tabulate
@@ -67,10 +72,11 @@ def overtime_model():
             int(df['Stok'][t]),
             int(df['Stok Maliyeti'][t]),
             int(df['Stoksuzluk Maliyeti'][t]),
-            int(df['Fazla Mesai Maliyeti'][t])
+            int(df['Fazla Mesai Maliyeti'][t]),
+            int(df['Normal İşçilik Maliyeti'][t])
         ])
     headers = [
-        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti'
+        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti'
     ]
     print(tabulate(table, headers, tablefmt='github', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {cost:,.2f} TL')

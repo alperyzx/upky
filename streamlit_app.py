@@ -72,7 +72,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
     toplam_maliyet = pulp.value(decision_model.objective)
     return df, toplam_maliyet
 
-def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, overtime_cost_per_hour, stockout_cost):
+def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, overtime_cost_per_hour, stockout_cost, normal_hourly_wage):
     months = len(demand)
     production = np.zeros(months)
     overtime_hours = np.zeros(months)
@@ -85,7 +85,10 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers
         max_overtime_total_hours = fixed_workers * max_overtime_per_worker
         max_overtime_units = max_overtime_total_hours / labor_per_unit
         remaining_demand = demand[t] - prev_inventory
-        if remaining_demand <= normal_prod:
+        if remaining_demand <= 0:
+            prod = 0
+            ot_hours = 0
+        elif remaining_demand <= normal_prod:
             prod = remaining_demand
             ot_hours = 0
         else:
@@ -100,13 +103,14 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers
         holding = max(inventory[t], 0) * holding_cost
         stockout = abs(min(inventory[t], 0)) * stockout_cost
         overtime = max(ot_hours, 0) * overtime_wage_multiplier * overtime_cost_per_hour
-        total_cost += holding + stockout + overtime
+        normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
+        total_cost += holding + stockout + overtime + normal_labor_cost
         results.append([
-            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime
+            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost
         ])
         prev_inventory = inventory[t]
     headers = [
-        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti'
+        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti'
     ]
     df = pd.DataFrame(results, columns=headers)
     return df, total_cost
@@ -168,12 +172,13 @@ if model == "Fazla Mesaili Üretim (Model 2)":
     daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8, key="m2_daily")
     overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", 1.0, 5.0, 1.5)
     max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", 0, 100, 20)
-    overtime_cost_per_hour = st.number_input("Fazla Mesai Saatlik Maliyeti (TL)", 1, 1000, 100)
+    overtime_cost_per_hour = st.number_input("Fazla Mesai Saatlik Maliyeti (TL)", 1, 1000, 10)
     stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, 20)
+    normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", 1, 1000, 10)
     if st.button("Modeli Çalıştır", key="m2_run"):
         df_table, total_cost = model2_run(
             demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours,
-            overtime_wage_multiplier, max_overtime_per_worker, overtime_cost_per_hour, stockout_cost
+            overtime_wage_multiplier, max_overtime_per_worker, overtime_cost_per_hour, stockout_cost, normal_hourly_wage
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df_table, use_container_width=True)
