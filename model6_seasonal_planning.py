@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 
 # Örnek mevsimsel talep (12 ay)
-seasonal_demand = np.array([1000, 1200, 1600, 2000, 2500, 3000, 2800, 2200, 1800, 1400, 1100, 900])
+seasonal_demand = np.array([900, 1200, 1500, 1650, 1300, 1200, 1000, 900, 900, 850, 850, 1000])
 months = len(seasonal_demand)
 holding_cost = 5
 stockout_cost = 20
 production_cost = 12
-max_production = 2200  # Maksimum aylık üretim kapasitesi
+max_production = 1500  # Maksimum aylık üretim kapasitesi
 
 results = []
 production = np.zeros(months)
