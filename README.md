@@ -31,6 +31,25 @@ Diğer modeller için de benzer şekilde:
 - Model 5: `python model5_outsourcing_comparison.py`
 - Model 6: `python model6_seasonal_planning.py`
 
+## Streamlit Arayüzü ile Kullanım
+
+Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygulaması içerir.
+
+### Streamlit ile Başlatma
+
+1. Terminalde proje klasörüne gelin:
+   ```bash
+   cd /home/alper/PycharmProjects/upky
+   ```
+2. Streamlit uygulamasını başlatın:
+   ```bash
+   streamlit run streamlit_app.py
+   ```
+3. Tarayıcıda açılan arayüzden istediğiniz modeli seçip parametreleri girerek çalıştırabilirsiniz.
+
+- Sonuçlar tablo ve grafik olarak arayüzde görüntülenir.
+- Her modelin parametreleri arayüzde kolayca değiştirilebilir.
+
 ## Sonuçlar
 - Her model çalıştırıldığında, terminalde tablo halinde sonuçlar ve toplam maliyet görüntülenir.
 - Ayrıca, modelin türüne göre otomatik olarak grafiksel çıktı (üretim, stok, işçi sayısı vb.) açılır.
