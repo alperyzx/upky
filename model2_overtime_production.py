@@ -3,7 +3,7 @@ import pandas as pd
 
 # Parametreler
 months = 6
-demand = np.array([1000, 1200, 1500, 1300, 1100, 1400])
+demand = np.array([8000, 12000, 5000, 1300, 1100, 1400])
 working_days = np.array([22, 20, 23, 21, 22, 20])
 holding_cost = 5
 stockout_cost = 20
@@ -11,16 +11,11 @@ labor_per_unit = 0.5
 hiring_cost = 1000  # Kullanılmayacak
 firing_cost = 800   # Kullanılmayacak
 daily_hours = 8
-fixed_workers = 50
+fixed_workers = 25
 overtime_wage_multiplier = 1.5
 max_overtime_per_worker = 20  # saat/ay
 overtime_cost_per_hour = 100  # örnek: 100 TL/saat
 overtime_limit = fixed_workers * max_overtime_per_worker
-
-# Kapasiteler
-total_normal_hours = fixed_workers * working_days * daily_hours
-total_overtime_hours = fixed_workers * max_overtime_per_worker
-normal_capacity = total_normal_hours / labor_per_unit
 
 def overtime_model():
     production = np.zeros(months)
@@ -31,53 +26,74 @@ def overtime_model():
     results = []
     for t in range(months):
         # Normal kapasiteyle üretilebilecek miktar
-        normal_prod = normal_capacity[t]
+        normal_prod = fixed_workers * working_days[t] * daily_hours / labor_per_unit
+        # Fazla mesaiyle üretilebilecek maksimum miktar
+        max_overtime_total_hours = fixed_workers * max_overtime_per_worker
+        max_overtime_units = max_overtime_total_hours / labor_per_unit
         remaining_demand = demand[t] - prev_inventory
+        # Önce normal kapasiteyi kullan
         if remaining_demand <= normal_prod:
-            production[t] = remaining_demand
-            overtime_hours[t] = 0
-            inventory[t] = prev_inventory + production[t] - demand[t]
+            prod = remaining_demand
+            ot_hours = 0
         else:
-            production[t] = normal_prod
+            prod = normal_prod
             extra_needed = remaining_demand - normal_prod
-            # Fazla mesaiyle karşılanacak miktar
-            overtime_units = min(extra_needed, total_overtime_hours[t] / labor_per_unit)
-            overtime_hours[t] = overtime_units * labor_per_unit
-            production[t] += overtime_units
-            inventory[t] = prev_inventory + production[t] - demand[t]
-        # Maliyetler
+            overtime_units = min(extra_needed, max_overtime_units)
+            ot_hours = overtime_units * labor_per_unit
+            prod += overtime_units
+        production[t] = prod
+        overtime_hours[t] = ot_hours
+        inventory[t] = prev_inventory + prod - demand[t]
         holding = max(inventory[t], 0) * holding_cost
         stockout = abs(min(inventory[t], 0)) * stockout_cost
-        overtime = overtime_hours[t] * overtime_wage_multiplier * overtime_cost_per_hour
+        overtime = ot_hours * overtime_wage_multiplier * overtime_cost_per_hour
         cost += holding + stockout + overtime
         results.append([
-            t+1, production[t], overtime_hours[t], inventory[t], holding, stockout, overtime
+            t+1, prod, ot_hours, inventory[t], holding, stockout, overtime
         ])
         prev_inventory = inventory[t]
     df = pd.DataFrame(results, columns=[
         'Ay', 'Üretim', 'Fazla Mesai (saat)', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti'
     ])
-    print(df.to_string(index=False))
+    # Tabulate ile tabloyu ve toplam maliyeti göster
+    from tabulate import tabulate
+    table = []
+    for t in range(months):
+        table.append([
+            t+1,
+            int(fixed_workers),
+            int(df['Üretim'][t]),
+            int(df['Fazla Mesai (saat)'][t]),
+            int(df['Stok'][t]),
+            int(df['Stok Maliyeti'][t]),
+            int(df['Stoksuzluk Maliyeti'][t]),
+            int(df['Fazla Mesai Maliyeti'][t])
+        ])
+    headers = [
+        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti'
+    ]
+    print(tabulate(table, headers, tablefmt='github', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {cost:,.2f} TL')
-
-    # Grafiksel çıktı
+    # Grafiksel tablo ve değişken görselleştirme
     try:
         import matplotlib.pyplot as plt
     except ImportError:
         print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
         return df
     months_list = list(range(1, months+1))
-    fig, ax1 = plt.subplots(figsize=(10,6))
-    # İşçi sayısı sabit, bar olarak göster
-    ax1.bar(months_list, [fixed_workers]*months, color='skyblue', label='İşçi (Sabit)', alpha=0.7)
+    fig, ax1 = plt.subplots(figsize=(12,7))
+    # İşçi sayısı bar (kolon) olarak, ikincil eksende
+    worker_count = [fixed_workers] * months
+    bar_width = 0.6
+    ax1.bar(months_list, worker_count, color='skyblue', label='İşçi', alpha=0.8, width=bar_width, zorder=2)
     ax1.set_xlabel('Ay')
     ax1.set_ylabel('İşçi Sayısı', color='skyblue')
     ax1.tick_params(axis='y', labelcolor='skyblue')
-    # Diğer değişkenler çizgi olarak, ikinci y ekseninde
+    # Diğer değişkenler ikinci y ekseninde
     ax2 = ax1.twinx()
-    ax2.plot(months_list, production, marker='s', label='Üretim', color='green')
-    ax2.plot(months_list, overtime_hours, marker='^', label='Fazla Mesai (saat)', color='orange')
-    ax2.plot(months_list, inventory, marker='d', label='Stok', color='red')
+    ax2.plot(months_list, df['Üretim'], marker='o', label='Üretim', color='green', markersize=7, zorder=3)
+    ax2.plot(months_list, df['Fazla Mesai (saat)'], marker='^', label='Fazla Mesai (saat)', color='orange', markersize=7, zorder=3)
+    ax2.plot(months_list, df['Stok'], marker='s', label='Stok', color='red', markersize=7, zorder=3)
     ax2.set_ylabel('Adet / Saat', color='gray')
     ax2.tick_params(axis='y', labelcolor='gray')
     # Legend birleştir
@@ -92,4 +108,3 @@ def overtime_model():
 
 if __name__ == '__main__':
     overtime_model()
-

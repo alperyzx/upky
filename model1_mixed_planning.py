@@ -2,8 +2,8 @@ import pulp
 import numpy as np
 
 # Örnek parametreler
-demand = [12000, 12200, 1500, 1500, 2000, 1000]
-working_days = [20, 20, 23, 21, 22, 20]
+demand = [15000, 8200, 8500, 5500, 8000, 9000]
+working_days = [22, 20, 23, 21, 20, 20]
 holding_cost = 5
 stockout_cost = 20
 outsourcing_cost = 15
@@ -12,7 +12,7 @@ hiring_cost = 1000
 firing_cost = 800  # Düşük işçi çıkarma maliyeti
 daily_hours = 8
 overtime_limit = 20
-outsourcing_capacity = 5000
+outsourcing_capacity = 3000
 min_internal_ratio = 0.70
 max_workforce_change = 10  # Daha hızlı işçi azaltımı
 max_outsourcing_ratio = 0.30
