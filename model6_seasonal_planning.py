@@ -1,41 +1,66 @@
+import pulp
 import numpy as np
 import pandas as pd
 
 # Örnek mevsimsel talep (12 ay)
-seasonal_demand = np.array([900, 1200, 1500, 1650, 1300, 1200, 1000, 900, 900, 850, 850, 1000])
+seasonal_demand = np.array([700, 600, 1500, 1850, 1500, 1200, 800, 400, 900, 1650, 1550, 900])
 months = len(seasonal_demand)
 holding_cost = 5
 stockout_cost = 20
 production_cost = 12
-max_production = 1500  # Maksimum aylık üretim kapasitesi
+max_production = 1200  # Maksimum aylık üretim kapasitesi
+
+# Doğrusal programlama modeli
+model = pulp.LpProblem('Mevsimsel_Stok_Optimizasyonu', pulp.LpMinimize)
+
+# Karar değişkenleri
+y_production = [pulp.LpVariable(f'production_{t}', lowBound=0, cat='Integer') for t in range(months)]
+y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
+y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
+
+# Amaç fonksiyonu
+model += pulp.lpSum([
+    production_cost * y_production[t] +
+    holding_cost * y_inventory[t] +
+    stockout_cost * y_stockout[t]
+    for t in range(months)
+])
+
+# Kısıtlar
+for t in range(months):
+    # Üretim kapasitesi
+    model += y_production[t] <= max_production
+    # Stok ve stoksuzluk denklemi
+    if t == 0:
+        prev_inventory = 0
+    else:
+        prev_inventory = y_inventory[t-1]
+    model += prev_inventory + y_production[t] + y_stockout[t] == seasonal_demand[t] + y_inventory[t]
+    model += y_inventory[t] >= 0
+    model += y_stockout[t] >= 0
+
+# Modeli çöz
+solver = pulp.PULP_CBC_CMD(msg=0)
+model.solve(solver)
 
 results = []
-production = np.zeros(months)
-inventory = np.zeros(months)
-cost = 0
-prev_inventory = 0
-
 for t in range(months):
-    # Talep ve kapasiteye göre üretim kararı
-    if seasonal_demand[t] > max_production:
-        production[t] = max_production
-    else:
-        production[t] = seasonal_demand[t]
-    inventory[t] = prev_inventory + production[t] - seasonal_demand[t]
-    holding = max(inventory[t], 0) * holding_cost
-    stockout = abs(min(inventory[t], 0)) * stockout_cost
-    prod_cost = production[t] * production_cost
-    cost += holding + stockout + prod_cost
     results.append([
-        t+1, seasonal_demand[t], production[t], inventory[t], holding, stockout, prod_cost
+        t+1,
+        seasonal_demand[t],
+        int(y_production[t].varValue),
+        int(y_inventory[t].varValue),
+        int(y_stockout[t].varValue),
+        int(y_inventory[t].varValue) * holding_cost,
+        int(y_stockout[t].varValue) * stockout_cost,
+        int(y_production[t].varValue) * production_cost
     ])
-    prev_inventory = inventory[t]
 
 df = pd.DataFrame(results, columns=[
-    'Ay', 'Talep', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti'
+    'Ay', 'Talep', 'Üretim', 'Stok', 'Stoksuzluk', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti'
 ])
 print(df.to_string(index=False))
-print(f'\nToplam Maliyet: {cost:,.2f} TL')
+print(f'\nToplam Maliyet: {pulp.value(model.objective):,.2f} TL')
 
 # Grafiksel çıktı
 try:
@@ -46,11 +71,12 @@ except ImportError:
 months_list = list(range(1, months+1))
 plt.figure(figsize=(12,6))
 plt.plot(months_list, seasonal_demand, marker='o', label='Talep', color='orange')
-plt.bar(months_list, production, color='skyblue', label='Üretim', alpha=0.7)
-plt.plot(months_list, inventory, marker='d', label='Stok', color='red')
+plt.bar(months_list, [int(y_production[t].varValue) for t in range(months)], color='skyblue', label='Üretim', alpha=0.7)
+plt.plot(months_list, [int(y_inventory[t].varValue) for t in range(months)], marker='d', label='Stok', color='red')
+plt.plot(months_list, [int(y_stockout[t].varValue) for t in range(months)], marker='x', label='Stoksuzluk', color='black')
 plt.xlabel('Ay')
 plt.ylabel('Adet')
-plt.title('Mevsimsellik ve Talep Dalgaları Modeli Sonuçları')
+plt.title('Mevsimsellik ve Stok Optimizasyonu Sonuçları')
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
