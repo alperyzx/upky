@@ -121,7 +121,7 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers
 
 if model == "Karma Planlama (Model 1)":
     st.header("Karma Planlama (Model 1)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "7000, 9000, 8000, 12000, 15000, 25000, 20000, 18000, 12000, 10000, 9000, 7000")
+    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "5000, 9000, 27000, 12000, 15000, 25000, 40000, 18000, 12000, 10000, 12000, 15000")
     demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
     working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", "22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21")
     working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
@@ -133,7 +133,7 @@ if model == "Karma Planlama (Model 1)":
     daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8)
     outsourcing_capacity = st.number_input("Fason Kapasitesi (adet)", 1, 10000, 6000)
     min_internal_ratio = st.slider("En Az İç Üretim Oranı (%)", 0, 100, 70) / 100
-    max_workforce_change = st.number_input("İşgücü Değişim Sınırı (kişi)", 1, 100, 20)
+    max_workforce_change = st.number_input("İşgücü Değişim Sınırı (kişi)", 1, 100, 8)
     max_outsourcing_ratio = st.slider("En Fazla Fason Oranı (%)", 0, 100, 30) / 100
     stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 100, 20)
     if st.button("Modeli Çalıştır"):
