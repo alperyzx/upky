@@ -78,28 +78,37 @@
 - `outsourced_supplier_B[t]`: Tedarikçi B’den üretim.
 - `internal_production[t]`: İç üretim.
 - `inventory[t]`: Stok seviyesi.
+- `stockout[t]`: Karşılanmayan talep (stokta bulundurmama).
 
 ### Sabit Parametreler
 - `cost_supplier_A`: 15 TL/adet.
 - `cost_supplier_B`: 18 TL/adet.
 - `capacity_supplier_A`: 500 adet.
+- `stockout_cost`: 20 TL/adet.
 
 ### Python Yaklaşımı
 - Kütüphane: `PuLP`.
-- Amaç: Maliyet minimizasyonu.
+- Amaç: Maliyet minimizasyonu (stok, üretim, tedarikçi ve stoksuzluk maliyeti dahil).
+- Kısıtlar: Tedarikçi kapasitesi, stok ve stoksuzluk denklemi.
 
 ## Model 6: Mevsimsellik ve Talep Dalgaları Modeli
 ### Değişkenler
 - `production[t]`: t ayındaki üretim.
 - `inventory[t]`: t ayı sonundaki stok.
-- `workers[t]`: t ayındaki işçi sayısı (opsiyonel).
+- `stockout[t]`: t ayındaki karşılanmayan talep (stoksuzluk).
 
 ### Sabit Parametreler
 - `seasonal_demand`: Mevsimsel talep desenleri.
+- `holding_cost`: Stok maliyeti.
+- `stockout_cost`: Stoksuzluk maliyeti.
+- `production_cost`: Üretim maliyeti.
+- `max_production`: Maksimum aylık üretim kapasitesi.
 
 ### Python Yaklaşımı
-- Kütüphaneler: `statsmodels`, `Pandas`.
-- Hesaplama: Zaman serisi analizi, üretim planlama.
+- Kütüphane: `PuLP`.
+- Amaç: Üretim, stok ve stoksuzluk maliyetlerinin toplamını minimize et.
+- Kısıtlar: Üretim kapasitesi, stok ve stoksuzluk denklemi.
+- Model, düşük talep aylarında fazla üretim yapıp stokta tutarak yüksek talep aylarını karşılamaya çalışır.
 
 ## Toplam Maliyet Hesaplaması
 - İşçilik, işçi değişim, stok, fason maliyetleri.
@@ -107,3 +116,4 @@
 ## Karar Destek Aracı
 - Kütüphaneler: `Pandas`, `NumPy`, `PuLP`, `Matplotlib`.
 - Özellikler: Parametre girişi, model çalıştırma, görselleştirme.
+
