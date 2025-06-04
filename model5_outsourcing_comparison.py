@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-demand = [5050, 3000, 3000, 1300, 1100, 1400]
+demand = [3500, 3300, 3500, 3000, 2500, 9000, 6500, 2500, 7500, 2500, 9000, 5500]
 months = len(demand)
 holding_cost = 5
 stockout_cost = 20
@@ -11,12 +11,14 @@ labor_per_unit = 0.5
 internal_production_cost = 10
 cost_supplier_A = 12
 cost_supplier_B = 15
-capacity_supplier_A = 1000
-capacity_supplier_B = 1000  # Tedarikçi B kapasitesi (örnek varsayılan)
-working_days = [22, 20, 23, 21, 22, 20]
+capacity_supplier_A = 1000 # Tedarikçi A kapasitesi
+capacity_supplier_B = 1000
+working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 daily_hours = 8
-max_internal_workers = 50
-max_internal_production = 1500  # İç üretim kapasitesi (adet/ay)
+max_internal_workers = 12
+
+# Dinamik iç üretim kapasitesi hesaplama
+max_internal_production = int(max_internal_workers * np.mean(working_days) * daily_hours / labor_per_unit)
 
 # Model
 decision_model = pulp.LpProblem('Dis_Kaynak_Karsilastirma', pulp.LpMinimize)

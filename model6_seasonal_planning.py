@@ -3,12 +3,12 @@ import numpy as np
 import pandas as pd
 
 # Örnek mevsimsel talep (12 ay)
-seasonal_demand = np.array([700, 600, 1500, 1850, 1500, 1200, 800, 400, 900, 1650, 1550, 900])
+seasonal_demand = np.array([1200, 4500, 5500, 2800, 2100, 1500, 4500, 6000, 3000, 2500, 1500, 1000])
 months = len(seasonal_demand)
 holding_cost = 5
 stockout_cost = 20
-production_cost = 12
-max_production = 1200  # Maksimum aylık üretim kapasitesi
+production_cost = 10
+max_production = 4000  # Maksimum aylık üretim kapasitesi
 
 # Doğrusal programlama modeli
 model = pulp.LpProblem('Mevsimsel_Stok_Optimizasyonu', pulp.LpMinimize)

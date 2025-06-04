@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-demand = np.array([2000, 2200, 1500, 1300, 1500, 1900])
-working_days = np.array([22, 20, 23, 21, 22, 20])
+demand = np.array([3000, 3500, 2500, 3500, 3200, 4500, 3500, 2800, 3500, 3000, 3900, 2700])
+working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
 fixed_workers = 10
-production_rate = 1.2  # adet/saat
+production_rate = 2  # adet/saat
 daily_hours = 8
 months = len(demand)
 
