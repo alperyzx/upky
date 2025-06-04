@@ -2,20 +2,20 @@ import pulp
 import numpy as np
 
 # Örnek parametreler
-demand = [15000, 8200, 8500, 5500, 8000, 9000]
-working_days = [22, 20, 23, 21, 20, 20]
+demand = [5000, 9000, 27000, 12000, 15000, 25000, 40000, 18000, 12000, 10000, 12000, 15000]
+working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 holding_cost = 5
 stockout_cost = 20
 outsourcing_cost = 15
 labor_per_unit = 0.5
 hiring_cost = 1000
-firing_cost = 800  # Düşük işçi çıkarma maliyeti
+firing_cost = 800  # işçi çıkarma maliyeti
 daily_hours = 8
 overtime_limit = 20
-outsourcing_capacity = 3000
 min_internal_ratio = 0.70
-max_workforce_change = 10  # Daha hızlı işçi azaltımı
+max_workforce_change = 8  # Daha hızlı işçi azaltımı
 max_outsourcing_ratio = 0.30
+outsourcing_capacity = 6000
 
 T = len(demand)
 
@@ -29,6 +29,7 @@ outsourced_production = [pulp.LpVariable(f'outsourced_prod_{t}', lowBound=0, cat
 inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(T)]
 hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range(T)]
 fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
+stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Karşılanmayan talep
 
 # Amaç fonksiyonu: Toplam maliyet
 cost = (
@@ -36,7 +37,8 @@ cost = (
         holding_cost * inventory[t] +
         outsourcing_cost * outsourced_production[t] +
         hiring_cost * hired[t] +
-        firing_cost * fired[t]
+        firing_cost * fired[t] +
+        stockout_cost * stockout[t]  # Stokta bulundurmama maliyeti eklendi
         for t in range(T)
     ])
 )
@@ -44,12 +46,12 @@ decision_model += cost
 
 # Kısıtlar
 for t in range(T):
-    # Talep karşılanmalı
+    # Talep karşılanmalı (stok + üretim + fason = talep + stok + karşılanmayan talep)
     if t == 0:
         prev_inventory = 0
     else:
         prev_inventory = inventory[t-1]
-    decision_model += (internal_production[t] + outsourced_production[t] + prev_inventory - demand[t] == inventory[t])
+    decision_model += (internal_production[t] + outsourced_production[t] + prev_inventory == demand[t] + inventory[t] + stockout[t])
 
     # Toplam üretimin en az %70'i iç üretim olmalı
     decision_model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
@@ -86,10 +88,11 @@ def print_results():
             int(outsourced_production[t].varValue),
             int(inventory[t].varValue),
             int(hired[t].varValue),
-            int(fired[t].varValue)
+            int(fired[t].varValue),
+            int(stockout[t].varValue)  # Karşılanmayan talep
         ])
     headers = [
-        'Ay', 'İşçi', 'İç Üretim', 'Fason', 'Stok', 'Alım', 'Çıkış'
+        'Ay', 'İşçi', 'İç Üretim', 'Fason', 'Stok', 'Alım', 'Çıkış', 'Karşılanmayan Talep'
     ]
     print(tabulate(table, headers, tablefmt='github', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
@@ -112,6 +115,7 @@ def print_results():
     ax2.plot(months, [int(internal_production[t].varValue) for t in range(T)], marker='s', label='İç Üretim', color='green')
     ax2.plot(months, [int(outsourced_production[t].varValue) for t in range(T)], marker='^', label='Fason', color='orange')
     ax2.plot(months, [int(inventory[t].varValue) for t in range(T)], marker='d', label='Stok', color='red')
+    ax2.plot(months, [int(stockout[t].varValue) for t in range(T)], marker='x', label='Karşılanmayan Talep', color='black')
     ax2.set_ylabel('Adet', color='gray')
     ax2.tick_params(axis='y', labelcolor='gray')
     # Legend birleştir
@@ -130,4 +134,5 @@ if __name__ == '__main__':
         print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
         exit(1)
     print_results()
+
 

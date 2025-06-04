@@ -2,19 +2,18 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-# Talebi ve işçi parametrelerini kolayca değiştirin
 # Çok yüksek talep için örnek:
-demand = np.array([12000, 15000, 18000, 20000, 17000, 16000])
-working_days = np.array([22, 20, 23, 21, 22, 20])
+demand = np.array([1500, 1200, 3600, 4500, 7200, 9000, 7200, 6400, 7200, 9000, 9600, 12000])
+working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
 hiring_cost = 1000
 firing_cost = 800
 daily_hours = 8
 labor_per_unit = 0.5
-max_workers = 100  # Daha yüksek üst sınır
-min_workers = 40
-max_workforce_change = 20  # Daha hızlı işçi artışı
+max_workers = 40  # Daha yüksek üst sınır
+min_workers = 8
+max_workforce_change = 8  # Daha hızlı işçi artışı
 months = len(demand)
 
 # Üretim kapasitesi: işçi * gün * saat / birim işgücü
