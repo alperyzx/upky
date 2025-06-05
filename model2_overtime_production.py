@@ -14,6 +14,7 @@ overtime_wage_multiplier = 1.5
 max_overtime_per_worker = 20  # saat/ay
 normal_hourly_wage = 10  # TL/saat
 overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier  # Fazla mesai saatlik ücret otomatik hesaplanır
+production_cost = 12  # Birim üretim maliyeti (TL)
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -52,20 +53,22 @@ def overtime_model():
         stockout = abs(min(inventory[t], 0)) * stockout_cost
         overtime = max(ot_hours, 0) * overtime_cost_per_hour
         normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
-        cost += holding + stockout + overtime + normal_labor_cost
+        production_cost_val = prod * production_cost
+        cost += holding + stockout + overtime + normal_labor_cost + production_cost_val
         results.append([
-            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost
+            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost, production_cost_val
         ])
         prev_inventory = inventory[t]
     headers = [
-        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti'
+        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti', 'Üretim Maliyeti'
     ]
     df = pd.DataFrame(results, columns=headers)
     from tabulate import tabulate
     # Format cost columns
-    for col in ['Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti']:
+    for col in ['Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti', 'Üretim Maliyeti']:
         df[col] = df[col].apply(lambda x: f'{int(x):,} TL')
     print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
+    print(f'\nToplam Maliyet: {cost:,.2f} TL')
     # Grafik: Fazla Mesai saatlerini bar olarak göster
     import matplotlib.pyplot as plt
     months_list = df['Ay'].tolist()

@@ -84,7 +84,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
     toplam_maliyet = pulp.value(decision_model.objective)
     return df, toplam_maliyet
 
-def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage):
+def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost=12):
     months = len(demand)
     production = np.zeros(months)
     overtime_hours = np.zeros(months)
@@ -117,13 +117,14 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers
         stockout = abs(min(inventory[t], 0)) * stockout_cost
         overtime = max(ot_hours, 0) * overtime_cost_per_hour
         normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
-        total_cost += holding + stockout + overtime + normal_labor_cost
+        production_cost_val = prod * production_cost
+        total_cost += holding + stockout + overtime + normal_labor_cost + production_cost_val
         results.append([
-            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost
+            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost, production_cost_val
         ])
         prev_inventory = inventory[t]
     headers = [
-        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti'
+        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti', 'Üretim Maliyeti'
     ]
     df = pd.DataFrame(results, columns=headers)
     return df, total_cost
@@ -354,10 +355,11 @@ if model == "Fazla Mesaili Üretim (Model 2)":
     max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", 0, 100, 20)
     stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, 20)
     normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", 1, 1000, 10)
+    production_cost = st.number_input("Üretim Maliyeti (TL)", 1, 100, 12, key="m2_prod_cost")
     if st.button("Modeli Çalıştır", key="m2_run"):
         df_table, total_cost = model2_run(
             demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours,
-            overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage
+            overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df_table, use_container_width=True)
@@ -474,7 +476,12 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True)
-        st.success(f"Toplam Maliyet: {toplam_maliyet:,.2f} TL")
+        # Calculate internal production and supplier costs
+        ic_uretim_maliyeti = df['İç Üretim'].sum() * internal_production_cost
+        tedarikci_a_maliyeti = df['Tedarikçi A'].sum() * cost_supplier_A
+        tedarikci_b_maliyeti = df['Tedarikçi B'].sum() * cost_supplier_B
+        toplam_tedarikci_maliyeti = tedarikci_a_maliyeti + tedarikci_b_maliyeti
+        st.success(f"Toplam Maliyet: {toplam_maliyet:,.2f} TL | İç Üretim Maliyeti: {ic_uretim_maliyeti:,.2f} TL | Toplam Tedarikçi Maliyeti: {toplam_tedarikci_maliyeti:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         months_list = [t+1 for t in range(len(demand))]
         fig, ax = plt.subplots(figsize=(10,6))
