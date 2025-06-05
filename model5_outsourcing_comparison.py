@@ -1,9 +1,14 @@
+# Check that demand and working_days have the same length
+if len(demand) != len(working_days):
+    raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
+
 import pulp
 import numpy as np
 import pandas as pd
 
 # Parametreler
 demand = [3500, 3300, 3500, 3000, 2500, 9000, 6500, 2500, 7500, 2500, 9000, 5500]
+working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 months = len(demand)
 holding_cost = 5
 stockout_cost = 20
@@ -13,7 +18,6 @@ cost_supplier_A = 12
 cost_supplier_B = 15
 capacity_supplier_A = 1000 # Tedarikçi A kapasitesi
 capacity_supplier_B = 1000
-working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 daily_hours = 8
 max_internal_workers = 12
 
@@ -122,4 +126,3 @@ if __name__ == '__main__':
         print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
         exit(1)
     print_results()
-

@@ -278,6 +278,9 @@ if model == "Karma Planlama (Model 1)":
     demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
     working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", "22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21")
     working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
+    if len(demand) != len(working_days):
+        st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
+        st.stop()
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5)
     outsourcing_cost = st.number_input("Fason Maliyeti (TL)", 1, 100, 15)
     labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, 0.5)
@@ -509,6 +512,9 @@ if model == "Karşılaştırma Tablosu":
     demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
     working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", "22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21")
     working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
+    if len(demand) != len(working_days):
+        st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
+        st.stop()
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="cmp_holding")
     outsourcing_cost = st.number_input("Fason Maliyeti (TL)", 1, 100, 15, key="cmp_outsourcing")
     labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, 0.5, key="cmp_labor")

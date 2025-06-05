@@ -11,6 +11,10 @@ production_rate = 2  # adet/saat
 daily_hours = 8
 months = len(demand)
 
+# Check that demand and working_days have the same length
+if len(demand) != len(working_days):
+    raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
+
 # Sabit üretim kapasitesi (işçi * gün * saat * hız)
 monthly_capacity = fixed_workers * daily_hours * working_days * production_rate
 

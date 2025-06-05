@@ -16,6 +16,10 @@ min_workers = 8
 max_workforce_change = 8  # Daha hızlı işçi artışı
 months = len(demand)
 
+# Check that demand and working_days have the same length
+if len(demand) != len(working_days):
+    raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
+
 # Üretim kapasitesi: işçi * gün * saat / birim işgücü
 def prod_capacity(workers, t):
     return workers * working_days[t] * daily_hours / labor_per_unit

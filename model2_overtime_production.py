@@ -15,6 +15,10 @@ max_overtime_per_worker = 20  # saat/ay
 normal_hourly_wage = 10  # TL/saat
 overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier  # Fazla mesai saatlik ücret otomatik hesaplanır
 
+# Check that demand and working_days have the same length
+if len(demand) != len(working_days):
+    raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
+
 def overtime_model():
     production = np.zeros(months)
     overtime_hours = np.zeros(months)

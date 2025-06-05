@@ -18,6 +18,10 @@ outsourcing_capacity = 6000
 
 T = len(demand)
 
+# Check that demand and working_days have the same length
+if len(demand) != len(working_days):
+    raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
+
 # Model
 decision_model = pulp.LpProblem('Karma_Planlama_Modeli', pulp.LpMinimize)
 
