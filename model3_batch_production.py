@@ -3,15 +3,16 @@ import pandas as pd
 from tabulate import tabulate
 
 # Parametreler
-demand = np.array([1500, 1500, 2500, 1500, 1500, 1500, 2500, 1500,1800, 2700, 1500, 2500])
+demand = np.array([650, 650, 750, 650, 700, 600, 700, 650,650, 670, 750, 650])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
-fixed_workers = 10
+fixed_workers = 20
 worker_monthly_cost = 1680  # İşçi başı aylık maliyet (ör: asgari ücret)
-production_rate = 2  # adet/saat
+production_rate = 0.25 # Bir işçi günde 0.25 birim üretim yapabiliyor
 daily_hours = 8
 months = len(demand)
+production_cost = 20  # birim üretim maliyeti (TL)
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -33,20 +34,29 @@ for t in range(months):
     holding = max(inventory[t], 0) * holding_cost
     stockout = abs(min(inventory[t], 0)) * stockout_cost
     labor = fixed_workers * worker_monthly_cost
-    cost += holding + stockout + labor
+    prod_cost = production[t] * production_cost
+    cost += holding + stockout + labor + prod_cost
     results.append([
-        t+1, production[t], inventory[t], holding, stockout, labor
+        t+1, production[t], inventory[t], holding, stockout, labor, prod_cost
     ])
     prev_inventory = inventory[t]
 
 df = pd.DataFrame(results, columns=[
-    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'İşçilik Maliyeti'
+    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)', 'İş��ilik Maliyeti (₺)', 'Üretim Maliyeti (₺)'
 ])
-df['Stok Maliyeti'] = df['Stok Maliyeti'].apply(lambda x: f'{int(x):,} TL')
-df['Stoksuzluk Maliyeti'] = df['Stoksuzluk Maliyeti'].apply(lambda x: f'{int(x):,} TL')
-df['İşçilik Maliyeti'] = df['İşçilik Maliyeti'].apply(lambda x: f'{int(x):,} TL')
+
+# Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
+df['Stok Maliyeti (₺)'] = df['Stok Maliyeti (₺)'].astype(int)
+df['Stoksuzluk Maliyeti (₺)'] = df['Stoksuzluk Maliyeti (₺)'].astype(int)
+df.rename(columns={df.columns[5]: 'İşçilik Maliyeti (₺)'}, inplace=True)  # Fix encoding issue
+df['İşçilik Maliyeti (₺)'] = df['İşçilik Maliyeti (₺)'].astype(int)
+df['Üretim Maliyeti (₺)'] = df['Üretim Maliyeti (₺)'].astype(int)
 print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
 print(f'\nToplam Maliyet: {cost:,.2f} TL')
+print(f'Stok Maliyeti Toplamı: {df["Stok Maliyeti (₺)"].sum():,} TL')
+print(f'Stoksuzluk Maliyeti Toplamı: {df["Stoksuzluk Maliyeti (₺)"].sum():,} TL')
+print(f'İşçilik Maliyeti Toplamı: {df["İşçilik Maliyeti (₺)"].sum():,} TL')
+print(f'Üretim Maliyeti Toplamı: {df["Üretim Maliyeti (₺)"].sum():,} TL')
 
 # Grafiksel çıktı
 try:
@@ -58,7 +68,7 @@ months_list = list(range(1, months+1))
 plt.figure(figsize=(10,6))
 plt.bar(months_list, production, color='skyblue', label='Üretim', alpha=0.7)
 plt.plot(months_list, inventory, marker='d', label='Stok', color='red')
-plt.plot(months_list, df['Stoksuzluk Maliyeti'], marker='x', label='Stoksuzluk Maliyeti', color='black')
+plt.plot(months_list, df['Stoksuzluk Maliyeti (₺)'], marker='x', label='Stoksuzluk Maliyeti', color='black')
 plt.xlabel('Ay')
 plt.ylabel('Adet / TL')
 plt.title('Toplu Üretim ve Stoklama Modeli Sonuçları')
