@@ -130,5 +130,89 @@ def overtime_model():
     plt.show()
     return df, cost
 
+def maliyet_analizi(
+    demand=demand,
+    working_days=working_days,
+    holding_cost=holding_cost,
+    stockout_cost=stockout_cost,
+    labor_per_unit=labor_per_unit,
+    daily_hours=daily_hours,
+    fixed_workers=fixed_workers,
+    overtime_wage_multiplier=overtime_wage_multiplier,
+    max_overtime_per_worker=max_overtime_per_worker,
+    normal_hourly_wage=normal_hourly_wage,
+    production_cost=production_cost
+):
+    months = len(demand)
+    overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier
+    production = np.zeros(months)
+    overtime_hours = np.zeros(months)
+    inventory = np.zeros(months)
+    prev_inventory = 0
+    total_holding = 0
+    total_stockout = 0
+    total_overtime = 0
+    total_normal_labor = 0
+    total_production = 0
+    total_demand = sum(demand)
+    total_unfilled = 0
+    for t in range(months):
+        normal_prod = fixed_workers * working_days[t] * daily_hours / labor_per_unit
+        max_overtime_total_hours = fixed_workers * max_overtime_per_worker
+        max_overtime_units = max_overtime_total_hours / labor_per_unit
+        remaining_demand = demand[t] - prev_inventory
+        if remaining_demand <= 0:
+            prod = 0
+            ot_hours = 0
+        elif remaining_demand <= normal_prod:
+            prod = remaining_demand
+            ot_hours = 0
+        else:
+            prod = normal_prod
+            extra_needed = remaining_demand - normal_prod
+            overtime_units = min(extra_needed, max_overtime_units)
+            ot_hours = overtime_units * labor_per_unit
+            prod += overtime_units
+        production[t] = prod
+        overtime_hours[t] = ot_hours
+        inventory[t] = prev_inventory + prod - demand[t]
+        holding = max(inventory[t], 0) * holding_cost
+        stockout = abs(min(inventory[t], 0)) * stockout_cost
+        overtime = max(ot_hours, 0) * overtime_cost_per_hour
+        normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
+        production_cost_val = prod * production_cost
+        total_holding += holding
+        total_stockout += stockout
+        total_overtime += overtime
+        total_normal_labor += normal_labor_cost
+        total_production += prod
+        prev_inventory = inventory[t]
+        if inventory[t] < 0:
+            total_unfilled += abs(inventory[t])
+    toplam_maliyet = total_holding + total_stockout + total_overtime + total_normal_labor + total_production * production_cost
+    if total_production > 0:
+        avg_unit_cost = toplam_maliyet / total_production
+        avg_labor_unit = (total_normal_labor + total_overtime) / total_production
+        avg_prod_unit = (total_production * production_cost) / total_production
+        avg_other_unit = (total_holding + total_stockout) / total_production
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+    return {
+        "Toplam Maliyet": toplam_maliyet,
+        "İşçilik Maliyeti": total_normal_labor + total_overtime,
+        "Üretim Maliyeti": total_production * production_cost,
+        "Stok Maliyeti": total_holding,
+        "Stoksuzluk Maliyeti": total_stockout,
+        "İşe Alım Maliyeti": 0,
+        "İşten Çıkarma Maliyeti": 0,
+        "Toplam Talep": total_demand,
+        "Toplam Üretim": total_production,
+        "Karşılanmayan Talep": total_unfilled,
+        "Ortalama Birim Maliyet": avg_unit_cost,
+        "İşçilik Birim Maliyeti": avg_labor_unit,
+        "Üretim Birim Maliyeti": avg_prod_unit,
+        "Diğer Birim Maliyetler": avg_other_unit
+    }
+
 if __name__ == '__main__':
     overtime_model()

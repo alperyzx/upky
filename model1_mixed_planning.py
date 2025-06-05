@@ -199,6 +199,134 @@ def print_results():
     plt.tight_layout()
     plt.show()
 
+def maliyet_analizi(
+    demand=demand,
+    working_days=working_days,
+    holding_cost=holding_cost,
+    stockout_cost=stockout_cost,
+    outsourcing_cost=outsourcing_cost,
+    labor_per_unit=labor_per_unit,
+    hiring_cost=hiring_cost,
+    firing_cost=firing_cost,
+    daily_hours=daily_hours,
+    min_internal_ratio=min_internal_ratio,
+    max_workforce_change=max_workforce_change,
+    max_outsourcing_ratio=max_outsourcing_ratio,
+    outsourcing_capacity=outsourcing_capacity,
+    hourly_wage=hourly_wage,
+    production_cost=production_cost
+):
+    T = len(demand)
+    # Model ve değişkenler yukarıdaki gibi tanımlanıyor
+    model = pulp.LpProblem('Karma_Planlama_Modeli', pulp.LpMinimize)
+    workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, cat='Integer') for t in range(T)]
+    internal_production = [pulp.LpVariable(f'internal_prod_{t}', lowBound=0, cat='Integer') for t in range(T)]
+    outsourced_production = [pulp.LpVariable(f'outsourced_prod_{t}', lowBound=0, cat='Integer') for t in range(T)]
+    inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(T)]
+    hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range(T)]
+    fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
+    stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Karşılanmayan talep
+
+    # Amaç fonksiyonu: işçi ücretleri eklendi
+    cost = (
+        pulp.lpSum([
+            holding_cost * inventory[t] +
+            stockout_cost * stockout[t] +
+            outsourcing_cost * outsourced_production[t] +
+            hiring_cost * hired[t] +
+            firing_cost * fired[t] +
+            workers[t] * working_days[t] * daily_hours * hourly_wage +  # işçi ücretleri
+            production_cost * internal_production[t]  # iç üretim birim üretim maliyeti
+            for t in range(T)
+        ])
+    )
+    model += cost
+
+    # Kısıtlar
+    for t in range(T):
+        # Talep karşılanmalı (stok + üretim + fason = talep + stok + karşılanmayan talep)
+        if t == 0:
+            prev_inventory = 0
+        else:
+            prev_inventory = inventory[t-1]
+        model += (internal_production[t] + outsourced_production[t] + prev_inventory == demand[t] + inventory[t] + stockout[t])
+
+        # Toplam üretimin en az %70'i iç üretim olmalı
+        model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
+        # Fason üretim toplam üretimin %Z'sini geçemez
+        model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
+        # Fason kapasite
+        model += (outsourced_production[t] <= outsourcing_capacity)
+        # İç üretim kapasitesi (işçi * gün * saat / birim işgücü)
+        model += (internal_production[t] <= workers[t] * working_days[t] * daily_hours / labor_per_unit)
+        # İşgücü değişim sınırı
+        if t > 0:
+            model += (workers[t] - workers[t-1] <= max_workforce_change)
+            model += (workers[t-1] - workers[t] <= max_workforce_change)
+            model += (workers[t] - workers[t-1] == hired[t] - fired[t])
+        else:
+            model += (hired[t] - fired[t] == workers[t])
+        # İşçi sayısı, iç üretim ihtiyacından fazla olamaz (yuvarlama payı ile)
+        model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
+        model += (workers[t] >= 0)
+
+    # Modeli çöz
+    solver = pulp.PULP_CBC_CMD(msg=0)
+    model.solve(solver)
+
+    # Sonuçların hesaplanması
+    total_internal_labor = 0
+    total_internal_prod = 0
+    total_outsource = 0
+    total_holding = 0
+    total_stockout = 0
+    total_hiring = 0
+    total_firing = 0
+    total_produced = 0
+    total_demand = sum(demand)
+    total_unfilled = 0
+    for t in range(T):
+        internal_cost = int(internal_production[t].varValue) * working_days[t] * daily_hours * hourly_wage / (working_days[t] * daily_hours / labor_per_unit)
+        internal_prod_cost = int(internal_production[t].varValue) * production_cost
+        outsourcing_cost_val = int(outsourced_production[t].varValue) * outsourcing_cost
+        holding = int(inventory[t].varValue) * holding_cost
+        stockout_ = int(stockout[t].varValue) * stockout_cost
+        hiring = int(hired[t].varValue) * hiring_cost
+        firing = int(fired[t].varValue) * firing_cost
+        total_internal_labor += internal_cost
+        total_internal_prod += internal_prod_cost
+        total_outsource += outsourcing_cost_val
+        total_holding += holding
+        total_stockout += stockout_
+        total_hiring += hiring
+        total_firing += firing
+        total_produced += int(internal_production[t].varValue) + int(outsourced_production[t].varValue)
+        total_unfilled += int(stockout[t].varValue)
+    toplam_maliyet = total_internal_labor + total_internal_prod + total_outsource + total_holding + total_stockout + total_hiring + total_firing
+    if total_produced > 0:
+        avg_unit_cost = toplam_maliyet / total_produced
+        avg_labor_unit = total_internal_labor / total_produced
+        avg_prod_unit = (total_internal_prod + total_outsource) / total_produced
+        avg_other_unit = (total_holding + total_stockout + total_hiring + total_firing) / total_produced
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+    return {
+        "Toplam Maliyet": toplam_maliyet,
+        "İşçilik Maliyeti": total_internal_labor,
+        "Üretim Maliyeti": total_internal_prod + total_outsource,
+        "Stok Maliyeti": total_holding,
+        "Stoksuzluk Maliyeti": total_stockout,
+        "İşe Alım Maliyeti": total_hiring,
+        "İşten Çıkarma Maliyeti": total_firing,
+        "Toplam Talep": total_demand,
+        "Toplam Üretim": total_produced,
+        "Karşılanmayan Talep": total_unfilled,
+        "Ortalama Birim Maliyet": avg_unit_cost,
+        "İşçilik Birim Maliyeti": avg_labor_unit,
+        "Üretim Birim Maliyeti": avg_prod_unit,
+        "Diğer Birim Maliyetler": avg_other_unit
+    }
+
 if __name__ == '__main__':
     try:
         import tabulate

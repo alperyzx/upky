@@ -143,3 +143,78 @@ plt.legend()
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
+
+def maliyet_analizi(
+    seasonal_demand=seasonal_demand,
+    holding_cost=holding_cost,
+    stockout_cost=stockout_cost,
+    production_cost=production_cost,
+    max_production=max_production,
+    labor_per_unit=labor_per_unit,
+    hourly_wage=hourly_wage
+):
+    months = len(seasonal_demand)
+    avg_working_days = np.mean([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
+    needed_workers = int(np.ceil(max_production * labor_per_unit / (8 * avg_working_days)))
+    monthly_labor_cost = needed_workers * avg_working_days * 8 * hourly_wage
+    model = pulp.LpProblem('Mevsimsel_Stok_Optimizasyonu', pulp.LpMinimize)
+    y_production = [pulp.LpVariable(f'production_{t}', lowBound=0, cat='Integer') for t in range(months)]
+    y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
+    y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
+    model += pulp.lpSum([
+        production_cost * y_production[t] +
+        holding_cost * y_inventory[t] +
+        stockout_cost * y_stockout[t] +
+        monthly_labor_cost
+        for t in range(months)
+    ])
+    for t in range(months):
+        model += y_production[t] <= max_production
+        if t == 0:
+            prev_inventory = 0
+        else:
+            prev_inventory = y_inventory[t-1]
+        model += prev_inventory + y_production[t] + y_stockout[t] == seasonal_demand[t] + y_inventory[t]
+        model += y_inventory[t] >= 0
+        model += y_stockout[t] >= 0
+    solver = pulp.PULP_CBC_CMD(msg=0)
+    model.solve(solver)
+    total_production = 0
+    total_holding = 0
+    total_stockout = 0
+    total_labor = 0
+    total_demand = sum(seasonal_demand)
+    total_unfilled = 0
+    for t in range(months):
+        prod = int(y_production[t].varValue)
+        inv = int(y_inventory[t].varValue)
+        so = int(y_stockout[t].varValue)
+        total_production += prod
+        total_holding += inv * holding_cost
+        total_stockout += so * stockout_cost
+        total_labor += monthly_labor_cost
+        total_unfilled += so
+    toplam_maliyet = total_production * production_cost + total_holding + total_stockout + total_labor
+    if total_production > 0:
+        avg_unit_cost = toplam_maliyet / total_production
+        avg_labor_unit = total_labor / total_production
+        avg_prod_unit = (total_production * production_cost) / total_production
+        avg_other_unit = (total_holding + total_stockout) / total_production
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+    return {
+        "Toplam Maliyet": toplam_maliyet,
+        "İşçilik Maliyeti": total_labor,
+        "Üretim Maliyeti": total_production * production_cost,
+        "Stok Maliyeti": total_holding,
+        "Stoksuzluk Maliyeti": total_stockout,
+        "İşe Alım Maliyeti": 0,
+        "İşten Çıkarma Maliyeti": 0,
+        "Toplam Talep": total_demand,
+        "Toplam Üretim": total_production,
+        "Karşılanmayan Talep": total_unfilled,
+        "Ortalama Birim Maliyet": avg_unit_cost,
+        "İşçilik Birim Maliyeti": avg_labor_unit,
+        "Üretim Birim Maliyeti": avg_prod_unit,
+        "Diğer Birim Maliyetler": avg_other_unit
+    }

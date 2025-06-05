@@ -177,3 +177,103 @@ plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
 
+def maliyet_analizi(
+    demand=demand,
+    working_days=working_days,
+    holding_cost=holding_cost,
+    stockout_cost=stockout_cost,
+    hiring_cost=hiring_cost,
+    firing_cost=firing_cost,
+    daily_hours=daily_hours,
+    labor_per_unit=labor_per_unit,
+    min_workers=min_workers,
+    max_workers=max_workers,
+    max_workforce_change=max_workforce_change,
+    hourly_wage=hourly_wage,
+    production_cost=production_cost
+):
+    months = len(demand)
+    # DP tabloları
+    cost_table = np.full((months+1, max_workers+1), np.inf)
+    backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
+    cost_table[0, min_workers:max_workers+1] = 0
+    for t in range(months):
+        for prev_w in range(min_workers, max_workers+1):
+            if cost_table[t, prev_w] < np.inf:
+                for w in range(max(min_workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
+                    capacity = w * working_days[t] * daily_hours / labor_per_unit
+                    unmet = max(0, demand[t] - capacity)
+                    inventory = max(0, capacity - demand[t])
+                    hire = max(0, w - prev_w) * hiring_cost
+                    fire = max(0, prev_w - w) * firing_cost
+                    holding = inventory * holding_cost
+                    stockout = unmet * stockout_cost
+                    labor = w * working_days[t] * daily_hours * hourly_wage
+                    actual_prod = min(capacity, demand[t])
+                    prod_cost = actual_prod * production_cost
+                    total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor + prod_cost
+                    if total_cost < cost_table[t+1, w]:
+                        cost_table[t+1, w] = total_cost
+                        backtrack[t+1, w] = prev_w
+    # En düşük maliyetli yolun sonundaki işçi sayısı
+    min_cost = np.min(cost_table[months, min_workers:max_workers+1])
+    last_worker = np.argmin(cost_table[months, min_workers:max_workers+1]) + min_workers
+    # Geriye doğru izleme
+    workers = [0]*months
+    w = last_worker
+    for t in range(months, 0, -1):
+        workers[t-1] = w
+        w = backtrack[t, w]
+    # Sonuçların hesaplanması
+    total_labor = 0
+    total_production = 0
+    total_holding = 0
+    total_stockout = 0
+    total_hiring = 0
+    total_firing = 0
+    total_demand = sum(demand)
+    total_produced = 0
+    total_unfilled = 0
+    for t in range(months):
+        capacity = workers[t] * working_days[t] * daily_hours / labor_per_unit
+        actual_prod = min(capacity, demand[t])
+        unmet = max(0, demand[t] - capacity)
+        inventory = max(0, capacity - demand[t])
+        hire = max(0, workers[t] - (workers[t-1] if t > 0 else min_workers)) * hiring_cost
+        fire = max(0, (workers[t-1] if t > 0 else min_workers) - workers[t]) * firing_cost
+        holding = inventory * holding_cost
+        stockout = unmet * stockout_cost
+        labor = workers[t] * working_days[t] * daily_hours * hourly_wage
+        prod_cost = actual_prod * production_cost
+        total_labor += labor
+        total_production += prod_cost
+        total_holding += holding
+        total_stockout += stockout
+        total_hiring += hire
+        total_firing += fire
+        total_produced += actual_prod
+        total_unfilled += unmet
+    toplam_maliyet = total_labor + total_production + total_holding + total_stockout + total_hiring + total_firing
+    if total_produced > 0:
+        avg_unit_cost = toplam_maliyet / total_produced
+        avg_labor_unit = total_labor / total_produced
+        avg_prod_unit = total_production / total_produced
+        avg_other_unit = (total_holding + total_stockout + total_hiring + total_firing) / total_produced
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+    return {
+        "Toplam Maliyet": toplam_maliyet,
+        "İşçilik Maliyeti": total_labor,
+        "Üretim Maliyeti": total_production,
+        "Stok Maliyeti": total_holding,
+        "Stoksuzluk Maliyeti": total_stockout,
+        "İşe Alım Maliyeti": total_hiring,
+        "İşten Çıkarma Maliyeti": total_firing,
+        "Toplam Talep": total_demand,
+        "Toplam Üretim": total_produced,
+        "Karşılanmayan Talep": total_unfilled,
+        "Ortalama Birim Maliyet": avg_unit_cost,
+        "İşçilik Birim Maliyeti": avg_labor_unit,
+        "Üretim Birim Maliyeti": avg_prod_unit,
+        "Diğer Birim Maliyetler": avg_other_unit
+    }
