@@ -10,8 +10,8 @@ holding_cost = 5
 stockout_cost = 80  # Karşılanmayan talep maliyetini yükseltiyoruz ki tedarikçiler kullanılsın
 
 # Tedarikçi özellikleri
-cost_supplier_A = 25  # Düşük maliyetli tedarikçi (TL/birim)
-cost_supplier_B = 35  # Yüksek maliyetli tedarikçi (TL/birim)
+cost_supplier_A = 50  # Düşük maliyetli tedarikçi (TL/birim)
+cost_supplier_B = 80  # Yüksek maliyetli tedarikçi (TL/birim)
 capacity_supplier_A = 300  # Tedarikçi A'nın sınırlı kapasitesi
 # Tedarikçi B'nin sınırsız kapasitesi (pratikte çok büyük bir değer)
 capacity_supplier_B = 99999
