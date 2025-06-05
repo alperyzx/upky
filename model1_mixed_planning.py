@@ -2,20 +2,21 @@ import pulp
 import numpy as np
 
 # Örnek parametreler
-demand = [5000, 9000, 7000, 12000, 5000, 5000, 4000, 8000, 12000, 10000, 12000, 15000]
+demand = [500, 290, 5000, 250, 700, 500, 400, 800, 1200, 1000, 1200, 500]
 working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 holding_cost = 5
 stockout_cost = 20
 outsourcing_cost = 15
-labor_per_unit = 0.5
-hiring_cost = 1000
-firing_cost = 800  # işçi çıkarma maliyeti
+labor_per_unit = 4
+hiring_cost = 1800
+firing_cost = 1500  # işçi çıkarma maliyeti
 daily_hours = 8
 min_internal_ratio = 0.70
 max_workforce_change = 12  # Daha hızlı işçi azaltımı
 max_outsourcing_ratio = 0.30
-outsourcing_capacity = 6000
+outsourcing_capacity = 500
 hourly_wage = 10  # İşçi saatlik ücreti (TL)
+production_cost = 30  # birim üretim maliyeti (TL)
 
 T = len(demand)
 
@@ -43,7 +44,8 @@ cost = (
         outsourcing_cost * outsourced_production[t] +
         hiring_cost * hired[t] +
         firing_cost * fired[t] +
-        workers[t] * working_days[t] * daily_hours * hourly_wage  # işçi ücretleri
+        workers[t] * working_days[t] * daily_hours * hourly_wage +  # işçi ücretleri
+        production_cost * internal_production[t]  # iç üretim birim üretim maliyeti
         for t in range(T)
     ])
 )
@@ -85,9 +87,28 @@ decision_model.solve(solver)
 def print_results():
     from tabulate import tabulate
     table = []
+    total_internal_labor = 0
+    total_internal_prod = 0
+    total_outsource = 0
+    total_holding = 0
+    total_stockout = 0
+    total_hiring = 0
+    total_firing = 0
     for t in range(T):
         internal_cost = int(internal_production[t].varValue) * working_days[t] * daily_hours * hourly_wage / (working_days[t] * daily_hours / labor_per_unit)
+        internal_prod_cost = int(internal_production[t].varValue) * production_cost
         outsourcing_cost_val = int(outsourced_production[t].varValue) * outsourcing_cost
+        holding = int(inventory[t].varValue) * holding_cost
+        stockout_ = int(stockout[t].varValue) * stockout_cost
+        hiring = int(hired[t].varValue) * hiring_cost
+        firing = int(fired[t].varValue) * firing_cost
+        total_internal_labor += internal_cost
+        total_internal_prod += internal_prod_cost
+        total_outsource += outsourcing_cost_val
+        total_holding += holding
+        total_stockout += stockout_
+        total_hiring += hiring
+        total_firing += firing
         table.append([
             t+1,
             int(workers[t].varValue),
@@ -98,18 +119,28 @@ def print_results():
             int(fired[t].varValue),
             int(stockout[t].varValue),
             internal_cost,
+            internal_prod_cost,
             outsourcing_cost_val
         ])
     headers = [
         'Ay', 'İşçi', 'İç Üretim', 'Fason', 'Stok', 'Alım', 'Çıkış', 'Karşılanmayan Talep',
-        'İç Üretim Maliyeti', 'Fason Üretim Maliyeti'
+        'İç Üretim İşçilik Maliyeti', 'İç Üretim Birim Maliyeti', 'Fason Üretim Maliyeti'
     ]
     # Format cost columns
     for row in table:
         row[8] = f'{int(row[8]):,} TL'
         row[9] = f'{int(row[9]):,} TL'
+        row[10] = f'{int(row[10]):,} TL'
     print(tabulate(table, headers, tablefmt='fancy_grid', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
+    print(f"\nAyrıntılı Toplam Maliyetler:")
+    print(f"- İç Üretim İşçilik Maliyeti Toplamı: {total_internal_labor:,.2f} TL")
+    print(f"- İç Üretim Birim Maliyeti Toplamı: {total_internal_prod:,.2f} TL")
+    print(f"- Fason Üretim Maliyeti Toplamı: {total_outsource:,.2f} TL")
+    print(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
+    print(f"- Karşılanmayan Talep Maliyeti Toplamı: {total_stockout:,.2f} TL")
+    print(f"- İşe Alım Maliyeti Toplamı: {total_hiring:,.2f} TL")
+    print(f"- İşten Çıkarma Maliyeti Toplamı: {total_firing:,.2f} TL")
 
     # Grafiksel çıktı
     try:
