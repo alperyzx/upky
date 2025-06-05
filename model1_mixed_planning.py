@@ -11,7 +11,6 @@ labor_per_unit = 0.5
 hiring_cost = 1000
 firing_cost = 800  # işçi çıkarma maliyeti
 daily_hours = 8
-overtime_limit = 20
 min_internal_ratio = 0.70
 max_workforce_change = 8  # Daha hızlı işçi azaltımı
 max_outsourcing_ratio = 0.30

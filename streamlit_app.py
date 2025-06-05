@@ -13,12 +13,13 @@ model = st.sidebar.selectbox("Model Seçiniz", [
     "Toplu Üretim ve Stoklama (Model 3)",
     "Dinamik Programlama (Model 4)",
     "Dış Kaynak Karşılaştırma (Model 5)",
-    "Mevsimsellik ve Dalga (Model 6)"
+    "Mevsimsellik ve Dalga (Model 6)",
+    "Karşılaştırma Tablosu"
 ])
 
 st.sidebar.markdown("---")
 
-def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost=20):
+def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost=20, min_workers=10):
     T = len(demand)
     decision_model = pulp.LpProblem('Karma_Planlama_Modeli', pulp.LpMinimize)
     workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, cat='Integer') for t in range(T)]
@@ -55,6 +56,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
             decision_model += (workers[t] - workers[t-1] == hired[t] - fired[t])
         else:
             decision_model += (hired[t] - fired[t] == workers[t])
+            decision_model += (workers[t] >= min_workers)
         decision_model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
         decision_model += (workers[t] >= 0)
     solver = pulp.PULP_CBC_CMD(msg=0)
@@ -136,10 +138,11 @@ if model == "Karma Planlama (Model 1)":
     max_workforce_change = st.number_input("İşgücü Değişim Sınırı (kişi)", 1, 100, 8)
     max_outsourcing_ratio = st.slider("En Fazla Fason Oranı (%)", 0, 100, 30) / 100
     stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 100, 20)
+    min_workers = st.number_input("Başlangıç Minimum İşçi Sayısı", 1, 100, 10)
     if st.button("Modeli Çalıştır"):
         df, toplam_maliyet = model1_run(
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
-            outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost
+            outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, min_workers
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True)
@@ -477,3 +480,86 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         plt.tight_layout()
         st.pyplot(fig)
 
+if model == "Karşılaştırma Tablosu":
+    st.header("Tüm Modellerin Karşılaştırması")
+    # Ortak parametreler için kullanıcıdan giriş alın (sadece 6 parametre)
+    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", "5000, 3000, 2000, 2000, 5000, 2000, 4000, 1800, 1200, 1000, 1200, 1500")
+    demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
+    working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", "22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21")
+    working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
+    holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="cmp_holding")
+    outsourcing_cost = st.number_input("Fason Maliyeti (TL)", 1, 100, 15, key="cmp_outsourcing")
+    labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, 0.5, key="cmp_labor")
+    stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 100, 20, key="cmp_stockout")
+    min_workers = 25  # Diğer parametreler modellerdeki gibi sabit
+    hiring_cost = 1000
+    firing_cost = 800
+    daily_hours = 8
+    outsourcing_capacity = 6000
+    min_internal_ratio = 0.70
+    max_workforce_change = 8
+    max_outsourcing_ratio = 0.30
+    if st.button("Karşılaştırmayı Çalıştır"):
+        # Model 1
+        df1, cost1 = model1_run(
+            demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
+            outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, min_workers
+        )
+        stockout_rate1 = df1["Karşılanmayan Talep"].sum() / sum(demand)
+        # Model 2
+        df2, cost2 = model2_run(
+            np.array(demand), np.array(working_days), holding_cost, labor_per_unit, 25, daily_hours, 1.5, 20, stockout_cost, 10
+        )
+        stockout_rate2 = df2["Stoksuzluk Maliyeti"].sum() / sum(demand)
+        # Model 3
+        fixed_workers = 25
+        production_rate = 2
+        monthly_capacity = fixed_workers * daily_hours * np.array(working_days) * production_rate
+        production = monthly_capacity
+        inventory = np.zeros(len(demand))
+        prev_inventory = 0
+        cost3 = 0
+        stockout3 = 0
+        for t in range(len(demand)):
+            inventory[t] = prev_inventory + production[t] - demand[t]
+            holding = max(inventory[t], 0) * holding_cost
+            stockout = abs(min(inventory[t], 0)) * stockout_cost
+            cost3 += holding + stockout
+            stockout3 += abs(min(inventory[t], 0))
+            prev_inventory = inventory[t]
+        stockout_rate3 = stockout3 / sum(demand)
+        # Model 4 (basit versiyon)
+        workers_seq4 = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+        production_seq4 = [min(10 * daily_hours / labor_per_unit, d) for d in demand]
+        inventory_seq4 = [production_seq4[t] - demand[t] for t in range(len(demand))]
+        cost4 = sum(holding_cost * max(0, inv) + stockout_cost * abs(min(0, inv)) for inv in inventory_seq4)
+        stockout_rate4 = sum(abs(min(0, inv)) for inv in inventory_seq4) / sum(demand)
+        # Model 5 (basit versiyon, iç kaynak kullanımı maksimum)
+        df5, cost5 = model1_run(
+            demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
+            outsourcing_capacity, 1.0, max_workforce_change, 0.0, stockout_cost, min_workers
+        )
+        stockout_rate5 = df5["Karşılanmayan Talep"].sum() / sum(demand)
+        # Esneklik seviyeleri örnek olarak sabitlenmiştir
+        summary = pd.DataFrame([
+            ["Model 1", cost1, stockout_rate1, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"],
+            ["Model 2", cost2, stockout_rate2, "Orta", "Fazla mesai ile esneklik"],
+            ["Model 3", cost3, stockout_rate3, "Düşük", "Sabit işgücü, toplu üretim"],
+            ["Model 4", cost4, stockout_rate4, "Düşük", "Sabit işgücü, belirli üretim"],
+            ["Model 5", cost5, stockout_rate5, "Yok", "Tam iç kaynak kullanımı"],
+            # Diğer modeller eklenebilir
+        ], columns=["Model", "Toplam Maliyet", "Stoksuzluk Oranı", "İşgücü Esnekliği", "Uygun Senaryo"])
+        st.dataframe(summary, use_container_width=True)
+        st.subheader("Karşılaştırma Grafiği")
+        fig, ax1 = plt.subplots(figsize=(8,5))
+        ax1.bar(summary["Model"], summary["Toplam Maliyet"], color='skyblue', label='Toplam Maliyet')
+        ax2 = ax1.twinx()
+        ax2.plot(summary["Model"], summary["Stoksuzluk Oranı"], marker='o', color='red', label='Stoksuzluk Oranı')
+        ax1.set_ylabel('Toplam Maliyet (TL)')
+        ax2.set_ylabel('Stoksuzluk Oranı')
+        ax1.set_xlabel('Model')
+        ax1.legend(loc='upper left')
+        ax2.legend(loc='upper right')
+        plt.title('Modellerin Toplam Maliyet ve Stoksuzluk Oranı Karşılaştırması')
+        plt.tight_layout()
+        st.pyplot(fig)

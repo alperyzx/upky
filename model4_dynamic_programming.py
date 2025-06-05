@@ -33,14 +33,14 @@ for t in range(months):
         if cost_table[t, prev_w] < np.inf:
             for w in range(max(min_workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
                 capacity = prod_capacity(w, t)
-                # Üretim kapasitesi işçiyle sınırlı, ancak üretim talebi kadar olmalı
-                if capacity < demand[t]:
-                    continue
-                inventory = capacity - demand[t]
+                # Karşılanamayan talep varsa ceza maliyeti uygula
+                unmet = max(0, demand[t] - capacity)
+                inventory = max(0, capacity - demand[t])
                 hire = max(0, w - prev_w) * hiring_cost
                 fire = max(0, prev_w - w) * firing_cost
                 holding = inventory * holding_cost
-                total_cost = cost_table[t, prev_w] + hire + fire + holding
+                stockout = unmet * stockout_cost
+                total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout
                 if total_cost < cost_table[t+1, w]:
                     cost_table[t+1, w] = total_cost
                     backtrack[t+1, w] = prev_w
@@ -60,18 +60,21 @@ workers_seq = workers_seq[::-1]
 # Üretim ve stok hesaplama
 production_seq = []
 inventory_seq = []
+stockout_seq = []
 for t, w in enumerate(workers_seq):
     cap = prod_capacity(w, t)
-    production_seq.append(min(cap, demand[t]))
-    inventory_seq.append(cap - demand[t])
+    prod = min(cap, demand[t])
+    production_seq.append(prod)
+    inventory_seq.append(max(0, cap - demand[t]))
+    stockout_seq.append(max(0, demand[t] - cap))
 
 # Sonuç tablosu
 results = []
 for t in range(months):
     results.append([
-        t+1, workers_seq[t], production_seq[t], inventory_seq[t]
+        t+1, workers_seq[t], production_seq[t], inventory_seq[t], stockout_seq[t]
     ])
-df = pd.DataFrame(results, columns=['Ay', 'İşçi', 'Üretim', 'Stok'])
+df = pd.DataFrame(results, columns=['Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep'])
 print(df.to_string(index=False))
 print(f'\nToplam Maliyet: {min_cost:,.2f} TL')
 
@@ -90,6 +93,7 @@ ax1.tick_params(axis='y', labelcolor='skyblue')
 ax2 = ax1.twinx()
 ax2.plot(months_list, production_seq, marker='s', label='Üretim', color='green')
 ax2.plot(months_list, inventory_seq, marker='d', label='Stok', color='red')
+ax2.plot(months_list, stockout_seq, marker='x', label='Karşılanmayan Talep', color='black')
 ax2.set_ylabel('Adet', color='gray')
 ax2.tick_params(axis='y', labelcolor='gray')
 lines1, labels1 = ax1.get_legend_handles_labels()
@@ -99,4 +103,3 @@ plt.title('Dinamik Programlama Tabanlı Model Sonuçları')
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
-

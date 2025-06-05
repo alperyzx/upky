@@ -65,7 +65,18 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 ## Kaynaklar
 - Detaylı model açıklamaları ve parametreler için `upky Blueprint.md` dosyasına bakınız.
 
+## Karşılaştırma Tablosu (Streamlit)
+
+- Karşılaştırma tablosunda kullanıcıdan **yalnızca 6 parametre** alınır:
+  - `demand` (Aylık talep)
+  - `working_days` (Aylık çalışma günü)
+  - `holding_cost` (Stok maliyeti)
+  - `outsourcing_cost` (Fason maliyeti)
+  - `labor_per_unit` (Birim işgücü)
+  - `stockout_cost` (Karşılanmayan talep maliyeti)
+- Diğer tüm parametreler modellerde sabit olarak tanımlıdır.
+- Karşılaştırma tablosu ve grafikler, bu 6 parametreye göre otomatik güncellenir.
+
 ---
 
 Herhangi bir hata veya eksiklikte, terminaldeki hata mesajını kontrol ederek eksik paketi yükleyebilir veya parametreleri gözden geçirebilirsiniz.
-

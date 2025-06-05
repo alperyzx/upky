@@ -1,17 +1,14 @@
 # Üretim Planlama Modelleri için Python Tabanlı Analiz Blueprint'i
 
-## Ortak Parametreler
+## Ortak Parametreler (Karşılaştırma Tablosu için Kullanıcı Girişi)
 - `demand`: Aylık talep tahminleri `[1000, 1200, 1500, ...]` (adet).
 - `working_days`: Aylık çalışma günleri `[22, 20, 23, ...]` (gün).
 - `holding_cost`: 5 TL/ay (birim stok tutma maliyeti).
-- `stockout_cost`: 20 TL/adet (birim stokta bulundurmama maliyeti).
 - `outsourcing_cost`: 15 TL/adet (fason imalat maliyeti).
 - `labor_per_unit`: 0.5 saat/adet (üretim başına işgücü).
-- `hiring_cost`: 1000 TL/kişi (işçi alım maliyeti).
-- `firing_cost`: 800 TL/kişi (işçi çıkarma maliyeti).
-- `daily_hours`: 8 saat/gün (günlük çalışma süresi).
-- `overtime_limit`: 20 saat/ay (fazla mesai limiti).
-- `outsourcing_capacity`: 500 adet/ay (fason kapasite).
+- `stockout_cost`: 20 TL/adet (birim stokta bulundurmama maliyeti).
+
+> Diğer parametreler modellerde sabit olarak tanımlıdır ve karşılaştırma tablosunda kullanıcı tarafından değiştirilemez.
 
 ## Model 1: Karma Planlama Modeli
 ### Değişkenler
@@ -19,11 +16,13 @@
 - `internal_production[t]`: t ayındaki iç üretim.
 - `outsourced_production[t]`: t ayındaki fason üretim.
 - `inventory[t]`: t ayı sonundaki stok.
+- `stockout[t]`: t ayındaki karşılanmayan talep (stokta bulundurmama miktarı).
 
 ### Sabit Parametreler
 - `min_internal_ratio`: 0.70.
 - `max_workforce_change`: ±5 kişi.
 - `max_outsourcing_ratio`: 0.30.
+- `min_workers`: Başlangıç minimum işçi sayısı.
 
 ### Python Yaklaşımı
 - Kütüphane: `PuLP`.
@@ -116,4 +115,3 @@
 ## Karar Destek Aracı
 - Kütüphaneler: `Pandas`, `NumPy`, `PuLP`, `Matplotlib`.
 - Özellikler: Parametre girişi, model çalıştırma, görselleştirme.
-
