@@ -83,12 +83,12 @@
 - `cost_supplier_A`: 15 TL/adet.
 - `cost_supplier_B`: 18 TL/adet.
 - `capacity_supplier_A`: 500 adet.
+- `capacity_supplier_B`: 500 adet.
 - `stockout_cost`: 20 TL/adet.
 
 ### Python Yaklaşımı
-- Kütüphane: `PuLP`.
-- Amaç: Maliyet minimizasyonu (stok, üretim, tedarikçi ve stoksuzluk maliyeti dahil).
-- Kısıtlar: Tedarikçi kapasitesi, stok ve stoksuzluk denklemi.
+- Kütüphane: `Pandas`, `PuLP`.
+- Modelleme: Lineer programlama ile tedarikçi ve iç üretim optimizasyonu.
 
 ## Model 6: Mevsimsellik ve Talep Dalgaları Modeli
 ### Değişkenler

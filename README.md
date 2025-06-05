@@ -43,6 +43,7 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
    ```
 2. Streamlit uygulamasını başlatın:
    ```bash
+   source .venv/bin/activate
    streamlit run streamlit_app.py
    ```
 3. Tarayıcıda açılan arayüzden istediğiniz modeli seçip parametreleri girerek çalıştırabilirsiniz.

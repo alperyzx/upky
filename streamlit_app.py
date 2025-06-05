@@ -534,7 +534,7 @@ if model == "Karşılaştırma Tablosu":
         )
         stockout_rate2 = df2["Stoksuzluk Maliyeti"].sum() / sum(demand)
         # Model 3
-        fixed_workers = 25
+        fixed_workers = 12
         production_rate = 2
         monthly_capacity = fixed_workers * daily_hours * np.array(working_days) * production_rate
         production = monthly_capacity
@@ -571,19 +571,22 @@ if model == "Karşılaştırma Tablosu":
         stockout_rate6 = stockout6 / sum(demand)
         # Esneklik seviyeleri örnek olarak sabitlenmiştir
         summary = pd.DataFrame([
-            ["Model 1", cost1, stockout_rate1, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"],
-            ["Model 2", cost2, stockout_rate2, "Orta", "Fazla mesai ile esneklik"],
-            ["Model 3", cost3, stockout_rate3, "Düşük", "Sabit işgücü, toplu üretim"],
-            ["Model 4", cost4, stockout_rate4, "Düşük", "Sabit işgücü, belirli üretim"],
-            ["Model 5", cost5, stockout_rate5, "Yok", "Tam iç kaynak kullanımı"],
-            ["Model 6", cost6, stockout_rate6, "Orta", "Mevsimsellik ve stok optimizasyonu"],
-        ], columns=["Model", "Toplam Maliyet", "Stoksuzluk Oranı", "İşgücü Esnekliği", "Uygun Senaryo"])
+            [f"{cost1:,.0f}₺", stockout_rate1, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"],
+            [f"{cost2:,.0f}₺", stockout_rate2, "Orta", "Fazla mesai ile esneklik"],
+            [f"{cost3:,.0f}₺", stockout_rate3, "Düşük", "Sabit işgücü, toplu üretim"],
+            [f"{cost4:,.0f}₺", stockout_rate4, "Düşük", "Sabit işgücü, belirli üretim"],
+            [f"{cost5:,.0f}₺", stockout_rate5, "Yok", "Tam iç kaynak kullanımı"],
+            [f"{cost6:,.0f}₺", stockout_rate6, "Orta", "Mevsimsellik ve stok optimizasyonu"],
+        ], columns=["Toplam Maliyet", "Stoksuzluk Oranı", "İşgücü Esnekliği", "Uygun Senaryo"],
+            index=["Model 1", "Model 2", "Model 3", "Model 4", "Model 5", "Model 6"])
         st.dataframe(summary, use_container_width=True)
         st.subheader("Karşılaştırma Grafiği")
+        # Grafik için sayısal maliyet değerlerini ayrı bir liste olarak al
+        cost_values = [cost1, cost2, cost3, cost4, cost5, cost6]
         fig, ax1 = plt.subplots(figsize=(8,5))
-        ax1.bar(summary["Model"], summary["Toplam Maliyet"], color='skyblue', label='Toplam Maliyet')
+        ax1.bar(summary.index, cost_values, color='skyblue', label='Toplam Maliyet')
         ax2 = ax1.twinx()
-        ax2.plot(summary["Model"], summary["Stoksuzluk Oranı"], marker='o', color='red', label='Stoksuzluk Oranı')
+        ax2.plot(summary.index, summary["Stoksuzluk Oranı"], marker='o', color='red', label='Stoksuzluk Oranı')
         ax1.set_ylabel('Toplam Maliyet (TL)')
         ax2.set_ylabel('Stoksuzluk Oranı')
         ax1.set_xlabel('Model')
