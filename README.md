@@ -78,6 +78,21 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 - Diğer tüm parametreler modellerde sabit olarak tanımlıdır.
 - Karşılaştırma tablosu ve grafikler, bu 6 parametreye göre otomatik güncellenir.
 
+## Hangi Model Hangi Senaryoda Kullanılır?
+
+- **Model 1: Karma Planlama**
+  - Talep ve işgücü dalgalanmalarının yüksek olduğu, hem iç üretim hem fason esnekliğinin gerektiği durumlar için uygundur.
+- **Model 2: Fazla Mesaili Üretim**
+  - İşgücü sabit, talep dalgalı ve kısa vadeli artışlar fazla mesaiyle karşılanabiliyorsa tercih edilir.
+- **Model 3: Toplu Üretim ve Stoklama**
+  - Talebin öngörülebilir ve üretim kapasitesinin sabit olduğu, stok tutmanın sorun olmadığı durumlar için uygundur.
+- **Model 4: Dinamik Programlama**
+  - İşgücü planlamasının ve işçi değişim maliyetlerinin önemli olduğu, uzun vadeli ve değişken talep yapısında kullanılır.
+- **Model 5: Dış Kaynak Kullanımı Karşılaştırması**
+  - Farklı tedarikçi seçeneklerinin ve kapasite kısıtlarının olduğu, dış kaynak ve iç üretim arasında maliyet karşılaştırması yapılacaksa uygundur.
+- **Model 6: Mevsimsellik ve Talep Dalgaları**
+  - Talebin mevsimsel dalgalandığı, stok ve üretim optimizasyonunun önemli olduğu sektörlerde kullanılır.
+
 ---
 
 Herhangi bir hata veya eksiklikte, terminaldeki hata mesajını kontrol ederek eksik paketi yükleyebilir veya parametreleri gözden geçirebilirsiniz.
