@@ -3,13 +3,13 @@ import pandas as pd
 
 # Parametreler
 months = 12
-demand = np.array([3000, 900, 3000, 1200, 3200, 2000, 3000, 1800, 3200, 1000, 2900, 1700])
+demand = np.array([3000, 9000, 3000, 1200, 3200, 2000, 3000, 1800, 3200, 1000, 2900, 1700])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
 labor_per_unit = 0.5
 daily_hours = 8
-fixed_workers = 8
+fixed_workers = 12
 overtime_wage_multiplier = 1.5
 max_overtime_per_worker = 20  # saat/ay
 normal_hourly_wage = 10  # TL/saat

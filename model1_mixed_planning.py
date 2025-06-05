@@ -2,7 +2,7 @@ import pulp
 import numpy as np
 
 # Örnek parametreler
-demand = [5000, 9000, 27000, 12000, 15000, 25000, 40000, 18000, 12000, 10000, 12000, 15000]
+demand = [5000, 9000, 7000, 12000, 5000, 5000, 4000, 8000, 12000, 10000, 12000, 15000]
 working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 holding_cost = 5
 stockout_cost = 20
@@ -12,9 +12,10 @@ hiring_cost = 1000
 firing_cost = 800  # işçi çıkarma maliyeti
 daily_hours = 8
 min_internal_ratio = 0.70
-max_workforce_change = 8  # Daha hızlı işçi azaltımı
+max_workforce_change = 12  # Daha hızlı işçi azaltımı
 max_outsourcing_ratio = 0.30
 outsourcing_capacity = 6000
+hourly_wage = 10  # İşçi saatlik ücreti (TL)
 
 T = len(demand)
 
@@ -34,14 +35,15 @@ hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range
 fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
 stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Karşılanmayan talep
 
-# Amaç fonksiyonu: Toplam maliyet
+# Amaç fonksiyonu: işçi ücretleri eklendi
 cost = (
     pulp.lpSum([
         holding_cost * inventory[t] +
+        stockout_cost * stockout[t] +
         outsourcing_cost * outsourced_production[t] +
         hiring_cost * hired[t] +
         firing_cost * fired[t] +
-        stockout_cost * stockout[t]  # Stokta bulundurmama maliyeti eklendi
+        workers[t] * working_days[t] * daily_hours * hourly_wage  # işçi ücretleri
         for t in range(T)
     ])
 )
@@ -84,6 +86,9 @@ def print_results():
     from tabulate import tabulate
     table = []
     for t in range(T):
+        internal_cost = int(internal_production[t].varValue) * working_days[t] * daily_hours * hourly_wage / (working_days[t] * daily_hours / labor_per_unit)
+        # Alternatif olarak, işçilik maliyeti zaten toplam maliyete ekleniyor, burada birim başı işçilik maliyeti olarak gösterilebilir.
+        outsourcing_cost_val = int(outsourced_production[t].varValue) * outsourcing_cost
         table.append([
             t+1,
             int(workers[t].varValue),
@@ -92,10 +97,13 @@ def print_results():
             int(inventory[t].varValue),
             int(hired[t].varValue),
             int(fired[t].varValue),
-            int(stockout[t].varValue)  # Karşılanmayan talep
+            int(stockout[t].varValue),
+            int(internal_production[t].varValue) * hourly_wage * labor_per_unit,  # İç üretim maliyeti
+            outsourcing_cost_val  # Fason üretim maliyeti
         ])
     headers = [
-        'Ay', 'İşçi', 'İç Üretim', 'Fason', 'Stok', 'Alım', 'Çıkış', 'Karşılanmayan Talep'
+        'Ay', 'İşçi', 'İç Üretim', 'Fason', 'Stok', 'Alım', 'Çıkış', 'Karşılanmayan Talep',
+        'İç Üretim Maliyeti', 'Fason Üretim Maliyeti'
     ]
     print(tabulate(table, headers, tablefmt='github', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')

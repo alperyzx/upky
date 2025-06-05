@@ -9,6 +9,8 @@ holding_cost = 5
 stockout_cost = 20
 production_cost = 10
 max_production = 4000  # Maksimum aylık üretim kapasitesi
+labor_unit_cost = 3    # Birim işçilik maliyeti (örnek değer)
+labor_cost = labor_unit_cost * max_production  # Aylık sabit işçilik maliyeti
 
 # Doğrusal programlama modeli
 model = pulp.LpProblem('Mevsimsel_Stok_Optimizasyonu', pulp.LpMinimize)
@@ -22,7 +24,8 @@ y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t 
 model += pulp.lpSum([
     production_cost * y_production[t] +
     holding_cost * y_inventory[t] +
-    stockout_cost * y_stockout[t]
+    stockout_cost * y_stockout[t] +
+    labor_cost  # Her ay sabit işçilik maliyeti
     for t in range(months)
 ])
 
@@ -53,11 +56,12 @@ for t in range(months):
         int(y_stockout[t].varValue),
         int(y_inventory[t].varValue) * holding_cost,
         int(y_stockout[t].varValue) * stockout_cost,
-        int(y_production[t].varValue) * production_cost
+        int(y_production[t].varValue) * production_cost,
+        labor_cost
     ])
 
 df = pd.DataFrame(results, columns=[
-    'Ay', 'Talep', 'Üretim', 'Stok', 'Stoksuzluk', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti'
+    'Ay', 'Talep', 'Üretim', 'Stok', 'Stoksuzluk', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti', 'İşçilik Maliyeti'
 ])
 print(df.to_string(index=False))
 print(f'\nToplam Maliyet: {pulp.value(model.objective):,.2f} TL')
@@ -81,3 +85,4 @@ plt.legend()
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
+

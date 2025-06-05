@@ -3,7 +3,7 @@ import pandas as pd
 
 # Parametreler
 # Çok yüksek talep için örnek:
-demand = np.array([1500, 1200, 3600, 4500, 7200, 9000, 7200, 6400, 7200, 9000, 9600, 12000])
+demand = np.array([1500, 5500, 2500, 7500, 5500, 6500, 2500, 1500,1800, 2700, 1500, 2500])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
@@ -11,10 +11,11 @@ hiring_cost = 1000
 firing_cost = 800
 daily_hours = 8
 labor_per_unit = 0.5
-max_workers = 40  # Daha yüksek üst sınır
-min_workers = 8
-max_workforce_change = 8  # Daha hızlı işçi artışı
+max_workers = 100  # Daha yüksek üst sınır
+min_workers = 12
+max_workforce_change = 12  # Daha hızlı işçi artışı
 months = len(demand)
+hourly_wage = 10
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -44,7 +45,8 @@ for t in range(months):
                 fire = max(0, prev_w - w) * firing_cost
                 holding = inventory * holding_cost
                 stockout = unmet * stockout_cost
-                total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout
+                labor = w * working_days[t] * daily_hours * hourly_wage
+                total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor
                 if total_cost < cost_table[t+1, w]:
                     cost_table[t+1, w] = total_cost
                     backtrack[t+1, w] = prev_w
@@ -75,10 +77,11 @@ for t, w in enumerate(workers_seq):
 # Sonuç tablosu
 results = []
 for t in range(months):
+    labor_cost = workers_seq[t] * working_days[t] * daily_hours * hourly_wage
     results.append([
-        t+1, workers_seq[t], production_seq[t], inventory_seq[t], stockout_seq[t]
+        t+1, workers_seq[t], production_seq[t], inventory_seq[t], stockout_seq[t], labor_cost
     ])
-df = pd.DataFrame(results, columns=['Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep'])
+df = pd.DataFrame(results, columns=['Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep', 'İşçilik Maliyeti'])
 print(df.to_string(index=False))
 print(f'\nToplam Maliyet: {min_cost:,.2f} TL')
 

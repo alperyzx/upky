@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-demand = np.array([3000, 3500, 2500, 3500, 3200, 4500, 3500, 2800, 3500, 3000, 3900, 2700])
+demand = np.array([15000, 15000, 25000, 15000, 15000, 15000, 25000, 15000,18000, 27000, 15000, 25000])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
-fixed_workers = 10
+fixed_workers = 60
+worker_monthly_cost = 1680  # İşçi başı aylık maliyet (ör: asgari ücret)
 production_rate = 2  # adet/saat
 daily_hours = 8
 months = len(demand)
@@ -30,14 +31,15 @@ for t in range(months):
     inventory[t] = prev_inventory + production[t] - demand[t]
     holding = max(inventory[t], 0) * holding_cost
     stockout = abs(min(inventory[t], 0)) * stockout_cost
-    cost += holding + stockout
+    labor = fixed_workers * worker_monthly_cost
+    cost += holding + stockout + labor
     results.append([
-        t+1, production[t], inventory[t], holding, stockout
+        t+1, production[t], inventory[t], holding, stockout, labor
     ])
     prev_inventory = inventory[t]
 
 df = pd.DataFrame(results, columns=[
-    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti'
+    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'İşçilik Maliyeti'
 ])
 print(df.to_string(index=False))
 print(f'\nToplam Maliyet: {cost:,.2f} TL')

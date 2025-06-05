@@ -1,7 +1,3 @@
-# Check that demand and working_days have the same length
-if len(demand) != len(working_days):
-    raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
-
 import pulp
 import numpy as np
 import pandas as pd
@@ -20,6 +16,10 @@ capacity_supplier_A = 1000 # Tedarikçi A kapasitesi
 capacity_supplier_B = 1000
 daily_hours = 8
 max_internal_workers = 12
+
+# Check that demand and working_days have the same length
+if len(demand) != len(working_days):
+    raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
 
 # Dinamik iç üretim kapasitesi hesaplama
 max_internal_production = int(max_internal_workers * np.mean(working_days) * daily_hours / labor_per_unit)
@@ -126,3 +126,4 @@ if __name__ == '__main__':
         print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
         exit(1)
     print_results()
+
