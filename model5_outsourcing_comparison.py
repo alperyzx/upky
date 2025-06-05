@@ -14,7 +14,7 @@ cost_supplier_A = 50  # Düşük maliyetli tedarikçi (TL/birim)
 cost_supplier_B = 75  # Yüksek maliyetli tedarikçi (TL/birim)
 capacity_supplier_A = 300  # Tedarikçi A'nın sınırlı kapasitesi
 # Tedarikçi B'nin sınırsız kapasitesi (pratikte çok büyük bir değer)
-capacity_supplier_B = 99999
+capacity_supplier_B = 9999
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
