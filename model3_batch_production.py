@@ -42,7 +42,7 @@ for t in range(months):
     prev_inventory = inventory[t]
 
 df = pd.DataFrame(results, columns=[
-    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)', 'İşçilik Maliyeti (₺)', 'Üretim Maliyeti (₺)'
+    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)', 'İş��ilik Maliyeti (₺)', 'Üretim Maliyeti (₺)'
 ])
 
 # Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
@@ -101,3 +101,66 @@ plt.legend()
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
+
+def maliyet_analizi(
+    demand=demand,
+    working_days=working_days,
+    holding_cost=holding_cost,
+    stockout_cost=stockout_cost,
+    fixed_workers=fixed_workers,
+    worker_monthly_cost=worker_monthly_cost,
+    production_rate=production_rate,
+    daily_hours=daily_hours,
+    production_cost=production_cost
+):
+    months = len(demand)
+    monthly_capacity = fixed_workers * daily_hours * working_days * production_rate
+    production = np.zeros(months)
+    inventory = np.zeros(months)
+    prev_inventory = 0
+    total_holding = 0
+    total_stockout = 0
+    total_labor = 0
+    total_prod_cost = 0
+    total_production = 0
+    total_demand = sum(demand)
+    total_unfilled = 0
+    for t in range(months):
+        production[t] = monthly_capacity[t]
+        inventory[t] = prev_inventory + production[t] - demand[t]
+        holding = max(inventory[t], 0) * holding_cost
+        stockout = abs(min(inventory[t], 0)) * stockout_cost
+        labor = fixed_workers * worker_monthly_cost
+        prod_cost = production[t] * production_cost
+        total_holding += holding
+        total_stockout += stockout
+        total_labor += labor
+        total_prod_cost += prod_cost
+        total_production += production[t]
+        prev_inventory = inventory[t]
+        if inventory[t] < 0:
+            total_unfilled += abs(inventory[t])
+    toplam_maliyet = total_holding + total_stockout + total_labor + total_prod_cost
+    if total_production > 0:
+        avg_unit_cost = toplam_maliyet / total_production
+        avg_labor_unit = total_labor / total_production
+        avg_prod_unit = total_prod_cost / total_production
+        avg_other_unit = (total_holding + total_stockout) / total_production
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+    return {
+        "Toplam Maliyet": toplam_maliyet,
+        "İşçilik Maliyeti": total_labor,
+        "Üretim Maliyeti": total_prod_cost,
+        "Stok Maliyeti": total_holding,
+        "Stoksuzluk Maliyeti": total_stockout,
+        "İşe Alım Maliyeti": 0,
+        "İşten Çıkarma Maliyeti": 0,
+        "Toplam Talep": total_demand,
+        "Toplam Üretim": total_production,
+        "Karşılanmayan Talep": total_unfilled,
+        "Ortalama Birim Maliyet": avg_unit_cost,
+        "İşçilik Birim Maliyeti": avg_labor_unit,
+        "Üretim Birim Maliyeti": avg_prod_unit,
+        "Diğer Birim Maliyetler": avg_other_unit
+    }
