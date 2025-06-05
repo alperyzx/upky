@@ -4,19 +4,20 @@ from tabulate import tabulate
 
 # Parametreler
 # Çok yüksek talep için örnek:
-demand = np.array([1500, 5500, 2500, 7500, 5500, 6500, 2500, 1500,1800, 2700, 1500, 2500])
+demand = np.array([300, 230, 200, 200, 500, 200, 400, 180, 100, 100, 120, 150])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
-hiring_cost = 1000
-firing_cost = 800
+hiring_cost = 1800
+firing_cost = 1500
 daily_hours = 8
-labor_per_unit = 0.5
+labor_per_unit = 4 # 1 birim üretim için gereken işgücü (saat)
 max_workers = 100  # Daha yüksek üst sınır
 min_workers = 12
-max_workforce_change = 12  # Daha hızlı işçi artışı
+max_workforce_change = 3  # Daha hızlı işçi artışı
 months = len(demand)
 hourly_wage = 10
+production_cost = 30  # birim üretim maliyeti (TL)
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -47,7 +48,12 @@ for t in range(months):
                 holding = inventory * holding_cost
                 stockout = unmet * stockout_cost
                 labor = w * working_days[t] * daily_hours * hourly_wage
-                total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor
+
+                # Kapasiteye değil, gerçek üretim miktarına göre maliyet hesaplanmalı
+                actual_prod = min(capacity, demand[t])
+                prod_cost = actual_prod * production_cost  # Kapasite değil, gerçek üretim miktarı
+
+                total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor + prod_cost
                 if total_cost < cost_table[t+1, w]:
                     cost_table[t+1, w] = total_cost
                     backtrack[t+1, w] = prev_w
@@ -77,15 +83,73 @@ for t, w in enumerate(workers_seq):
 
 # Sonuç tablosu
 results = []
+total_labor = 0
+total_production = 0
+total_holding = 0
+total_stockout = 0
+total_hiring = 0
+total_firing = 0
+
 for t in range(months):
+    # İşçi sayısı değişiminden kaynaklanan maliyetler
+    if t > 0:
+        hire = max(0, workers_seq[t] - workers_seq[t-1]) * hiring_cost
+        fire = max(0, workers_seq[t-1] - workers_seq[t]) * firing_cost
+    else:
+        hire = workers_seq[t] * hiring_cost
+        fire = 0
+
     labor_cost = workers_seq[t] * working_days[t] * daily_hours * hourly_wage
+    prod_cost = production_seq[t] * production_cost
+    holding = inventory_seq[t] * holding_cost
+    stockout = stockout_seq[t] * stockout_cost
+
+    # Toplam maliyetleri hesapla
+    total_labor += labor_cost
+    total_production += prod_cost
+    total_holding += holding
+    total_stockout += stockout
+    total_hiring += hire
+    total_firing += fire
+
     results.append([
-        t+1, workers_seq[t], production_seq[t], inventory_seq[t], stockout_seq[t], labor_cost
+        t+1, workers_seq[t], production_seq[t], inventory_seq[t], stockout_seq[t],
+        labor_cost, prod_cost, hire, fire, holding, stockout
     ])
-df = pd.DataFrame(results, columns=['Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep', 'İşçilik Maliyeti'])
-df['İşçilik Maliyeti'] = df['İşçilik Maliyeti'].apply(lambda x: f'{int(x):,} TL')
-print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
+
+df = pd.DataFrame(results, columns=[
+    'Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep',
+    'İşçilik Maliyeti (₺)', 'Üretim Maliyeti (₺)', 'İşe Alım Maliyeti (₺)',
+    'İşten Çıkarma Maliyeti (₺)', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)'
+])
+
+print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right'))
 print(f'\nToplam Maliyet: {min_cost:,.2f} TL')
+print(f"\nAyrıntılı Toplam Maliyetler:")
+print(f"- İşçilik Maliyeti Toplamı: {total_labor:,.2f} TL")
+print(f"- Üretim Maliyeti Toplamı: {total_production:,.2f} TL")
+print(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
+print(f"- Karşılanmayan Talep Maliyeti Toplamı: {total_stockout:,.2f} TL")
+print(f"- İşe Alım Maliyeti Toplamı: {total_hiring:,.2f} TL")
+print(f"- İşten Çıkarma Maliyeti Toplamı: {total_firing:,.2f} TL")
+
+# Birim maliyet hesaplaması
+total_demand = sum(demand)
+total_produced = sum(production_seq)
+total_unfilled = sum(stockout_seq)
+total_cost = min_cost
+
+print(f"\nBirim Maliyet Analizi:")
+print(f"- Toplam Talep: {total_demand:,} birim")
+print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
+print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
+if total_produced > 0:
+    print(f"- Ortalama Birim Maliyet (Toplam): {total_cost/total_produced:.2f} TL/birim")
+    print(f"- Ortalama İşçilik Birim Maliyeti: {total_labor/total_produced:.2f} TL/birim")
+    print(f"- Ortalama Üretim Birim Maliyeti: {total_production/total_produced:.2f} TL/birim")
+    print(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {(total_holding+total_hiring+total_firing)/total_produced:.2f} TL/birim")
+else:
+    print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
 # Grafiksel çıktı
 try:
