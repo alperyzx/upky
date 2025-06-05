@@ -2,11 +2,11 @@ import pulp
 import numpy as np
 
 # Örnek parametreler
-demand = [500, 290, 5000, 250, 700, 500, 400, 800, 1200, 1000, 1200, 500]
+demand = [500, 1900, 3000, 2500, 700, 500, 1400, 800, 1200, 1000, 1200, 500]
 working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 holding_cost = 5
 stockout_cost = 20
-outsourcing_cost = 15
+outsourcing_cost = 80  # Fason üretim maliyeti (TL)
 labor_per_unit = 4
 hiring_cost = 1800
 firing_cost = 1500  # işçi çıkarma maliyeti
@@ -141,6 +141,33 @@ def print_results():
     print(f"- Karşılanmayan Talep Maliyeti Toplamı: {total_stockout:,.2f} TL")
     print(f"- İşe Alım Maliyeti Toplamı: {total_hiring:,.2f} TL")
     print(f"- İşten Çıkarma Maliyeti Toplamı: {total_firing:,.2f} TL")
+
+    # Birim maliyet hesaplaması
+    total_demand = sum(demand)
+    total_internal_produced = sum([int(internal_production[t].varValue) for t in range(T)])
+    total_outsourced = sum([int(outsourced_production[t].varValue) for t in range(T)])
+    total_produced = total_internal_produced + total_outsourced
+    total_unfilled = sum([int(stockout[t].varValue) for t in range(T)])
+    total_cost = pulp.value(decision_model.objective)
+
+    print(f"\nBirim Maliyet Analizi:")
+    print(f"- Toplam Talep: {total_demand:,} birim")
+    print(f"- Toplam İç Üretim: {total_internal_produced:,} birim ({total_internal_produced/total_demand*100:.2f}%)")
+    print(f"- Toplam Fason Üretim: {total_outsourced:,} birim ({total_outsourced/total_demand*100:.2f}%)")
+    print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
+    print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
+
+    if total_produced > 0:
+        print(f"- Ortalama Birim Maliyet (Toplam): {total_cost/total_produced:.2f} TL/birim")
+        if total_internal_produced > 0:
+            print(f"- İç Üretim Birim Maliyeti: {(total_internal_labor+total_internal_prod)/total_internal_produced:.2f} TL/birim")
+            print(f"  * İşçilik Birim Maliyeti: {total_internal_labor/total_internal_produced:.2f} TL/birim")
+            print(f"  * Üretim Birim Maliyeti: {total_internal_prod/total_internal_produced:.2f} TL/birim")
+        if total_outsourced > 0:
+            print(f"- Fason Üretim Birim Maliyeti: {total_outsource/total_outsourced:.2f} TL/birim")
+        print(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {(total_holding+total_hiring+total_firing)/total_produced:.2f} TL/birim")
+    else:
+        print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
     # Grafiksel çıktı
     try:
