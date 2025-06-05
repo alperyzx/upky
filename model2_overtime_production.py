@@ -3,18 +3,18 @@ import pandas as pd
 
 # Parametreler
 months = 12
-demand = np.array([3000, 6000, 3000, 4200, 3200, 4000, 3000, 1800, 3700, 4500, 2900, 4200])
+demand = np.array([500, 890, 500, 850, 700, 500, 400, 800, 1200, 1000, 1200, 500])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
-labor_per_unit = 0.5
+labor_per_unit = 4
 daily_hours = 8
-fixed_workers = 12
+fixed_workers = 18
 overtime_wage_multiplier = 1.5
 max_overtime_per_worker = 20  # saat/ay
 normal_hourly_wage = 10  # TL/saat
 overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier  # Fazla mesai saatlik ücret otomatik hesaplanır
-production_cost = 12  # Birim üretim maliyeti (TL)
+production_cost = 30  # birim üretim maliyeti (TL)
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -27,6 +27,11 @@ def overtime_model():
     cost = 0
     prev_inventory = 0
     results = []
+    total_holding = 0
+    total_stockout = 0
+    total_overtime = 0
+    total_normal_labor = 0
+    total_production = 0
     for t in range(months):
         # Normal kapasiteyle üretilebilecek miktar
         normal_prod = fixed_workers * working_days[t] * daily_hours / labor_per_unit
@@ -55,6 +60,11 @@ def overtime_model():
         normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
         production_cost_val = prod * production_cost
         cost += holding + stockout + overtime + normal_labor_cost + production_cost_val
+        total_holding += holding
+        total_stockout += stockout
+        total_overtime += overtime
+        total_normal_labor += normal_labor_cost
+        total_production += production_cost_val
         results.append([
             t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost, production_cost_val
         ])
@@ -69,6 +79,12 @@ def overtime_model():
         df[col] = df[col].apply(lambda x: f'{int(x):,} TL')
     print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {cost:,.2f} TL')
+    print(f"\nAyrıntılı Toplam Maliyetler:")
+    print(f"- Toplam Stok Maliyeti: {total_holding:,.2f} TL")
+    print(f"- Toplam Stoksuzluk Maliyeti: {total_stockout:,.2f} TL")
+    print(f"- Toplam Fazla Mesai Maliyeti: {total_overtime:,.2f} TL")
+    print(f"- Toplam Normal İşçilik Maliyeti: {total_normal_labor:,.2f} TL")
+    print(f"- Toplam Üretim Maliyeti: {total_production:,.2f} TL")
     # Grafik: Fazla Mesai saatlerini bar olarak göster
     import matplotlib.pyplot as plt
     months_list = df['Ay'].tolist()
