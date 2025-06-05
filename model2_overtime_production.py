@@ -85,6 +85,29 @@ def overtime_model():
     print(f"- Toplam Fazla Mesai Maliyeti: {total_overtime:,.2f} TL")
     print(f"- Toplam Normal İşçilik Maliyeti: {total_normal_labor:,.2f} TL")
     print(f"- Toplam Üretim Maliyeti: {total_production:,.2f} TL")
+
+    # Birim maliyet hesaplaması
+    total_demand = sum(demand)
+    total_produced = sum(production)
+    total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(months)])
+
+    print(f"\nBirim Maliyet Analizi:")
+    print(f"- Toplam Talep: {total_demand:,} birim")
+    print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
+    if total_unfilled > 0:
+        print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
+
+    if total_produced > 0:
+        print(f"- Ortalama Birim Maliyet (Toplam): {cost/total_produced:.2f} TL/birim")
+        print(f"- İşçilik Birim Maliyeti: {(total_normal_labor+total_overtime)/total_produced:.2f} TL/birim")
+        print(f"  * Normal İşçilik: {total_normal_labor/total_produced:.2f} TL/birim")
+        print(f"  * Fazla Mesai: {total_overtime/total_produced:.2f} TL/birim")
+        print(f"- Üretim Birim Maliyeti: {total_production/total_produced:.2f} TL/birim")
+        print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {(total_holding+total_stockout)/total_produced:.2f} TL/birim")
+    else:
+        print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
+
+    # Grafiksel çıktı
     # Grafik: Fazla Mesai saatlerini bar olarak göster
     import matplotlib.pyplot as plt
     months_list = df['Ay'].tolist()
