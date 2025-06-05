@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # Parametreler
-demand = [350, 330, 350, 300, 250, 900, 650, 250, 750, 250, 900, 550]
+demand = [350, 330, 350, 380, 250, 900, 650, 250, 750, 250, 900, 550]
 working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 months = len(demand)
 holding_cost = 5
@@ -11,7 +11,7 @@ stockout_cost = 80  # Karşılanmayan talep maliyetini yükseltiyoruz ki tedarik
 
 # Tedarikçi özellikleri
 cost_supplier_A = 50  # Düşük maliyetli tedarikçi (TL/birim)
-cost_supplier_B = 80  # Yüksek maliyetli tedarikçi (TL/birim)
+cost_supplier_B = 75  # Yüksek maliyetli tedarikçi (TL/birim)
 capacity_supplier_A = 300  # Tedarikçi A'nın sınırlı kapasitesi
 # Tedarikçi B'nin sınırsız kapasitesi (pratikte çok büyük bir değer)
 capacity_supplier_B = 99999
