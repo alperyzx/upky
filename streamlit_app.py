@@ -8,13 +8,13 @@ st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initi
 st.title("Üretim Planlama Modelleri Karar Destek Arayüzü")
 
 model = st.sidebar.selectbox("Model Seçiniz", [
+    "Karşılaştırma Tablosu",
     "Karma Planlama (Model 1)",
     "Fazla Mesaili Üretim (Model 2)",
     "Toplu Üretim ve Stoklama (Model 3)",
     "Dinamik Programlama (Model 4)",
     "Dış Kaynak Karşılaştırma (Model 5)",
-    "Mevsimsellik ve Dalga (Model 6)",
-    "Karşılaştırma Tablosu"
+    "Mevsimsellik ve Dalga (Model 6)"
 ])
 
 st.sidebar.markdown("---")
@@ -394,8 +394,9 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
     fixed_workers = st.number_input("Sabit İşçi Sayısı", 1, 200, 10, key="m3_workers")
     production_rate = st.number_input("Üretim Hızı (adet/saat)", 0.1, 10.0, 2.0)
     daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8, key="m3_daily")
-    if st.button("Modeli Çalışt��r", key="m3_run"):
-        df, cost = model3_run(demand, working_days, holding_cost, stockout_cost, fixed_workers, production_rate, daily_hours)
+    worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", 1, 100000, 1680, key="m3_worker_monthly_cost")
+    if st.button("Modeli Çalıştır", key="m3_run"):
+        df, cost = model3_run(demand, working_days, holding_cost, stockout_cost, fixed_workers, production_rate, daily_hours, worker_monthly_cost)
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True)
         st.success(f"Toplam Maliyet: {cost:,.2f} TL")
@@ -498,8 +499,13 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="m6_holding")
     stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, 20, key="m6_stockout")
     production_cost = st.number_input("Üretim Maliyeti (TL)", 1, 100, 12)
-    max_production = st.number_input("Maksimum Üretim Kapasitesi (adet)", 1, 10000, 4000)
-    labor_unit_cost = st.number_input("Birim İşçilik Maliyeti (TL)", 1, 100, 3, key="m6_labor_unit")
+    # max_production otomatik olarak ortalama talep * 1.3 olarak ayarlanır
+    if len(seasonal_demand) > 0:
+        max_production = int(np.mean(seasonal_demand) * 1.3)
+    else:
+        max_production = 0
+    st.info(f"Maksimum Üretim Kapasitesi otomatik olarak: {max_production} (12 aylık ortalama talep * 1.3)")
+    labor_unit_cost = st.number_input("Birim İşçilik Maliyeti (TL)", 1, 100, 5, key="m6_labor_unit")
     months = len(seasonal_demand)
     if st.button("Modeli Çalıştır", key="m6_run"):
         df, total_cost, stockout_sum, total_labor_cost = model6_run(
@@ -535,9 +541,11 @@ if model == "Karşılaştırma Tablosu":
         st.stop()
     holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, 5, key="cmp_holding")
     outsourcing_cost = st.number_input("Fason Maliyeti (TL)", 1, 100, 15, key="cmp_outsourcing")
-    labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, 0.5, key="cmp_labor")
     min_workers = st.number_input("Başlangıç Minimum İşçi Sayısı", 1, 100, 10, key="cmp_min_workers")
     stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 100, 20, key="cmp_stockout")
+    worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", 1, 100000, 1760, key="cmp_worker_monthly_cost")
+    # sabit değerler
+    labor_per_unit = 0.5
     hiring_cost = 1000
     firing_cost = 800
     daily_hours = 8
@@ -545,7 +553,7 @@ if model == "Karşılaştırma Tablosu":
     min_internal_ratio = 0.70
     max_workforce_change = 12
     max_outsourcing_ratio = 0.30
-    hourly_wage = 10 # Sabit işçilik maliyeti
+    hourly_wage = 10
     if st.button("Karşılaştırmayı Çalıştır"):
         # Model 1
         df1, cost1 = model1_run(
@@ -586,9 +594,9 @@ if model == "Karşılaştırma Tablosu":
             prev_inventory = inventory[t]
             total_production3 += production[t]
         stockout_rate3 = stockout3 / sum(demand)
-        # Model 4 (doğru versiyon)
+        # Model 4
         df4, cost4 = model4_run(
-            demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, min_workers, 40, max_workforce_change, hourly_wage
+            demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, min_workers, 100, max_workforce_change, hourly_wage
         )
         total_production4 = df4["Üretim"].sum()
         labor_cost4 = df4["İşçilik Maliyeti"].sum()
@@ -603,22 +611,23 @@ if model == "Karşılaştırma Tablosu":
         total_production5 = df5["İç Üretim"].sum()
         # Model 6
         production_cost = 12  # tüm maliyetler dahil, işçilik, malzeme vb.
-        max_production = 4000 # Varsayım, istenirse kullanıcıdan alınabilir
-        labor_unit_cost = 3   # Varsayım, istenirse kullanıcıdan alınabilir
+        max_production = int(np.mean(demand) * 1.3)  # 12 aylık ortalama talep * 1.3
+        labor_unit_cost = 5   # Varsayım, istenirse kullanıcıdan alınabilir
         df6, cost6, stockout6, labor_cost6 = model6_run(
             np.array(demand), holding_cost, stockout_cost, production_cost, max_production, labor_unit_cost
         )
         stockout_rate6 = stockout6 / sum(demand)
         total_production6 = df6["Üretim"].sum()
         # Esneklik seviyeleri örnek olarak sabitlenmiştir
+        # Stoksuzluk oranlarını yüzde olarak göster, işçilik ve üretim değerlerini numara formatında göster
         summary = pd.DataFrame([
-            [f"{cost1:,.0f}₺", stockout_rate1, labor_cost1, total_production1, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"],
-            [f"{cost2:,.0f}₺", stockout_rate2, labor_cost2, total_production2, "Orta", "Fazla mesai ile esneklik"],
-            [f"{cost3:,.0f}₺", stockout_rate3, labor_cost3, total_production3, "Düşük", "Sabit işgücü, toplu üretim"],
-            [f"{cost4:,.0f}₺", stockout_rate4, labor_cost4, total_production4, "Düşük", "Sabit işgücü, belirli üretim"],
-            [f"{cost5:,.0f}₺", stockout_rate5, labor_cost5, total_production5, "Yok", "Tam iç kaynak kullanımı"],
-            [f"{cost6:,.0f}₺", stockout_rate6, labor_cost6, total_production6, "Orta", "Mevsimsellik ve stok optimizasyonu"],
-        ], columns=["Toplam Maliyet", "Stoksuzluk Oranı", "Toplam İşçilik Maliyeti", "Toplam Üretim", "İşgücü Esnekliği", "Uygun Senaryo"],
+            [f"{cost1:,.0f}₺", f"{labor_cost1:,.0f}₺", f"{total_production1:,.0f}", f"{stockout_rate1*100:.1f}%", "Yüksek", "Karma planlama, işgücü ve fason esnekliği"],
+            [f"{cost2:,.0f}₺", f"{labor_cost2:,.0f}₺", f"{total_production2:,.0f}", f"{stockout_rate2*100:.1f}%", "Orta", "Fazla mesai ile esneklik"],
+            [f"{cost3:,.0f}₺", f"{labor_cost3:,.0f}₺", f"{total_production3:,.0f}", f"{stockout_rate3*100:.1f}%", "Düşük", "Sabit işgücü, toplu üretim"],
+            [f"{cost4:,.0f}₺", f"{labor_cost4:,.0f}₺", f"{total_production4:,.0f}", f"{stockout_rate4*100:.1f}%", "Düşük", "Sabit işgücü, belirli üretim"],
+            [f"{cost5:,.0f}₺", f"{labor_cost5:,.0f}₺", f"{total_production5:,.0f}", f"{stockout_rate5*100:.1f}%", "Yok", "Tam iç kaynak kullanımı"],
+            [f"{cost6:,.0f}₺", f"{labor_cost6:,.0f}₺", f"{total_production6:,.0f}", f"{stockout_rate6*100:.1f}%", "Orta", "Mevsimsellik ve stok optimizasyonu"],
+        ], columns=["Toplam Maliyet", "Toplam İşçilik Maliyeti", "Toplam Üretim", "Stoksuzluk Oranı", "İşgücü Esnekliği", "Uygun Senaryo"],
             index=["Model 1", "Model 2", "Model 3", "Model 4", "Model 5", "Model 6"])
         st.dataframe(summary, use_container_width=True)
         st.subheader("Karşılaştırma Grafiği")
@@ -626,6 +635,16 @@ if model == "Karşılaştırma Tablosu":
         cost_values = [cost1, cost2, cost3, cost4, cost5, cost6]
         fig, ax1 = plt.subplots(figsize=(8,5))
         ax1.bar(summary.index, cost_values, color='skyblue', label='Toplam Maliyet')
+        # Y eksenini ₺100k gibi okunaklı formatta göster
+        def currency_k_formatter(x, pos):
+            if x >= 1e6:
+                return f"₺{x/1e6:.1f}M"
+            elif x >= 1e3:
+                return f"₺{x/1e3:.0f}k"
+            else:
+                return f"₺{x:,.0f}"
+        from matplotlib.ticker import FuncFormatter
+        ax1.yaxis.set_major_formatter(FuncFormatter(currency_k_formatter))
         ax2 = ax1.twinx()
         ax2.plot(summary.index, summary["Stoksuzluk Oranı"], marker='o', color='red', label='Stoksuzluk Oranı')
         ax1.set_ylabel('Toplam Maliyet (TL)')

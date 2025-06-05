@@ -61,9 +61,11 @@ def overtime_model():
         'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti'
     ]
     df = pd.DataFrame(results, columns=headers)
-    # Tabloyu daha okunaklı şekilde göster
     from tabulate import tabulate
-    print(tabulate(df, headers='keys', tablefmt='psql', showindex=False))
+    # Format cost columns
+    for col in ['Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti']:
+        df[col] = df[col].apply(lambda x: f'{int(x):,} TL')
+    print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
     # Grafik: Fazla Mesai saatlerini bar olarak göster
     import matplotlib.pyplot as plt
     months_list = df['Ay'].tolist()

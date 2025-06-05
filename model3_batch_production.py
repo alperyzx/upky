@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
+from tabulate import tabulate
 
 # Parametreler
-demand = np.array([15000, 15000, 25000, 15000, 15000, 15000, 25000, 15000,18000, 27000, 15000, 25000])
+demand = np.array([1500, 1500, 2500, 1500, 1500, 1500, 2500, 1500,1800, 2700, 1500, 2500])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
-fixed_workers = 60
+fixed_workers = 10
 worker_monthly_cost = 1680  # İşçi başı aylık maliyet (ör: asgari ücret)
 production_rate = 2  # adet/saat
 daily_hours = 8
@@ -41,7 +42,10 @@ for t in range(months):
 df = pd.DataFrame(results, columns=[
     'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'İşçilik Maliyeti'
 ])
-print(df.to_string(index=False))
+df['Stok Maliyeti'] = df['Stok Maliyeti'].apply(lambda x: f'{int(x):,} TL')
+df['Stoksuzluk Maliyeti'] = df['Stoksuzluk Maliyeti'].apply(lambda x: f'{int(x):,} TL')
+df['İşçilik Maliyeti'] = df['İşçilik Maliyeti'].apply(lambda x: f'{int(x):,} TL')
+print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
 print(f'\nToplam Maliyet: {cost:,.2f} TL')
 
 # Grafiksel çıktı

@@ -1,15 +1,16 @@
 import pulp
 import numpy as np
 import pandas as pd
+from tabulate import tabulate
 
 # Örnek mevsimsel talep (12 ay)
 seasonal_demand = np.array([1200, 4500, 5500, 2800, 2100, 1500, 4500, 6000, 3000, 2500, 1500, 1000])
 months = len(seasonal_demand)
 holding_cost = 5
 stockout_cost = 20
-production_cost = 10
-max_production = 4000  # Maksimum aylık üretim kapasitesi
-labor_unit_cost = 3    # Birim işçilik maliyeti (örnek değer)
+production_cost = 12
+max_production = int(seasonal_demand.mean() * 1.3)  # 12 aylık talep ortalaması * 1,1
+labor_unit_cost = 5    # Birim işçilik maliyeti (örnek değer)
 labor_cost = labor_unit_cost * max_production  # Aylık sabit işçilik maliyeti
 
 # Doğrusal programlama modeli
@@ -63,7 +64,10 @@ for t in range(months):
 df = pd.DataFrame(results, columns=[
     'Ay', 'Talep', 'Üretim', 'Stok', 'Stoksuzluk', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti', 'İşçilik Maliyeti'
 ])
-print(df.to_string(index=False))
+# Format cost columns
+for col in ['Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti', 'İşçilik Maliyeti']:
+    df[col] = df[col].apply(lambda x: f'{int(x):,} TL')
+print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
 print(f'\nToplam Maliyet: {pulp.value(model.objective):,.2f} TL')
 
 # Grafiksel çıktı
@@ -85,4 +89,3 @@ plt.legend()
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
-

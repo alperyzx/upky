@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from tabulate import tabulate
 
 # Parametreler
 # Çok yüksek talep için örnek:
@@ -82,7 +83,8 @@ for t in range(months):
         t+1, workers_seq[t], production_seq[t], inventory_seq[t], stockout_seq[t], labor_cost
     ])
 df = pd.DataFrame(results, columns=['Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep', 'İşçilik Maliyeti'])
-print(df.to_string(index=False))
+df['İşçilik Maliyeti'] = df['İşçilik Maliyeti'].apply(lambda x: f'{int(x):,} TL')
+print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
 print(f'\nToplam Maliyet: {min_cost:,.2f} TL')
 
 # Grafiksel çıktı

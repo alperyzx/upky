@@ -87,7 +87,6 @@ def print_results():
     table = []
     for t in range(T):
         internal_cost = int(internal_production[t].varValue) * working_days[t] * daily_hours * hourly_wage / (working_days[t] * daily_hours / labor_per_unit)
-        # Alternatif olarak, işçilik maliyeti zaten toplam maliyete ekleniyor, burada birim başı işçilik maliyeti olarak gösterilebilir.
         outsourcing_cost_val = int(outsourced_production[t].varValue) * outsourcing_cost
         table.append([
             t+1,
@@ -98,14 +97,18 @@ def print_results():
             int(hired[t].varValue),
             int(fired[t].varValue),
             int(stockout[t].varValue),
-            int(internal_production[t].varValue) * hourly_wage * labor_per_unit,  # İç üretim maliyeti
-            outsourcing_cost_val  # Fason üretim maliyeti
+            internal_cost,
+            outsourcing_cost_val
         ])
     headers = [
         'Ay', 'İşçi', 'İç Üretim', 'Fason', 'Stok', 'Alım', 'Çıkış', 'Karşılanmayan Talep',
         'İç Üretim Maliyeti', 'Fason Üretim Maliyeti'
     ]
-    print(tabulate(table, headers, tablefmt='github', numalign='right', stralign='center'))
+    # Format cost columns
+    for row in table:
+        row[8] = f'{int(row[8]):,} TL'
+        row[9] = f'{int(row[9]):,} TL'
+    print(tabulate(table, headers, tablefmt='fancy_grid', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
 
     # Grafiksel çıktı
