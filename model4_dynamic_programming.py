@@ -124,58 +124,6 @@ df = pd.DataFrame(results, columns=[
 ])
 
 print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right'))
-print(f'\nToplam Maliyet: {min_cost:,.2f} TL')
-print(f"\nAyrıntılı Toplam Maliyetler:")
-print(f"- İşçilik Maliyeti Toplamı: {total_labor:,.2f} TL")
-print(f"- Üretim Maliyeti Toplamı: {total_production:,.2f} TL")
-print(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
-print(f"- Karşılanmayan Talep Maliyeti Toplamı: {total_stockout:,.2f} TL")
-print(f"- İşe Alım Maliyeti Toplamı: {total_hiring:,.2f} TL")
-print(f"- İşten Çıkarma Maliyeti Toplamı: {total_firing:,.2f} TL")
-
-# Birim maliyet hesaplaması
-total_demand = sum(demand)
-total_produced = sum(production_seq)
-total_unfilled = sum(stockout_seq)
-total_cost = min_cost
-
-print(f"\nBirim Maliyet Analizi:")
-print(f"- Toplam Talep: {total_demand:,} birim")
-print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
-print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
-if total_produced > 0:
-    print(f"- Ortalama Birim Maliyet (Toplam): {total_cost/total_produced:.2f} TL/birim")
-    print(f"- Ortalama İşçilik Birim Maliyeti: {total_labor/total_produced:.2f} TL/birim")
-    print(f"- Ortalama Üretim Birim Maliyeti: {total_production/total_produced:.2f} TL/birim")
-    print(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {(total_holding+total_hiring+total_firing)/total_produced:.2f} TL/birim")
-else:
-    print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
-
-# Grafiksel çıktı
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
-    exit(1)
-months_list = list(range(1, months+1))
-fig, ax1 = plt.subplots(figsize=(10,6))
-ax1.bar(months_list, workers_seq, color='skyblue', label='İşçi', alpha=0.7)
-ax1.set_xlabel('Ay')
-ax1.set_ylabel('İşçi Sayısı', color='skyblue')
-ax1.tick_params(axis='y', labelcolor='skyblue')
-ax2 = ax1.twinx()
-ax2.plot(months_list, production_seq, marker='s', label='Üretim', color='green')
-ax2.plot(months_list, inventory_seq, marker='d', label='Stok', color='red')
-ax2.plot(months_list, stockout_seq, marker='x', label='Karşılanmayan Talep', color='black')
-ax2.set_ylabel('Adet', color='gray')
-ax2.tick_params(axis='y', labelcolor='gray')
-lines1, labels1 = ax1.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
-ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-plt.title('Dinamik Programlama Tabanlı Model Sonuçları')
-plt.grid(True, linestyle='--', alpha=0.5)
-plt.tight_layout()
-plt.show()
 
 def maliyet_analizi(
     demand=demand,
@@ -277,3 +225,90 @@ def maliyet_analizi(
         "Üretim Birim Maliyeti": avg_prod_unit,
         "Diğer Birim Maliyetler": avg_other_unit
     }
+
+def ayrintili_toplam_maliyetler(total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing):
+    return {
+        'total_labor': total_labor,
+        'total_production': total_production,
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_hiring': total_hiring,
+        'total_firing': total_firing
+    }
+
+def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_cost, total_labor, total_production, total_holding, total_hiring, total_firing):
+    if total_produced > 0:
+        avg_unit_cost = total_cost / total_produced
+        avg_labor_unit = total_labor / total_produced
+        avg_prod_unit = total_production / total_produced
+        avg_other_unit = (total_holding + total_hiring + total_firing) / total_produced
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+    return {
+        'total_demand': total_demand,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+        'avg_unit_cost': avg_unit_cost,
+        'avg_labor_unit': avg_labor_unit,
+        'avg_prod_unit': avg_prod_unit,
+        'avg_other_unit': avg_other_unit
+    }
+
+detay = ayrintili_toplam_maliyetler(total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing)
+print(f'\nToplam Maliyet: {min_cost:,.2f} TL')
+print(f"\nAyrıntılı Toplam Maliyetler:")
+print(f"- İşçilik Maliyeti Toplamı: {detay['total_labor']:,.2f} TL")
+print(f"- Üretim Maliyeti Toplamı: {detay['total_production']:,.2f} TL")
+print(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+print(f"- Karşılanmayan Talep Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+print(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring']:,.2f} TL")
+print(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing']:,.2f} TL")
+
+birim = birim_maliyet_analizi(
+    sum(demand),
+    sum(production_seq),
+    sum(stockout_seq),
+    min_cost,
+    total_labor,
+    total_production,
+    total_holding,
+    total_hiring,
+    total_firing
+)
+print(f"\nBirim Maliyet Analizi:")
+print(f"- Toplam Talep: {birim['total_demand']:,} birim")
+print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+if birim['total_produced'] > 0:
+    print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+    print(f"- Ortalama İşçilik Birim Maliyeti: {birim['avg_labor_unit']:.2f} TL/birim")
+    print(f"- Ortalama Üretim Birim Maliyeti: {birim['avg_prod_unit']:.2f} TL/birim")
+    print(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {birim['avg_other_unit']:.2f} TL/birim")
+else:
+    print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
+
+# Grafiksel çıktı
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
+    exit(1)
+months_list = list(range(1, months+1))
+fig, ax1 = plt.subplots(figsize=(10,6))
+ax1.bar(months_list, workers_seq, color='skyblue', label='İşçi', alpha=0.7)
+ax1.set_xlabel('Ay')
+ax1.set_ylabel('İşçi Sayısı', color='skyblue')
+ax1.tick_params(axis='y', labelcolor='skyblue')
+ax2 = ax1.twinx()
+ax2.plot(months_list, production_seq, marker='s', label='Üretim', color='green')
+ax2.plot(months_list, inventory_seq, marker='d', label='Stok', color='red')
+ax2.plot(months_list, stockout_seq, marker='x', label='Karşılanmayan Talep', color='black')
+ax2.set_ylabel('Adet', color='gray')
+ax2.tick_params(axis='y', labelcolor='gray')
+lines1, labels1 = ax1.get_legend_handles_labels()
+lines2, labels2 = ax2.get_legend_handles_labels()
+ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+plt.title('Dinamik Programlama Tabanlı Model Sonuçları')
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()

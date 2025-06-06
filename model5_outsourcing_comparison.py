@@ -56,6 +56,23 @@ solver = pulp.PULP_CBC_CMD(msg=0)
 decision_model.solve(solver)
 
 # Sonuçlar
+def ayrintili_toplam_maliyetler(total_cost_A, total_cost_B, total_holding, total_stockout):
+    return {
+        'total_cost_A': total_cost_A,
+        'total_cost_B': total_cost_B,
+        'total_holding': total_holding,
+        'total_stockout': total_stockout
+    }
+
+def birim_maliyet_analizi(total_demand, total_fulfilled, total_cost, cost_supplier_A, cost_supplier_B):
+    return {
+        'total_demand': total_demand,
+        'total_fulfilled': total_fulfilled,
+        'avg_unit_cost': total_cost/total_fulfilled if total_fulfilled > 0 else 0,
+        'cost_supplier_A': cost_supplier_A,
+        'cost_supplier_B': cost_supplier_B
+    }
+
 def print_results():
     from tabulate import tabulate
     table = []
@@ -63,18 +80,15 @@ def print_results():
     total_cost_B = 0
     total_holding = 0
     total_stockout = 0
-
     for t in range(months):
         cost_A = int(out_A[t].varValue) * cost_supplier_A
         cost_B = int(out_B[t].varValue) * cost_supplier_B
         holding = int(inventory[t].varValue) * holding_cost
         stockout_val = int(stockout[t].varValue) * stockout_cost
-
         total_cost_A += cost_A
         total_cost_B += cost_B
         total_holding += holding
         total_stockout += stockout_val
-
         table.append([
             t+1,
             int(out_A[t].varValue),
@@ -86,32 +100,34 @@ def print_results():
             f"{holding:,} TL",
             f"{stockout_val:,} TL"
         ])
-
     headers = ['Ay', 'Tedarikçi A', 'Tedarikçi B', 'Stok', 'Karşılanmayan Talep',
               'Tedarikçi A Maliyeti (₺)', 'Tedarikçi B Maliyeti (₺)',
               'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)']
-
     print(f"Tedarikçi A: {cost_supplier_A} TL/birim, Kapasite: {capacity_supplier_A} birim/ay")
     print(f"Tedarikçi B: {cost_supplier_B} TL/birim, Kapasite: Sınırsız")
     print(tabulate(table, headers, tablefmt='fancy_grid', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
+    # Ayrıntılı Toplam Maliyetler fonksiyonundan alınır
+    detay = ayrintili_toplam_maliyetler(total_cost_A, total_cost_B, total_holding, total_stockout)
     print(f"\nAyrıntılı Maliyet Dağılımı:")
-    print(f"- Tedarikçi A Toplam Maliyet: {total_cost_A:,} TL")
-    print(f"- Tedarikçi B Toplam Maliyet: {total_cost_B:,} TL")
-    print(f"- Stok Tutma Toplam Maliyet: {total_holding:,} TL")
-    print(f"- Karşılanmayan Talep Toplam Maliyet: {total_stockout:,} TL")
-
-    # Birim maliyet hesaplaması
+    print(f"- Tedarikçi A Toplam Maliyet: {detay['total_cost_A']:,} TL")
+    print(f"- Tedarikçi B Toplam Maliyet: {detay['total_cost_B']:,} TL")
+    print(f"- Stok Tutma Toplam Maliyet: {detay['total_holding']:,} TL")
+    print(f"- Karşılanmayan Talep Toplam Maliyet: {detay['total_stockout']:,} TL")
+    # Birim Maliyet Analizi fonksiyonundan alınır
     total_demand = sum(demand)
     total_fulfilled = sum([int(out_A[t].varValue) + int(out_B[t].varValue) for t in range(months)])
     total_cost = pulp.value(decision_model.objective)
-
+    birim = birim_maliyet_analizi(total_demand, total_fulfilled, total_cost, cost_supplier_A, cost_supplier_B)
     print(f"\nBirim Maliyet Analizi:")
-    print(f"- Toplam Talep: {total_demand:,} birim")
-    print(f"- Karşılanan Talep: {total_fulfilled:,} birim ({total_fulfilled/total_demand*100:.2f}%)")
-    print(f"- Ortalama Birim Maliyet: {total_cost/total_fulfilled:.2f} TL/birim") if total_fulfilled > 0 else print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim karşılandı)")
-    print(f"- Tedarikçi A Birim Maliyet: {cost_supplier_A:.2f} TL/birim")
-    print(f"- Tedarikçi B Birim Maliyet: {cost_supplier_B:.2f} TL/birim")
+    print(f"- Toplam Talep: {birim['total_demand']:,} birim")
+    print(f"- Karşılanan Talep: {birim['total_fulfilled']:,} birim ({birim['total_fulfilled']/birim['total_demand']*100:.2f}%)")
+    if birim['total_fulfilled'] > 0:
+        print(f"- Ortalama Birim Maliyet: {birim['avg_unit_cost']:.2f} TL/birim")
+    else:
+        print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim karşılandı)")
+    print(f"- Tedarikçi A Birim Maliyeti: {birim['cost_supplier_A']:.2f} TL/birim")
+    print(f"- Tedarikçi B Birim Maliyeti: {birim['cost_supplier_B']:.2f} TL/birim")
 
     # Grafiksel çıktı
     try:

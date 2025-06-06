@@ -42,7 +42,7 @@ for t in range(months):
     prev_inventory = inventory[t]
 
 df = pd.DataFrame(results, columns=[
-    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)', 'İş��ilik Maliyeti (₺)', 'Üretim Maliyeti (₺)'
+    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)', 'İşçilik Maliyeti (₺)', 'Üretim Maliyeti (₺)'
 ])
 
 # Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
@@ -52,34 +52,57 @@ df.rename(columns={df.columns[5]: 'İşçilik Maliyeti (₺)'}, inplace=True)  #
 df['İşçilik Maliyeti (₺)'] = df['İşçilik Maliyeti (₺)'].astype(int)
 df['Üretim Maliyeti (₺)'] = df['Üretim Maliyeti (₺)'].astype(int)
 print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
+
+def ayrintili_toplam_maliyetler(df):
+    return {
+        'total_holding': df["Stok Maliyeti (₺)"].sum(),
+        'total_stockout': df["Stoksuzluk Maliyeti (₺)"].sum(),
+        'total_labor': df["İşçilik Maliyeti (₺)"].sum(),
+        'total_production_cost': df["Üretim Maliyeti (₺)"].sum()
+    }
+
+def birim_maliyet_analizi(demand, production, inventory, cost, df, fixed_workers, months):
+    total_demand = demand.sum()
+    total_produced = production.sum()
+    total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(months)])
+    total_holding = df["Stok Maliyeti (₺)"].sum()
+    total_stockout = df["Stoksuzluk Maliyeti (₺)"].sum()
+    total_labor = df["İşçilik Maliyeti (₺)"].sum()
+    total_production_cost = df["Üretim Maliyeti (₺)"].sum()
+    result = {
+        'total_demand': total_demand,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+        'avg_unit_cost': cost/total_produced if total_produced > 0 else 0,
+        'labor_unit_cost': total_labor/total_produced if total_produced > 0 else 0,
+        'prod_unit_cost': total_production_cost/total_produced if total_produced > 0 else 0,
+        'other_unit_cost': (total_holding+total_stockout)/total_produced if total_produced > 0 else 0,
+        'fixed_workers': fixed_workers,
+        'avg_prod_per_worker': total_produced/(fixed_workers*months) if fixed_workers > 0 else 0
+    }
+    return result
+
+detay = ayrintili_toplam_maliyetler(df)
 print(f'\nToplam Maliyet: {cost:,.2f} TL')
-print(f'Stok Maliyeti Toplamı: {df["Stok Maliyeti (₺)"].sum():,} TL')
-print(f'Stoksuzluk Maliyeti Toplamı: {df["Stoksuzluk Maliyeti (₺)"].sum():,} TL')
-print(f'İşçilik Maliyeti Toplamı: {df["İşçilik Maliyeti (₺)"].sum():,} TL')
-print(f'Üretim Maliyeti Toplamı: {df["Üretim Maliyeti (₺)"].sum():,} TL')
+print(f'Stok Maliyeti Toplamı: {detay["total_holding"]:,} TL')
+print(f'Stoksuzluk Maliyeti Toplamı: {detay["total_stockout"]:,} TL')
+print(f'İşçilik Maliyeti Toplamı: {detay["total_labor"]:,} TL')
+print(f'Üretim Maliyeti Toplamı: {detay["total_production_cost"]:,} TL')
 
-# Birim maliyet hesaplaması
-total_demand = demand.sum()
-total_produced = production.sum()
-total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(months)])
-total_holding = df["Stok Maliyeti (₺)"].sum()
-total_stockout = df["Stoksuzluk Maliyeti (₺)"].sum()
-total_labor = df["İşçilik Maliyeti (₺)"].sum()
-total_production_cost = df["Üretim Maliyeti (₺)"].sum()
-
+# Birim maliyet analizini fonksiyon ile yap
+birim = birim_maliyet_analizi(demand, production, inventory, cost, df, fixed_workers, months)
 print(f"\nBirim Maliyet Analizi:")
-print(f"- Toplam Talep: {total_demand:,} birim")
-print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
-if total_unfilled > 0:
-    print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
-
-if total_produced > 0:
-    print(f"- Ortalama Birim Maliyet (Toplam): {cost/total_produced:.2f} TL/birim")
-    print(f"- İşçilik Birim Maliyeti: {total_labor/total_produced:.2f} TL/birim")
-    print(f"- Üretim Birim Maliyeti: {total_production_cost/total_produced:.2f} TL/birim")
-    print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {(total_holding+total_stockout)/total_produced:.2f} TL/birim")
-    print(f"- Sabit İşçi Sayısı: {fixed_workers} kişi")
-    print(f"- İşçi Başına Aylık Ortalama Üretim: {total_produced/(fixed_workers*months):.2f} birim/ay")
+print(f"- Toplam Talep: {birim['total_demand']:,} birim")
+print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+if birim['total_unfilled'] > 0:
+    print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+if birim['total_produced'] > 0:
+    print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+    print(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
+    print(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
+    print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
+    print(f"- Sabit İşçi Sayısı: {birim['fixed_workers']} kişi")
+    print(f"- İşçi Başına Aylık Ortalama Üretim: {birim['avg_prod_per_worker']:.2f} birim/ay")
 else:
     print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 

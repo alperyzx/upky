@@ -93,9 +93,7 @@ solver = pulp.PULP_CBC_CMD(msg=0)
 decision_model.solve(solver)
 
 # Sonuçlar
-def print_results():
-    from tabulate import tabulate
-    table = []
+def ayrintili_toplam_maliyetler(T, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours, working_days, daily_hours, hourly_wage, production_cost, outsourcing_cost, holding_cost, stockout_cost, hiring_cost, firing_cost, overtime_wage_multiplier):
     total_internal_labor = 0
     total_internal_prod = 0
     total_outsource = 0
@@ -121,6 +119,51 @@ def print_results():
         total_hiring += hiring
         total_firing += firing
         total_overtime += overtime_cost
+    return {
+        'total_internal_labor': total_internal_labor,
+        'total_internal_prod': total_internal_prod,
+        'total_outsource': total_outsource,
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_hiring': total_hiring,
+        'total_firing': total_firing,
+        'total_overtime': total_overtime
+    }
+
+def birim_maliyet_analizi(T, demand, internal_production, outsourced_production, stockout, total_internal_labor, total_internal_prod, total_outsource, total_holding, total_hiring, total_firing, total_cost):
+    total_demand = sum(demand)
+    total_internal_produced = sum([int(internal_production[t].varValue) for t in range(T)])
+    total_outsourced = sum([int(outsourced_production[t].varValue) for t in range(T)])
+    total_produced = total_internal_produced + total_outsourced
+    total_unfilled = sum([int(stockout[t].varValue) for t in range(T)])
+    result = {
+        'total_demand': total_demand,
+        'total_internal_produced': total_internal_produced,
+        'total_outsourced': total_outsourced,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+        'total_cost': total_cost,
+        'avg_unit_cost': total_cost/total_produced if total_produced > 0 else 0,
+        'internal_unit_cost': (total_internal_labor+total_internal_prod)/total_internal_produced if total_internal_produced > 0 else 0,
+        'internal_labor_unit_cost': total_internal_labor/total_internal_produced if total_internal_produced > 0 else 0,
+        'internal_prod_unit_cost': total_internal_prod/total_internal_produced if total_internal_produced > 0 else 0,
+        'outsourced_unit_cost': total_outsource/total_outsourced if total_outsourced > 0 else 0,
+        'other_unit_cost': (total_holding+total_hiring+total_firing)/total_produced if total_produced > 0 else 0
+    }
+    return result
+
+def print_results():
+    from tabulate import tabulate
+    table = []
+    for t in range(T):
+        internal_cost = int(internal_production[t].varValue) * working_days[t] * daily_hours * hourly_wage / (working_days[t] * daily_hours / labor_per_unit)
+        internal_prod_cost = int(internal_production[t].varValue) * production_cost
+        outsourcing_cost_val = int(outsourced_production[t].varValue) * outsourcing_cost
+        holding = int(inventory[t].varValue) * holding_cost
+        stockout_ = int(stockout[t].varValue) * stockout_cost
+        hiring = int(hired[t].varValue) * hiring_cost
+        firing = int(fired[t].varValue) * firing_cost
+        overtime_cost = int(overtime_hours[t].varValue) * hourly_wage * overtime_wage_multiplier
         table.append([
             t+1,
             int(workers[t].varValue),
@@ -147,40 +190,38 @@ def print_results():
         row[11] = f'{int(row[11]):,} TL'
     print(tabulate(table, headers, tablefmt='fancy_grid', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
+    detay = ayrintili_toplam_maliyetler(
+        T, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours,
+        working_days, daily_hours, hourly_wage, production_cost, outsourcing_cost, holding_cost, stockout_cost, hiring_cost, firing_cost, overtime_wage_multiplier
+    )
     print(f"\nAyrıntılı Toplam Maliyetler:")
-    print(f"- İç Üretim İşçilik Maliyeti Toplamı: {total_internal_labor:,.2f} TL")
-    print(f"- İç Üretim Birim Maliyeti Toplamı: {total_internal_prod:,.2f} TL")
-    print(f"- Fason Üretim Maliyeti Toplamı: {total_outsource:,.2f} TL")
-    print(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
-    print(f"- Karşılanmayan Talep Maliyeti Toplamı: {total_stockout:,.2f} TL")
-    print(f"- İşe Alım Maliyeti Toplamı: {total_hiring:,.2f} TL")
-    print(f"- İşten Çıkarma Maliyeti Toplamı: {total_firing:,.2f} TL")
-    print(f"- Fazla Mesai Maliyeti Toplamı: {total_overtime:,.2f} TL")
-
-    # Birim maliyet hesaplaması
-    total_demand = sum(demand)
-    total_internal_produced = sum([int(internal_production[t].varValue) for t in range(T)])
-    total_outsourced = sum([int(outsourced_production[t].varValue) for t in range(T)])
-    total_produced = total_internal_produced + total_outsourced
-    total_unfilled = sum([int(stockout[t].varValue) for t in range(T)])
-    total_cost = pulp.value(decision_model.objective)
-
+    print(f"- İç Üretim İşçilik Maliyeti Toplamı: {detay['total_internal_labor']:,.2f} TL")
+    print(f"- İç Üretim Birim Maliyeti Toplamı: {detay['total_internal_prod']:,.2f} TL")
+    print(f"- Fason Üretim Maliyeti Toplamı: {detay['total_outsource']:,.2f} TL")
+    print(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+    print(f"- Karşılanmayan Talep Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+    print(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring']:,.2f} TL")
+    print(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing']:,.2f} TL")
+    print(f"- Fazla Mesai Maliyeti Toplamı: {detay['total_overtime']:,.2f} TL")
+    birim = birim_maliyet_analizi(
+        T, demand, internal_production, outsourced_production, stockout,
+        detay['total_internal_labor'], detay['total_internal_prod'], detay['total_outsource'], detay['total_holding'], detay['total_hiring'], detay['total_firing'], pulp.value(decision_model.objective)
+    )
     print(f"\nBirim Maliyet Analizi:")
-    print(f"- Toplam Talep: {total_demand:,} birim")
-    print(f"- Toplam İç Üretim: {total_internal_produced:,} birim ({total_internal_produced/total_demand*100:.2f}%)")
-    print(f"- Toplam Fason Üretim: {total_outsourced:,} birim ({total_outsourced/total_demand*100:.2f}%)")
-    print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
-    print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
-
-    if total_produced > 0:
-        print(f"- Ortalama Birim Maliyet (Toplam): {total_cost/total_produced:.2f} TL/birim")
-        if total_internal_produced > 0:
-            print(f"- İç Üretim Birim Maliyeti: {(total_internal_labor+total_internal_prod)/total_internal_produced:.2f} TL/birim")
-            print(f"  * İşçilik Birim Maliyeti: {total_internal_labor/total_internal_produced:.2f} TL/birim")
-            print(f"  * Üretim Birim Maliyeti: {total_internal_prod/total_internal_produced:.2f} TL/birim")
-        if total_outsourced > 0:
-            print(f"- Fason Üretim Birim Maliyeti: {total_outsource/total_outsourced:.2f} TL/birim")
-        print(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {(total_holding+total_hiring+total_firing)/total_produced:.2f} TL/birim")
+    print(f"- Toplam Talep: {birim['total_demand']:,} birim")
+    print(f"- Toplam İç Üretim: {birim['total_internal_produced']:,} birim ({birim['total_internal_produced']/birim['total_demand']*100:.2f}%)")
+    print(f"- Toplam Fason Üretim: {birim['total_outsourced']:,} birim ({birim['total_outsourced']/birim['total_demand']*100:.2f}%)")
+    print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+    print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+    if birim['total_produced'] > 0:
+        print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+        if birim['total_internal_produced'] > 0:
+            print(f"- İç Üretim Birim Maliyeti: {birim['internal_unit_cost']:.2f} TL/birim")
+            print(f"  * İşçilik Birim Maliyeti: {birim['internal_labor_unit_cost']:.2f} TL/birim")
+            print(f"  * Üretim Birim Maliyeti: {birim['internal_prod_unit_cost']:.2f} TL/birim")
+        if birim['total_outsourced'] > 0:
+            print(f"- Fason Üretim Birim Maliyeti: {birim['outsourced_unit_cost']:.2f} TL/birim")
+        print(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {birim['other_unit_cost']:.2f} TL/birim")
     else:
         print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 

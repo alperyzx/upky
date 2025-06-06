@@ -20,6 +20,26 @@ production_cost = 30  # birim üretim maliyeti (TL)
 if len(demand) != len(working_days):
     raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
 
+def birim_maliyet_analizi(
+    demand, production, inventory, cost, total_normal_labor, total_overtime, total_production, total_holding, total_stockout, production_cost
+):
+    total_demand = sum(demand)
+    total_produced = sum(production)
+    total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(len(demand))])
+    result = {
+        'total_demand': total_demand,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+        'cost': cost,
+        'avg_unit_cost': cost/total_produced if total_produced > 0 else 0,
+        'labor_unit_cost': (total_normal_labor+total_overtime)/total_produced if total_produced > 0 else 0,
+        'normal_labor_unit_cost': total_normal_labor/total_produced if total_produced > 0 else 0,
+        'overtime_unit_cost': total_overtime/total_produced if total_produced > 0 else 0,
+        'prod_unit_cost': (total_production*production_cost)/total_produced if total_produced > 0 else 0,
+        'other_unit_cost': (total_holding+total_stockout)/total_produced if total_produced > 0 else 0
+    }
+    return result
+
 def overtime_model():
     production = np.zeros(months)
     overtime_hours = np.zeros(months)
@@ -79,31 +99,30 @@ def overtime_model():
         df[col] = df[col].apply(lambda x: f'{int(x):,} TL')
     print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {cost:,.2f} TL')
+    # Ayrıntılı Toplam Maliyetler fonksiyonundan alınır
+    detay = ayrintili_toplam_maliyetler(total_holding, total_stockout, total_overtime, total_normal_labor, total_production)
     print(f"\nAyrıntılı Toplam Maliyetler:")
-    print(f"- Toplam Stok Maliyeti: {total_holding:,.2f} TL")
-    print(f"- Toplam Stoksuzluk Maliyeti: {total_stockout:,.2f} TL")
-    print(f"- Toplam Fazla Mesai Maliyeti: {total_overtime:,.2f} TL")
-    print(f"- Toplam Normal İşçilik Maliyeti: {total_normal_labor:,.2f} TL")
-    print(f"- Toplam Üretim Maliyeti: {total_production:,.2f} TL")
-
-    # Birim maliyet hesaplaması
-    total_demand = sum(demand)
-    total_produced = sum(production)
-    total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(months)])
-
+    print(f"- Toplam Stok Maliyeti: {detay['total_holding']:,.2f} TL")
+    print(f"- Toplam Stoksuzluk Maliyeti: {detay['total_stockout']:,.2f} TL")
+    print(f"- Toplam Fazla Mesai Maliyeti: {detay['total_overtime']:,.2f} TL")
+    print(f"- Toplam Normal İşçilik Maliyeti: {detay['total_normal_labor']:,.2f} TL")
+    print(f"- Toplam Üretim Maliyeti: {detay['total_production']:,.2f} TL")
+    # Birim maliyet analizini fonksiyon ile yap
+    birim = birim_maliyet_analizi(
+        demand, production, inventory, cost, total_normal_labor, total_overtime, total_production, total_holding, total_stockout, production_cost
+    )
     print(f"\nBirim Maliyet Analizi:")
-    print(f"- Toplam Talep: {total_demand:,} birim")
-    print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
-    if total_unfilled > 0:
-        print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
-
-    if total_produced > 0:
-        print(f"- Ortalama Birim Maliyet (Toplam): {cost/total_produced:.2f} TL/birim")
-        print(f"- İşçilik Birim Maliyeti: {(total_normal_labor+total_overtime)/total_produced:.2f} TL/birim")
-        print(f"  * Normal İşçilik: {total_normal_labor/total_produced:.2f} TL/birim")
-        print(f"  * Fazla Mesai: {total_overtime/total_produced:.2f} TL/birim")
-        print(f"- Üretim Birim Maliyeti: {total_production/total_produced:.2f} TL/birim")
-        print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {(total_holding+total_stockout)/total_produced:.2f} TL/birim")
+    print(f"- Toplam Talep: {birim['total_demand']:,} birim")
+    print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+    if birim['total_unfilled'] > 0:
+        print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+    if birim['total_produced'] > 0:
+        print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+        print(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
+        print(f"  * Normal İşçilik: {birim['normal_labor_unit_cost']:.2f} TL/birim")
+        print(f"  * Fazla Mesai: {birim['overtime_unit_cost']:.2f} TL/birim")
+        print(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
+        print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
     else:
         print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
@@ -212,6 +231,15 @@ def maliyet_analizi(
         "İşçilik Birim Maliyeti": avg_labor_unit,
         "Üretim Birim Maliyeti": avg_prod_unit,
         "Diğer Birim Maliyetler": avg_other_unit
+    }
+
+def ayrintili_toplam_maliyetler(total_holding, total_stockout, total_overtime, total_normal_labor, total_production):
+    return {
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_overtime': total_overtime,
+        'total_normal_labor': total_normal_labor,
+        'total_production': total_production
     }
 
 if __name__ == '__main__':

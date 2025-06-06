@@ -99,28 +99,60 @@ print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numal
 total_cost = pulp.value(model.objective)
 print(f'\nToplam Maliyet: {total_cost:,.2f} TL')
 
-# Ayrıntılı maliyetleri göster
-print(f"\nAyrıntılı Toplam Maliyetler:")
-print(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
-print(f"- Stoksuzluk Maliyeti Toplamı: {total_stockout:,.2f} TL")
-print(f"- Üretim Maliyeti Toplamı: {total_production_cost:,.2f} TL")
-print(f"- İşçilik Maliyeti Toplamı: {total_labor_cost:,.2f} TL")
+def ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost):
+    return {
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_production_cost': total_production_cost,
+        'total_labor_cost': total_labor_cost
+    }
 
-# Birim maliyet hesaplaması
-total_demand = seasonal_demand.sum()
+def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_cost, total_labor_cost, total_production_cost, total_holding, total_stockout):
+    if total_produced > 0:
+        avg_unit_cost = total_cost / total_produced
+        avg_labor_unit = total_labor_cost / total_produced
+        avg_prod_unit = total_production_cost / total_produced
+        avg_other_unit = (total_holding + total_stockout) / total_produced
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+    return {
+        'total_demand': total_demand,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+        'avg_unit_cost': avg_unit_cost,
+        'avg_labor_unit': avg_labor_unit,
+        'avg_prod_unit': avg_prod_unit,
+        'avg_other_unit': avg_other_unit
+    }
+
+detay = ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost)
+print(f"\nAyrıntılı Toplam Maliyetler:")
+print(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+print(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+print(f"- Üretim Maliyeti Toplamı: {detay['total_production_cost']:,.2f} TL")
+print(f"- İşçilik Maliyeti Toplamı: {detay['total_labor_cost']:,.2f} TL")
+
 total_produced = sum([int(y_production[t].varValue) for t in range(months)])
 total_unfilled = sum([int(y_stockout[t].varValue) for t in range(months)])
-
+birim = birim_maliyet_analizi(
+    seasonal_demand.sum(),
+    total_produced,
+    total_unfilled,
+    total_cost,
+    total_labor_cost,
+    total_production_cost,
+    total_holding,
+    total_stockout
+)
 print(f"\nBirim Maliyet Analizi:")
-print(f"- Toplam Talep: {total_demand:,} birim")
-print(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
-print(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
-
-if total_produced > 0:
-    print(f"- Ortalama Birim Maliyet (Toplam): {total_cost/total_produced:.2f} TL/birim")
-    print(f"- Ortalama İşçilik Birim Maliyeti: {total_labor_cost/total_produced:.2f} TL/birim")
-    print(f"- Ortalama Üretim Birim Maliyeti: {total_production_cost/total_produced:.2f} TL/birim")
-    print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {(total_holding+total_stockout)/total_produced:.2f} TL/birim")
+print(f"- Toplam Talep: {birim['total_demand']:,} birim")
+print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+if birim['total_produced'] > 0:
+    print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+    print(f"- Ortalama İşçilik Birim Maliyeti: {birim['avg_labor_unit']:.2f} TL/birim")
+    print(f"- Ortalama Üretim Birim Maliyeti: {birim['avg_prod_unit']:.2f} TL/birim")
+    print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['avg_other_unit']:.2f} TL/birim")
 else:
     print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
