@@ -42,33 +42,33 @@ for t in range(months):
     prev_inventory = inventory[t]
 
 df = pd.DataFrame(results, columns=[
-    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)', 'İşçilik Maliyeti (₺)', 'Üretim Maliyeti (₺)'
+    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'İşçilik Maliyeti', 'Üretim Maliyeti'
 ])
 
 # Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
-df['Stok Maliyeti (₺)'] = df['Stok Maliyeti (₺)'].astype(int)
-df['Stoksuzluk Maliyeti (₺)'] = df['Stoksuzluk Maliyeti (₺)'].astype(int)
-df.rename(columns={df.columns[5]: 'İşçilik Maliyeti (₺)'}, inplace=True)  # Fix encoding issue
-df['İşçilik Maliyeti (₺)'] = df['İşçilik Maliyeti (₺)'].astype(int)
-df['Üretim Maliyeti (₺)'] = df['Üretim Maliyeti (₺)'].astype(int)
+df['Stok Maliyeti'] = df['Stok Maliyeti'].astype(int)
+df['Stoksuzluk Maliyeti'] = df['Stoksuzluk Maliyeti'].astype(int)
+df.rename(columns={df.columns[5]: 'İşçilik Maliyeti'}, inplace=True)  # Fix encoding issue
+df['İşçilik Maliyeti'] = df['İşçilik Maliyeti'].astype(int)
+df['Üretim Maliyeti'] = df['Üretim Maliyeti'].astype(int)
 print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
 
 def ayrintili_toplam_maliyetler(df):
     return {
-        'total_holding': df["Stok Maliyeti (₺)"].sum(),
-        'total_stockout': df["Stoksuzluk Maliyeti (₺)"].sum(),
-        'total_labor': df["İşçilik Maliyeti (₺)"].sum(),
-        'total_production_cost': df["Üretim Maliyeti (₺)"].sum()
+        'total_holding': df["Stok Maliyeti"].sum(),
+        'total_stockout': df["Stoksuzluk Maliyeti"].sum(),
+        'total_labor': df["İşçilik Maliyeti"].sum(),
+        'total_production_cost': df["Üretim Maliyeti"].sum(),
     }
 
 def birim_maliyet_analizi(demand, production, inventory, cost, df, fixed_workers, months):
     total_demand = demand.sum()
     total_produced = production.sum()
     total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(months)])
-    total_holding = df["Stok Maliyeti (₺)"].sum()
-    total_stockout = df["Stoksuzluk Maliyeti (₺)"].sum()
-    total_labor = df["İşçilik Maliyeti (₺)"].sum()
-    total_production_cost = df["Üretim Maliyeti (₺)"].sum()
+    total_holding = df["Stok Maliyeti"].sum()
+    total_stockout = df["Stoksuzluk Maliyeti"].sum()
+    total_labor = df["İşçilik Maliyeti"].sum()
+    total_production_cost = df["Üretim Maliyeti"].sum()
     result = {
         'total_demand': total_demand,
         'total_produced': total_produced,
@@ -116,7 +116,7 @@ months_list = list(range(1, months+1))
 plt.figure(figsize=(10,6))
 plt.bar(months_list, production, color='skyblue', label='Üretim', alpha=0.7)
 plt.plot(months_list, inventory, marker='d', label='Stok', color='red')
-plt.plot(months_list, df['Stoksuzluk Maliyeti (₺)'], marker='x', label='Stoksuzluk Maliyeti', color='black')
+plt.plot(months_list, df['Stoksuzluk Maliyeti'], marker='x', label='Stoksuzluk Maliyeti', color='black')
 plt.xlabel('Ay')
 plt.ylabel('Adet / TL')
 plt.title('Toplu Üretim ve Stoklama Modeli Sonuçları')
