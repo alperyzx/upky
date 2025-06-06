@@ -35,7 +35,7 @@ def birim_maliyet_analizi(
         'labor_unit_cost': (total_normal_labor+total_overtime)/total_produced if total_produced > 0 else 0,
         'normal_labor_unit_cost': total_normal_labor/total_produced if total_produced > 0 else 0,
         'overtime_unit_cost': total_overtime/total_produced if total_produced > 0 else 0,
-        'prod_unit_cost': (total_production*production_cost)/total_produced if total_produced > 0 else 0,
+        'prod_unit_cost': total_production/total_produced if total_produced > 0 else 0,
         'other_unit_cost': (total_holding+total_stockout)/total_produced if total_produced > 0 else 0
     }
     return result
