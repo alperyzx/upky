@@ -4,7 +4,7 @@ from tabulate import tabulate
 
 # Parametreler
 # Çok yüksek talep için örnek:
-demand = np.array([300, 230, 200, 200, 500, 200, 400, 180, 100, 100, 120, 150])
+demand = np.array([300, 230, 250, 260, 370, 250, 400, 250, 270, 250, 320, 250])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
 stockout_cost = 20
@@ -12,9 +12,9 @@ hiring_cost = 1800
 firing_cost = 1500
 daily_hours = 8
 labor_per_unit = 4 # 1 birim üretim için gereken işgücü (saat)
-max_workers = 100  # Daha yüksek üst sınır
-min_workers = 12
-max_workforce_change = 3  # Daha hızlı işçi artışı
+max_workers = 50  # Daha yüksek üst sınır
+min_workers = 8
+max_workforce_change = 2  # Daha hızlı işçi artışı
 months = len(demand)
 hourly_wage = 10
 production_cost = 30  # birim üretim maliyeti (TL)
