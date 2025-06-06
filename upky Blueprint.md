@@ -75,7 +75,6 @@
 ### Değişkenler
 - `outsourced_supplier_A[t]`: Tedarikçi A’dan üretim.
 - `outsourced_supplier_B[t]`: Tedarikçi B’den üretim.
-- `internal_production[t]`: İç üretim.
 - `inventory[t]`: Stok seviyesi.
 - `stockout[t]`: Karşılanmayan talep (stokta bulundurmama).
 
@@ -88,7 +87,7 @@
 
 ### Python Yaklaşımı
 - Kütüphane: `Pandas`, `PuLP`.
-- Modelleme: Lineer programlama ile tedarikçi ve iç üretim optimizasyonu.
+- Modelleme: Lineer programlama ile tedarikçi optimizasyonu.
 
 ## Model 6: Mevsimsellik ve Talep Dalgaları Modeli
 ### Değişkenler
