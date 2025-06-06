@@ -3,25 +3,27 @@ import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
-# Örnek mevsimsel talep (12 ay)
-seasonal_demand = np.array([120, 450, 550, 280, 210, 150, 450, 600, 300, 250, 150, 100])
-months = len(seasonal_demand)
+# 12 aylık talep verisi
+demand = np.array([300, 310, 350, 300, 350, 450, 460, 450, 320, 350, 350, 300])
+working_days= [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]  # Aylık çalışma günleri
+months = len(demand)
 holding_cost = 5
 stockout_cost = 80
 production_cost = 30
-max_production = int(seasonal_demand.mean() * 1.3)  # 12 aylık talep ortalaması * 1,1
 labor_per_unit = 4  # 1 ürün için gereken işçilik süresi (saat)
+hiring_cost = 1800
+daily_hours = 8  # Günlük çalışma saati
+max_production = int(demand.mean() + demand.std())  # 12 a ylık talep ortalaması * 1,1
 
 # max_production'a göre ihtiyaç duyulan işçi sayısı
 # max_production = işçi_sayısı * günlük_saat * aylık_gün / labor_per_unit
 # işçi_sayısı = max_production * labor_per_unit / (günlük_saat * ortalama_aylık_gün)
-avg_working_days = np.mean([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
-needed_workers = int(np.ceil(max_production * labor_per_unit / (8 * avg_working_days)))
-print(f"Max üretim kapasitesi için gereken işçi sayısı: {needed_workers}")
+needed_workers = int(np.ceil(max_production * labor_per_unit / (daily_hours * np.mean(working_days))))
+print(f"Optimum üretim kapasitesi için gereken işçi sayısı: {needed_workers}")
 
 # Her ay işçilik maliyeti
 hourly_wage = 10
-monthly_labor_cost = needed_workers * avg_working_days * 8 * hourly_wage
+monthly_labor_cost = needed_workers * np.mean(working_days) * daily_hours * hourly_wage
 
 # Doğrusal programlama modeli
 model = pulp.LpProblem('Mevsimsel_Stok_Optimizasyonu', pulp.LpMinimize)
@@ -31,14 +33,17 @@ y_production = [pulp.LpVariable(f'production_{t}', lowBound=0, cat='Integer') fo
 y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
 y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
 
-# Amaç fonksiyonu
-model += pulp.lpSum([
-    production_cost * y_production[t] +
-    holding_cost * y_inventory[t] +
-    stockout_cost * y_stockout[t] +
-    monthly_labor_cost  # Her ay işçilik maliyeti
-    for t in range(months)
-])
+# Amaç fonksiyonu: Üretim, stok, stoksuzluk, işe alım ve toplam işçilik maliyetlerinin toplamı
+model += (
+    pulp.lpSum([
+        y_production[t] * production_cost +
+        y_inventory[t] * holding_cost +
+        y_stockout[t] * stockout_cost
+        for t in range(months)
+    ])
+    + hiring_cost * needed_workers
+    + monthly_labor_cost * months
+)
 
 # Kısıtlar
 for t in range(months):
@@ -49,7 +54,7 @@ for t in range(months):
         prev_inventory = 0
     else:
         prev_inventory = y_inventory[t-1]
-    model += prev_inventory + y_production[t] + y_stockout[t] == seasonal_demand[t] + y_inventory[t]
+    model += prev_inventory + y_production[t] + y_stockout[t] == demand[t] + y_inventory[t]
     model += y_inventory[t] >= 0
     model += y_stockout[t] >= 0
 
@@ -77,7 +82,7 @@ for t in range(months):
 
     results.append([
         t+1,
-        seasonal_demand[t],
+        demand[t],
         int(y_production[t].varValue),
         int(y_inventory[t].varValue),
         int(y_stockout[t].varValue),
@@ -99,12 +104,13 @@ print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numal
 total_cost = pulp.value(model.objective)
 print(f'\nToplam Maliyet: {total_cost:,.2f} TL')
 
-def ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost):
+def ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost, total_hiring_cost):
     return {
         'total_holding': total_holding,
         'total_stockout': total_stockout,
         'total_production_cost': total_production_cost,
-        'total_labor_cost': total_labor_cost
+        'total_labor_cost': total_labor_cost,
+        'total_hiring_cost': total_hiring_cost
     }
 
 def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_cost, total_labor_cost, total_production_cost, total_holding, total_stockout):
@@ -112,7 +118,9 @@ def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_co
         avg_unit_cost = total_cost / total_produced
         avg_labor_unit = total_labor_cost / total_produced
         avg_prod_unit = total_production_cost / total_produced
-        avg_other_unit = (total_holding + total_stockout) / total_produced
+        # Calculate other costs (total cost minus labor and production costs)
+        other_costs = total_cost - total_labor_cost - total_production_cost
+        avg_other_unit = other_costs / total_produced
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
     return {
@@ -125,17 +133,21 @@ def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_co
         'avg_other_unit': avg_other_unit
     }
 
-detay = ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost)
+# Ayrıntılı maliyetleri hesapla ve yazdır
+
+total_hiring_cost = hiring_cost * needed_workers
+detay = ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost, total_hiring_cost)
 print(f"\nAyrıntılı Toplam Maliyetler:")
 print(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
 print(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
 print(f"- Üretim Maliyeti Toplamı: {detay['total_production_cost']:,.2f} TL")
 print(f"- İşçilik Maliyeti Toplamı: {detay['total_labor_cost']:,.2f} TL")
+print(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring_cost']:,.2f} TL")
 
 total_produced = sum([int(y_production[t].varValue) for t in range(months)])
 total_unfilled = sum([int(y_stockout[t].varValue) for t in range(months)])
 birim = birim_maliyet_analizi(
-    seasonal_demand.sum(),
+    demand.sum(),
     total_produced,
     total_unfilled,
     total_cost,
@@ -164,7 +176,7 @@ except ImportError:
     exit(1)
 months_list = list(range(1, months+1))
 plt.figure(figsize=(12,6))
-plt.plot(months_list, seasonal_demand, marker='o', label='Talep', color='orange')
+plt.plot(months_list, demand, marker='o', label='Talep', color='orange')
 plt.bar(months_list, [int(y_production[t].varValue) for t in range(months)], color='skyblue', label='Üretim', alpha=0.7)
 plt.plot(months_list, [int(y_inventory[t].varValue) for t in range(months)], marker='d', label='Stok', color='red')
 plt.plot(months_list, [int(y_stockout[t].varValue) for t in range(months)], marker='x', label='Stoksuzluk', color='black')
@@ -177,7 +189,7 @@ plt.tight_layout()
 plt.show()
 
 def maliyet_analizi(
-    seasonal_demand=seasonal_demand,
+    demand=demand,
     holding_cost=holding_cost,
     stockout_cost=stockout_cost,
     production_cost=production_cost,
@@ -185,28 +197,31 @@ def maliyet_analizi(
     labor_per_unit=labor_per_unit,
     hourly_wage=hourly_wage
 ):
-    months = len(seasonal_demand)
-    avg_working_days = np.mean([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
-    needed_workers = int(np.ceil(max_production * labor_per_unit / (8 * avg_working_days)))
-    monthly_labor_cost = needed_workers * avg_working_days * 8 * hourly_wage
+    months = len(demand)
+    needed_workers = int(np.ceil(max_production * labor_per_unit / (daily_hours * np.mean(working_days))))
+    monthly_labor_cost = needed_workers * np.mean(working_days) * daily_hours * hourly_wage
     model = pulp.LpProblem('Mevsimsel_Stok_Optimizasyonu', pulp.LpMinimize)
     y_production = [pulp.LpVariable(f'production_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    model += pulp.lpSum([
-        production_cost * y_production[t] +
-        holding_cost * y_inventory[t] +
-        stockout_cost * y_stockout[t] +
-        monthly_labor_cost
-        for t in range(months)
-    ])
+    # Fix the objective function to match the main model
+    model += (
+        pulp.lpSum([
+            production_cost * y_production[t] +
+            holding_cost * y_inventory[t] +
+            stockout_cost * y_stockout[t] +
+            monthly_labor_cost
+            for t in range(months)
+        ])
+        + hiring_cost * needed_workers
+    )
     for t in range(months):
         model += y_production[t] <= max_production
         if t == 0:
             prev_inventory = 0
         else:
             prev_inventory = y_inventory[t-1]
-        model += prev_inventory + y_production[t] + y_stockout[t] == seasonal_demand[t] + y_inventory[t]
+        model += prev_inventory + y_production[t] + y_stockout[t] == demand[t] + y_inventory[t]
         model += y_inventory[t] >= 0
         model += y_stockout[t] >= 0
     solver = pulp.PULP_CBC_CMD(msg=0)
@@ -215,7 +230,7 @@ def maliyet_analizi(
     total_holding = 0
     total_stockout = 0
     total_labor = 0
-    total_demand = sum(seasonal_demand)
+    total_demand = sum(demand)
     total_unfilled = 0
     for t in range(months):
         prod = int(y_production[t].varValue)
@@ -226,7 +241,9 @@ def maliyet_analizi(
         total_stockout += so * stockout_cost
         total_labor += monthly_labor_cost
         total_unfilled += so
-    toplam_maliyet = total_production * production_cost + total_holding + total_stockout + total_labor
+    total_hiring_cost = hiring_cost * needed_workers
+    # Get the total cost directly from the model's objective value
+    toplam_maliyet = pulp.value(model.objective)
     if total_production > 0:
         avg_unit_cost = toplam_maliyet / total_production
         avg_labor_unit = total_labor / total_production
@@ -240,7 +257,7 @@ def maliyet_analizi(
         "Üretim Maliyeti": total_production * production_cost,
         "Stok Maliyeti": total_holding,
         "Stoksuzluk Maliyeti": total_stockout,
-        "İşe Alım Maliyeti": 0,
+        "İşe Alım Maliyeti": total_hiring_cost,
         "İşten Çıkarma Maliyeti": 0,
         "Toplam Talep": total_demand,
         "Toplam Üretim": total_production,

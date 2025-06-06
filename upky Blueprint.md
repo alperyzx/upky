@@ -170,13 +170,15 @@
 - `total_cost[t]`: t ayındaki toplam maliyet.
 
 ### Sabit Parametreler
-- `seasonal_demand`: Mevsimsel talep desenleri (aylık dizi).
+- `demand`: Mevsimsel talep desenleri (12 aylık dizi).
+- `working_days[t]`: t ayındaki toplam çalışma günü.
 - `holding_cost`: Stok maliyeti (TL/adet/ay).
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
 - `production_cost`: Üretim maliyeti (TL/adet).
 - `max_production`: Maksimum aylık üretim kapasitesi (adet).
 - `labor_per_unit`: Birim başına işçilik süresi (saat/adet).
 - `hourly_wage`: Saatlik işçi ücreti (TL/saat).
+- `hiring_cost`: İşe alım maliyeti (TL/kişi).
 
 ### Python Yaklaşımı
 - Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`.
@@ -186,7 +188,7 @@
 - Özellikler: İşçilik, üretim, stok, stoksuzluk maliyetlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme, birim maliyet analizi fonksiyonu.
 
 ## Toplam Maliyet Hesaplaması
-- İşçilik, işçi değişim, stok, fason maliyetleri.
+- İşçilik, üretim, stok.
 
 ## Karar Destek Aracı
 - Kütüphaneler: `Pandas`, `NumPy`, `PuLP`, `Matplotlib`.
