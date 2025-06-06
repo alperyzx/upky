@@ -2,7 +2,7 @@ import pulp
 import numpy as np
 
 # Örnek parametreler
-demand = [500, 1900, 3000, 2500, 700, 500, 1400, 800, 1200, 1000, 1200, 500]
+demand = [200, 500, 800, 1000, 700, 600, 400, 300, 250, 300, 200, 250]
 working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 holding_cost = 5
 stockout_cost = 20
@@ -17,6 +17,8 @@ max_outsourcing_ratio = 0.30
 outsourcing_capacity = 500
 hourly_wage = 10  # İşçi saatlik ücreti (TL)
 production_cost = 30  # birim üretim maliyeti (TL)
+overtime_wage_multiplier = 1.5  # Fazla mesai ücret çarpanı
+max_overtime_per_worker = 20  # İşçi başına maksimum fazla mesai saati/ay
 
 T = len(demand)
 
@@ -35,8 +37,9 @@ inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t 
 hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range(T)]
 fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
 stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Karşılanmayan talep
+overtime_hours = [pulp.LpVariable(f'overtime_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Fazla mesai saatleri
 
-# Amaç fonksiyonu: işçi ücretleri eklendi
+# Amaç fonksiyonu: işçi ücretleri ve fazla mesai ücretleri eklendi
 cost = (
     pulp.lpSum([
         holding_cost * inventory[t] +
@@ -45,6 +48,7 @@ cost = (
         hiring_cost * hired[t] +
         firing_cost * fired[t] +
         workers[t] * working_days[t] * daily_hours * hourly_wage +  # işçi ücretleri
+        overtime_hours[t] * hourly_wage * overtime_wage_multiplier +  # fazla mesai ücretleri
         production_cost * internal_production[t]  # iç üretim birim üretim maliyeti
         for t in range(T)
     ])
@@ -66,8 +70,10 @@ for t in range(T):
     decision_model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
     # Fason kapasite
     decision_model += (outsourced_production[t] <= outsourcing_capacity)
-    # İç üretim kapasitesi (işçi * gün * saat / birim işgücü)
-    decision_model += (internal_production[t] <= workers[t] * working_days[t] * daily_hours / labor_per_unit)
+    # İç üretim kapasitesi (işçi * gün * saat / birim işgücü) + fazla mesai kapasitesi
+    decision_model += (internal_production[t] <= (workers[t] * working_days[t] * daily_hours + overtime_hours[t]) / labor_per_unit)
+    # Fazla mesai işçi sayısı ile ilişkili olmalı
+    decision_model += (overtime_hours[t] <= workers[t] * max_overtime_per_worker)
     # İşgücü değişim sınırı
     if t > 0:
         decision_model += (workers[t] - workers[t-1] <= max_workforce_change)
@@ -78,6 +84,9 @@ for t in range(T):
     # İşçi sayısı, iç üretim ihtiyacından fazla olamaz (yuvarlama payı ile)
     decision_model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
     decision_model += (workers[t] >= 0)
+    # Fazla mesai kısıtı
+    decision_model += (overtime_hours[t] <= max_overtime_per_worker)
+    decision_model += (overtime_hours[t] >= 0)
 
 # Modeli çöz
 solver = pulp.PULP_CBC_CMD(msg=0)
@@ -94,6 +103,7 @@ def print_results():
     total_stockout = 0
     total_hiring = 0
     total_firing = 0
+    total_overtime = 0
     for t in range(T):
         internal_cost = int(internal_production[t].varValue) * working_days[t] * daily_hours * hourly_wage / (working_days[t] * daily_hours / labor_per_unit)
         internal_prod_cost = int(internal_production[t].varValue) * production_cost
@@ -102,6 +112,7 @@ def print_results():
         stockout_ = int(stockout[t].varValue) * stockout_cost
         hiring = int(hired[t].varValue) * hiring_cost
         firing = int(fired[t].varValue) * firing_cost
+        overtime_cost = int(overtime_hours[t].varValue) * hourly_wage * overtime_wage_multiplier
         total_internal_labor += internal_cost
         total_internal_prod += internal_prod_cost
         total_outsource += outsourcing_cost_val
@@ -109,6 +120,7 @@ def print_results():
         total_stockout += stockout_
         total_hiring += hiring
         total_firing += firing
+        total_overtime += overtime_cost
         table.append([
             t+1,
             int(workers[t].varValue),
@@ -120,17 +132,19 @@ def print_results():
             int(stockout[t].varValue),
             internal_cost,
             internal_prod_cost,
-            outsourcing_cost_val
+            outsourcing_cost_val,
+            overtime_cost
         ])
     headers = [
         'Ay', 'İşçi', 'İç Üretim', 'Fason', 'Stok', 'Alım', 'Çıkış', 'Karşılanmayan Talep',
-        'İç Üretim İşçilik Maliyeti', 'İç Üretim Birim Maliyeti', 'Fason Üretim Maliyeti'
+        'İç Üretim İşçilik Maliyeti', 'İç Üretim Birim Maliyeti', 'Fason Üretim Maliyeti', 'Fazla Mesai Maliyeti'
     ]
     # Format cost columns
     for row in table:
         row[8] = f'{int(row[8]):,} TL'
         row[9] = f'{int(row[9]):,} TL'
         row[10] = f'{int(row[10]):,} TL'
+        row[11] = f'{int(row[11]):,} TL'
     print(tabulate(table, headers, tablefmt='fancy_grid', numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
     print(f"\nAyrıntılı Toplam Maliyetler:")
@@ -141,6 +155,7 @@ def print_results():
     print(f"- Karşılanmayan Talep Maliyeti Toplamı: {total_stockout:,.2f} TL")
     print(f"- İşe Alım Maliyeti Toplamı: {total_hiring:,.2f} TL")
     print(f"- İşten Çıkarma Maliyeti Toplamı: {total_firing:,.2f} TL")
+    print(f"- Fazla Mesai Maliyeti Toplamı: {total_overtime:,.2f} TL")
 
     # Birim maliyet hesaplaması
     total_demand = sum(demand)
@@ -226,8 +241,9 @@ def maliyet_analizi(
     hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range(T)]
     fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
     stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Karşılanmayan talep
+    overtime_hours = [pulp.LpVariable(f'overtime_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Fazla mesai saatleri
 
-    # Amaç fonksiyonu: işçi ücretleri eklendi
+    # Amaç fonksiyonu: işçi ücretleri ve fazla mesai ücretleri eklendi
     cost = (
         pulp.lpSum([
             holding_cost * inventory[t] +
@@ -236,6 +252,7 @@ def maliyet_analizi(
             hiring_cost * hired[t] +
             firing_cost * fired[t] +
             workers[t] * working_days[t] * daily_hours * hourly_wage +  # işçi ücretleri
+            overtime_hours[t] * hourly_wage * overtime_wage_multiplier +  # fazla mesai ücretleri
             production_cost * internal_production[t]  # iç üretim birim üretim maliyeti
             for t in range(T)
         ])
@@ -257,8 +274,10 @@ def maliyet_analizi(
         model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
         # Fason kapasite
         model += (outsourced_production[t] <= outsourcing_capacity)
-        # İç üretim kapasitesi (işçi * gün * saat / birim işgücü)
-        model += (internal_production[t] <= workers[t] * working_days[t] * daily_hours / labor_per_unit)
+        # İç üretim kapasitesi (işçi * gün * saat / birim işgücü) + fazla mesai kapasitesi
+        model += (internal_production[t] <= (workers[t] * working_days[t] * daily_hours + overtime_hours[t]) / labor_per_unit)
+        # Fazla mesai işçi sayısı ile ilişkili olmalı
+        model += (overtime_hours[t] <= workers[t] * max_overtime_per_worker)
         # İşgücü değişim sınırı
         if t > 0:
             model += (workers[t] - workers[t-1] <= max_workforce_change)
@@ -269,6 +288,9 @@ def maliyet_analizi(
         # İşçi sayısı, iç üretim ihtiyacından fazla olamaz (yuvarlama payı ile)
         model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
         model += (workers[t] >= 0)
+        # Fazla mesai kısıtı
+        model += (overtime_hours[t] <= max_overtime_per_worker)
+        model += (overtime_hours[t] >= 0)
 
     # Modeli çöz
     solver = pulp.PULP_CBC_CMD(msg=0)
@@ -282,6 +304,7 @@ def maliyet_analizi(
     total_stockout = 0
     total_hiring = 0
     total_firing = 0
+    total_overtime = 0
     total_produced = 0
     total_demand = sum(demand)
     total_unfilled = 0
@@ -293,6 +316,7 @@ def maliyet_analizi(
         stockout_ = int(stockout[t].varValue) * stockout_cost
         hiring = int(hired[t].varValue) * hiring_cost
         firing = int(fired[t].varValue) * firing_cost
+        overtime_cost = int(overtime_hours[t].varValue) * hourly_wage * overtime_wage_multiplier
         total_internal_labor += internal_cost
         total_internal_prod += internal_prod_cost
         total_outsource += outsourcing_cost_val
@@ -300,6 +324,7 @@ def maliyet_analizi(
         total_stockout += stockout_
         total_hiring += hiring
         total_firing += firing
+        total_overtime += overtime_cost
         total_produced += int(internal_production[t].varValue) + int(outsourced_production[t].varValue)
         total_unfilled += int(stockout[t].varValue)
     toplam_maliyet = total_internal_labor + total_internal_prod + total_outsource + total_holding + total_stockout + total_hiring + total_firing
