@@ -390,30 +390,33 @@ def model6_run(seasonal_demand, holding_cost, stockout_cost, production_cost, la
     # Calculate the total cost from all components
     total_cost = total_holding + total_stockout + total_production_cost + total_labor_cost
     return df, total_cost, needed_workers, max_production
+
 if model == "Karma Planlama (Model 1)":
     st.header("Karma Planlama (Model 1)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model1.demand)))
-    demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
-    working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model1.working_days)))
-    working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
-    if len(demand) != len(working_days):
-        st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
-        st.stop()
-    holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.holding_cost), step=1)
-    outsourcing_cost = st.number_input("Fason Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.outsourcing_cost), step=1)
-    stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", min_value=1, max_value=100, value=int(model1.stockout_cost), step=1)
-    labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model1.labor_per_unit), step=0.1)
-    hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(model1.hiring_cost), step=1)
-    firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", min_value=0, max_value=5000, value=int(model1.firing_cost), step=1)
-    daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=int(model1.daily_hours), step=1)
-    outsourcing_capacity = st.number_input("Fason Kapasitesi (adet)", min_value=1, max_value=10000, value=int(model1.outsourcing_capacity), step=1)
-    min_internal_ratio = st.slider("En Az İç Üretim Oranı (%)", min_value=0, max_value=100, value=int(model1.min_internal_ratio*100)) / 100
-    max_workforce_change = st.number_input("İşgücü Değişim Sınırı (kişi)", min_value=1, max_value=100, value=int(model1.max_workforce_change), step=1)
-    max_outsourcing_ratio = st.slider("En Fazla Fason Oranı (%)", min_value=0, max_value=100, value=int(model1.max_outsourcing_ratio*100)) / 100
-    min_workers = st.number_input("Başlangıç Minimum İşçi Sayısı", min_value=1, max_value=100, value=10, step=1)
-    overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=float(model1.overtime_wage_multiplier), step=0.1)
-    max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=int(model1.max_overtime_per_worker), step=1)
-    if st.button("Modeli Çalıştır"):
+    with st.sidebar:
+        demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model1.demand)), key="m1_demand")
+        demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
+        working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model1.working_days)), key="m1_days")
+        working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
+        if len(demand) != len(working_days):
+            st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
+            st.stop()
+        holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.holding_cost), step=1, key="m1_holding")
+        outsourcing_cost = st.number_input("Fason Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.outsourcing_cost), step=1, key="m1_outsourcing")
+        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", min_value=1, max_value=100, value=int(model1.stockout_cost), step=1, key="m1_stockout")
+        labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model1.labor_per_unit), step=0.1, key="m1_labor")
+        hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(model1.hiring_cost), step=1, key="m1_hire")
+        firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", min_value=0, max_value=5000, value=int(model1.firing_cost), step=1, key="m1_fire")
+        daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=int(model1.daily_hours), step=1, key="m1_daily")
+        outsourcing_capacity = st.number_input("Fason Kapasitesi (adet)", min_value=1, max_value=10000, value=int(model1.outsourcing_capacity), step=1, key="m1_capacity")
+        min_internal_ratio = st.slider("En Az İç Üretim Oranı (%)", min_value=0, max_value=100, value=int(model1.min_internal_ratio*100), key="m1_min_internal") / 100
+        max_workforce_change = st.number_input("İşgücü Değişim Sınırı (kişi)", min_value=1, max_value=100, value=int(model1.max_workforce_change), step=1, key="m1_max_workforce")
+        max_outsourcing_ratio = st.slider("En Fazla Fason Oranı (%)", min_value=0, max_value=100, value=int(model1.max_outsourcing_ratio*100), key="m1_max_outsourcing") / 100
+        min_workers = st.number_input("Başlangıç Minimum İşçi Sayısı", min_value=1, max_value=100, value=10, step=1, key="m1_min_workers")
+        overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=float(model1.overtime_wage_multiplier), step=0.1, key="m1_overtime_multiplier")
+        max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=int(model1.max_overtime_per_worker), step=1, key="m1_max_overtime")
+        run_model = st.button("Modeli Çalıştır", key="m1_run")
+    if run_model:
         df, toplam_maliyet = model1_run(
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
             outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, min_workers,
@@ -480,20 +483,25 @@ if model == "Karma Planlama (Model 1)":
 
 if model == "Fazla Mesaili Üretim (Model 2)":
     st.header("Fazla Mesaili Üretim (Model 2)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model2.demand)))
-    demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
-    working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model2.working_days)))
-    working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
-    holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model2.holding_cost), key="m2_holding", step=1)
-    labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model2.labor_per_unit), key="m2_labor", step=0.1)
-    fixed_workers = st.number_input("Sabit İşçi Sayısı", min_value=1, max_value=200, value=model2.fixed_workers, key="m2_workers", step=1)
-    daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model2.daily_hours, key="m2_daily", step=1)
-    overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=model2.overtime_wage_multiplier, step=0.1)
-    max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=model2.max_overtime_per_worker, step=1)
-    stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", min_value=1, max_value=100, value=model2.stockout_cost, step=1)
-    normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", min_value=1, max_value=1000, value=model2.normal_hourly_wage, step=1)
-    production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model2.production_cost, key="m2_prod_cost", step=1)
-    if st.button("Modeli Çalıştır", key="m2_run"):
+    with st.sidebar:
+        demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model2.demand)), key="m2_demand")
+        demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
+        working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model2.working_days)), key="m2_days")
+        working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
+        if len(demand) != len(working_days):
+            st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
+            st.stop()
+        holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model2.holding_cost), key="m2_holding", step=1)
+        labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model2.labor_per_unit), key="m2_labor", step=0.1)
+        fixed_workers = st.number_input("Sabit İşçi Sayısı", min_value=1, max_value=200, value=model2.fixed_workers, key="m2_workers", step=1)
+        daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model2.daily_hours, key="m2_daily", step=1)
+        overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=model2.overtime_wage_multiplier, step=0.1, key="m2_overtime_multiplier")
+        max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=model2.max_overtime_per_worker, step=1, key="m2_max_overtime")
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", min_value=1, max_value=100, value=model2.stockout_cost, step=1, key="m2_stockout")
+        normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", min_value=1, max_value=1000, value=model2.normal_hourly_wage, step=1, key="m2_normal_wage")
+        production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model2.production_cost, key="m2_prod_cost", step=1)
+        run_model = st.button("Modeli Çalıştır", key="m2_run")
+    if run_model:
         df_table, total_cost = model2_run(
             demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours,
             overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost
@@ -552,18 +560,23 @@ if model == "Fazla Mesaili Üretim (Model 2)":
 
 if model == "Toplu Üretim ve Stoklama (Model 3)":
     st.header("Toplu Üretim ve Stoklama (Model 3)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model3.demand)))
-    demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
-    working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model3.working_days)))
-    working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
-    holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model3.holding_cost), key="m3_holding", step=1)
-    stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL)", min_value=1, max_value=100, value=model3.stockout_cost, key="m3_stockout", step=1)
-    fixed_workers = st.number_input("Sabit İşçi Sayısı", min_value=1, max_value=200, value=model3.fixed_workers, key="m3_workers", step=1)
-    production_rate = st.number_input("Üretim Hızı (adet/saat)", min_value=0.1, max_value=10.0, value=model3.production_rate, step=0.1)
-    daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model3.daily_hours, key="m3_daily", step=1)
-    worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", min_value=1, max_value=100000, value=model3.worker_monthly_cost, key="m3_worker_monthly_cost", step=1)
-    production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model3.production_cost, key="m3_prod_cost", step=1)
-    if st.button("Modeli Çalıştır", key="m3_run"):
+    with st.sidebar:
+        demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model3.demand)), key="m3_demand")
+        demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
+        working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model3.working_days)), key="m3_days")
+        working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
+        if len(demand) != len(working_days):
+            st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
+            st.stop()
+        holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model3.holding_cost), key="m3_holding", step=1)
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL)", min_value=1, max_value=100, value=model3.stockout_cost, key="m3_stockout", step=1)
+        fixed_workers = st.number_input("Sabit İşçi Sayısı", min_value=1, max_value=200, value=model3.fixed_workers, key="m3_workers", step=1)
+        production_rate = st.number_input("Üretim Hızı (adet/saat)", min_value=0.1, max_value=10.0, value=model3.production_rate, step=0.1, key="m3_prod_rate")
+        daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model3.daily_hours, key="m3_daily", step=1)
+        worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", min_value=1, max_value=100000, value=model3.worker_monthly_cost, key="m3_worker_monthly_cost", step=1)
+        production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model3.production_cost, key="m3_prod_cost", step=1)
+        run_model = st.button("Modeli Çalıştır", key="m3_run")
+    if run_model:
         df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit = model3_run(demand, working_days, holding_cost, stockout_cost, fixed_workers, production_rate, daily_hours, worker_monthly_cost, production_cost)
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True)
@@ -603,20 +616,25 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
 
 if model == "Dinamik Programlama (Model 4)":
     st.header("Dinamik Programlama Tabanlı (Model 4)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model4.demand)))
-    demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
-    working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model4.working_days)), key="m4_days")
-    working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
-    holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model4.holding_cost), key="m4_holding")
-    stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 100, int(model4.stockout_cost), key="m4_stockout")
-    hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", 0, 5000, int(model4.hiring_cost), key="m4_hire")
-    firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", 0, 5000, int(model4.firing_cost), key="m4_fire")
-    daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, int(model4.daily_hours), key="m4_daily")
-    labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, float(model4.labor_per_unit), key="m4_labor")
-    min_workers = st.number_input("Minimum İşçi", 1, 100, int(model4.min_workers))
-    max_workers = st.number_input("Maksimum İşçi", 1, 100, int(model4.max_workers))
-    max_workforce_change = st.number_input("Aylık İşgücü Değişim Sınırı", 1, 100, int(model4.max_workforce_change))
-    if st.button("Modeli Çalıştır", key="m4_run"):
+    with st.sidebar:
+        demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model4.demand)), key="m4_demand")
+        demand = np.array([int(x.strip()) for x in demand.split(",") if x.strip()])
+        working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model4.working_days)), key="m4_days")
+        working_days = np.array([int(x.strip()) for x in working_days.split(",") if x.strip()])
+        if len(demand) != len(working_days):
+            st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
+            st.stop()
+        holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model4.holding_cost), key="m4_holding")
+        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 100, int(model4.stockout_cost), key="m4_stockout")
+        hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", 0, 5000, int(model4.hiring_cost), key="m4_hire")
+        firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", 0, 5000, int(model4.firing_cost), key="m4_fire")
+        daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, int(model4.daily_hours), key="m4_daily")
+        labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, float(model4.labor_per_unit), key="m4_labor")
+        min_workers = st.number_input("Minimum İşçi", 1, 100, int(model4.min_workers), key="m4_min_workers")
+        max_workers = st.number_input("Maksimum İşçi", 1, 100, int(model4.max_workers), key="m4_max_workers")
+        max_workforce_change = st.number_input("Aylık İşgücü Değişim Sınırı", 1, 100, int(model4.max_workforce_change), key="m4_max_workforce")
+        run_model = st.button("Modeli Çalıştır", key="m4_run")
+    if run_model:
         df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit = model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, min_workers, max_workers, max_workforce_change, hourly_wage=10, stockout_cost=stockout_cost)
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True)
@@ -666,17 +684,22 @@ if model == "Dinamik Programlama (Model 4)":
 
 if model == "Dış Kaynak Karşılaştırma (Model 5)":
     st.header("Dış Kaynak Kullanımı Karşılaştırma (Model 5)")
-    demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model5.demand)))
-    demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
-    holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model5.holding_cost), key="m5_holding")
-    cost_supplier_A = st.number_input("Tedarikçi A Maliyeti (TL)", 1, 1000, int(model5.cost_supplier_A))
-    cost_supplier_B = st.number_input("Tedarikçi B Maliyeti (TL)", 1, 1000, int(model5.cost_supplier_B))
-    capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_A))
-    capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_B))
-    working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model5.working_days)), key="m5_days")
-    working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
-    stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 9999, int(model5.stockout_cost), key="m5_stockout")
-    if st.button("Modeli Çalıştır", key="m5_run"):
+    with st.sidebar:
+        demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model5.demand)), key="m5_demand")
+        demand = [int(x.strip()) for x in demand.split(",") if x.strip()]
+        working_days = st.text_input("Aylık Çalışma Günü (virgülle ayrılmış)", ", ".join(map(str, model5.working_days)), key="m5_days")
+        working_days = [int(x.strip()) for x in working_days.split(",") if x.strip()]
+        if len(demand) != len(working_days):
+            st.error(f"Talep ve çalışma günü uzunlukları eşit olmalı. Şu an talep: {len(demand)}, çalışma günü: {len(working_days)}.")
+            st.stop()
+        holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model5.holding_cost), key="m5_holding")
+        cost_supplier_A = st.number_input("Tedarikçi A Maliyeti (TL)", 1, 1000, int(model5.cost_supplier_A), key="m5_cost_A")
+        cost_supplier_B = st.number_input("Tedarikçi B Maliyeti (TL)", 1, 1000, int(model5.cost_supplier_B), key="m5_cost_B")
+        capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_A), key="m5_cap_A")
+        capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_B), key="m5_cap_B")
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 9999, int(model5.stockout_cost), key="m5_stockout")
+        run_model = st.button("Modeli Çalıştır", key="m5_run")
+    if run_model:
         df, toplam_maliyet = model5_run(
             demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost
         )
@@ -729,15 +752,17 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
 
 if model == "Mevsimsellik ve Dalga (Model 6)":
     st.header("Mevsimsel Talep Dalgaları ve Stok Optimizasyonu (Model 6)")
-    seasonal_demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model6.seasonal_demand)))
-    seasonal_demand = np.array([int(x.strip()) for x in seasonal_demand.split(",") if x.strip()])
-    holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model6.holding_cost), key="m6_holding")
-    stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, int(model6.stockout_cost), key="m6_stockout")
-    production_cost = st.number_input("Üretim Maliyeti (TL)", 1, 100, int(model6.production_cost))
-    labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, float(model6.labor_per_unit), key="m6_labor_per_unit")
-    hourly_wage = st.number_input("Saatlik Ücret (TL)", 1, 100, int(model6.hourly_wage), key="m6_hourly_wage")
-    daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8, key="m6_daily_hours")
-    if st.button("Modeli Çalıştır", key="m6_run"):
+    with st.sidebar:
+        seasonal_demand = st.text_input("Aylık Talep (virgülle ayrılmış)", ", ".join(map(str, model6.seasonal_demand)), key="m6_demand")
+        seasonal_demand = np.array([int(x.strip()) for x in seasonal_demand.split(",") if x.strip()])
+        holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model6.holding_cost), key="m6_holding")
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, int(model6.stockout_cost), key="m6_stockout")
+        production_cost = st.number_input("Üretim Maliyeti (TL)", 1, 100, int(model6.production_cost), key="m6_prod_cost")
+        labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, float(model6.labor_per_unit), key="m6_labor_per_unit")
+        hourly_wage = st.number_input("Saatlik Ücret (TL)", 1, 100, int(model6.hourly_wage), key="m6_hourly_wage")
+        daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, 8, key="m6_daily_hours")
+        run_model = st.button("Modeli Çalıştır", key="m6_run")
+    if run_model:
         df, total_cost, needed_workers, max_production = model6_run(
             seasonal_demand, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours
         )
