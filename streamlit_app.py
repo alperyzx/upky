@@ -12,6 +12,14 @@ import model4_dynamic_programming as model4
 import model5_outsourcing_comparison as model5
 import model6_seasonal_planning as model6
 
+# Import ayrintili_toplam_maliyetler and birim_maliyet_analizi from each model
+from model1_mixed_planning import ayrintili_toplam_maliyetler as m1_ayrintili, birim_maliyet_analizi as m1_birim
+from model2_overtime_production import ayrintili_toplam_maliyetler as m2_ayrintili, birim_maliyet_analizi as m2_birim
+from model3_batch_production import ayrintili_toplam_maliyetler as m3_ayrintili, birim_maliyet_analizi as m3_birim
+from model4_dynamic_programming import ayrintili_toplam_maliyetler as m4_ayrintili, birim_maliyet_analizi as m4_birim
+from model5_outsourcing_comparison import ayrintili_toplam_maliyetler as m5_ayrintili, birim_maliyet_analizi as m5_birim
+from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili, birim_maliyet_analizi as m6_birim
+
 st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initial_sidebar_state="expanded")
 st.title("Üretim Planlama Modelleri Karar Destek Arayüzü")
 
@@ -27,7 +35,7 @@ model = st.sidebar.selectbox("Model Seçiniz", [
 
 st.sidebar.markdown("---")
 
-def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost=20, min_workers=10, hourly_wage=10, production_cost=30):
+def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost=20, min_workers=10, hourly_wage=10, production_cost=30, overtime_wage_multiplier=1.5, max_overtime_per_worker=20):
     T = len(demand)
     decision_model = pulp.LpProblem('Karma_Planlama_Modeli', pulp.LpMinimize)
     workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, cat='Integer') for t in range(T)]
@@ -403,10 +411,13 @@ if model == "Karma Planlama (Model 1)":
     max_workforce_change = st.number_input("İşgücü Değişim Sınırı (kişi)", min_value=1, max_value=100, value=int(model1.max_workforce_change), step=1)
     max_outsourcing_ratio = st.slider("En Fazla Fason Oranı (%)", min_value=0, max_value=100, value=int(model1.max_outsourcing_ratio*100)) / 100
     min_workers = st.number_input("Başlangıç Minimum İşçi Sayısı", min_value=1, max_value=100, value=10, step=1)
+    overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=float(model1.overtime_wage_multiplier), step=0.1)
+    max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=int(model1.max_overtime_per_worker), step=1)
     if st.button("Modeli Çalıştır"):
         df, toplam_maliyet = model1_run(
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
-            outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, min_workers
+            outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, min_workers,
+            hourly_wage=10, production_cost=30, overtime_wage_multiplier=overtime_wage_multiplier, max_overtime_per_worker=max_overtime_per_worker
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True)
@@ -434,46 +445,36 @@ if model == "Karma Planlama (Model 1)":
         st.pyplot(fig)
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
-        total_internal_labor = df["İşçilik Maliyeti"].sum()
-        total_internal_prod = df["İç Üretim Maliyeti"].sum()
-        total_outsource = df["Fason Üretim Maliyeti"].sum()
-        total_holding = 0  # Not in df, can be added if needed
-        total_stockout = 0 # Not in df, can be added if needed
-        total_hiring = 0   # Not in df, can be added if needed
-        total_firing = 0   # Not in df, can be added if needed
+        detay = m1_ayrintili(
+            len(demand), model1.internal_production, model1.outsourced_production, model1.inventory, model1.hired, model1.fired, model1.stockout, model1.overtime_hours, working_days, daily_hours, model1.hourly_wage, model1.production_cost, model1.outsourcing_cost, holding_cost, stockout_cost, hiring_cost, firing_cost, model1.overtime_wage_multiplier
+        )
         st.subheader("Ayrıntılı Toplam Maliyetler")
-        st.markdown(f"- İç Üretim İşçilik Maliyeti Toplamı: {total_internal_labor:,.2f} TL")
-        st.markdown(f"- İç Üretim Birim Maliyeti Toplamı: {total_internal_prod:,.2f} TL")
-        st.markdown(f"- Fason Üretim Maliyeti Toplamı: {total_outsource:,.2f} TL")
-        # Birim Maliyet Analizi
-        total_demand = sum(demand)
-        total_internal_produced = df["İç Üretim"].sum()
-        total_outsourced = df["Fason"].sum()
-        total_produced = total_internal_produced + total_outsourced
-        total_unfilled = df["Karşılanmayan Talep"].sum()
-        # Birim maliyetler
-        if total_produced > 0:
-            avg_unit_cost = toplam_maliyet / total_produced
-            avg_labor_unit = total_internal_labor / total_produced
-            avg_prod_unit = total_internal_prod / total_produced
-            avg_outsource_unit = total_outsource / total_outsourced if total_outsourced > 0 else 0
-            avg_other_unit = (total_holding + total_stockout) / total_produced
-        else:
-            avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_outsource_unit = avg_other_unit = 0
+        st.markdown(f"- İç Üretim İşçilik Maliyeti Toplamı: {detay['total_internal_labor']:,.2f} TL")
+        st.markdown(f"- İç Üretim Birim Maliyeti Toplamı: {detay['total_internal_prod']:,.2f} TL")
+        st.markdown(f"- Fason Üretim Maliyeti Toplamı: {detay['total_outsource']:,.2f} TL")
+        st.markdown(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+        st.markdown(f"- Karşılanmayan Talep Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+        st.markdown(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring']:,.2f} TL")
+        st.markdown(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing']:,.2f} TL")
+        st.markdown(f"- Fazla Mesai Maliyeti Toplamı: {detay['total_overtime']:,.2f} TL")
+        birim = m1_birim(
+            len(demand), demand, model1.internal_production, model1.outsourced_production, model1.stockout, detay['total_internal_labor'], detay['total_internal_prod'], detay['total_outsource'], detay['total_holding'], detay['total_hiring'], detay['total_firing'], toplam_maliyet
+        )
         st.subheader("Birim Maliyet Analizi")
-        st.markdown(f"- Toplam Talep: {total_demand:,} birim")
-        st.markdown(f"- Toplam İç Üretim: {total_internal_produced:,} birim ({total_internal_produced/total_demand*100:.2f}%)")
-        st.markdown(f"- Toplam Fason Üretim: {total_outsourced:,} birim ({total_outsourced/total_demand*100:.2f}%)")
-        st.markdown(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
-        st.markdown(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
-        if total_produced > 0:
-            st.markdown(f"- Ortalama Birim Maliyet (Toplam): {toplam_maliyet/total_produced:.2f} TL/birim")
-            if total_internal_produced > 0:
-                st.markdown(f"- İç Üretim Birim Maliyeti: {(total_internal_labor+total_internal_prod)/total_internal_produced:.2f} TL/birim")
-                st.markdown(f"  * İşçilik Birim Maliyeti: {total_internal_labor/total_internal_produced:.2f} TL/birim")
-                st.markdown(f"  * Üretim Birim Maliyeti: {total_internal_prod/total_internal_produced:.2f} TL/birim")
-            if total_outsourced > 0:
-                st.markdown(f"- Fason Üretim Birim Maliyeti: {total_outsource/total_outsourced:.2f} TL/birim")
+        st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
+        st.markdown(f"- Toplam İç Üretim: {birim['total_internal_produced']:,} birim ({birim['total_internal_produced']/birim['total_demand']*100:.2f}%)")
+        st.markdown(f"- Toplam Fason Üretim: {birim['total_outsourced']:,} birim ({birim['total_outsourced']/birim['total_demand']*100:.2f}%)")
+        st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+        st.markdown(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+        if birim['total_produced'] > 0:
+            st.markdown(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+            if birim['total_internal_produced'] > 0:
+                st.markdown(f"- İç Üretim Birim Maliyeti: {birim['internal_unit_cost']:.2f} TL/birim")
+                st.markdown(f"  * İşçilik Birim Maliyeti: {birim['internal_labor_unit_cost']:.2f} TL/birim")
+                st.markdown(f"  * Üretim Birim Maliyeti: {birim['internal_prod_unit_cost']:.2f} TL/birim")
+            if birim['total_outsourced'] > 0:
+                st.markdown(f"- Fason Üretim Birim Maliyeti: {birim['outsourced_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {birim['other_unit_cost']:.2f} TL/birim")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
@@ -522,21 +523,32 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         st.pyplot(fig)
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
+        detay = m2_ayrintili(
+            df_table['Stok Maliyeti'].sum(), df_table['Stoksuzluk Maliyeti'].sum(), df_table['Fazla Mesai Maliyeti'].sum() if 'Fazla Mesai Maliyeti' in df_table.columns else 0, df_table['Normal İşçilik Maliyeti'].sum(), df_table['Üretim Maliyeti'].sum()
+        )
         st.subheader("Ayrıntılı Toplam Maliyetler")
-        st.markdown(f"- Stok Maliyeti Toplamı: {df_table['Stok Maliyeti'].sum():,.2f} TL")
-        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {df_table['Stoksuzluk Maliyeti'].sum():,.2f} TL")
-        if 'Fazla Mesai Maliyeti' in df_table.columns:
-            st.markdown(f"- Fazla Mesai Maliyeti Toplamı: {df_table['Fazla Mesai Maliyeti'].sum():,.2f} TL")
-        st.markdown(f"- Normal İşçilik Maliyeti Toplamı: {df_table['Normal İşçilik Maliyeti'].sum():,.2f} TL")
-        st.markdown(f"- Üretim Maliyeti Toplamı: {df_table['Üretim Maliyeti'].sum():,.2f} TL")
+        st.markdown(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+        st.markdown(f"- Fazla Mesai Maliyeti Toplamı: {detay['total_overtime']:,.2f} TL")
+        st.markdown(f"- Normal İşçilik Maliyeti Toplamı: {detay['total_normal_labor']:,.2f} TL")
+        st.markdown(f"- Üretim Maliyeti Toplamı: {detay['total_production']:,.2f} TL")
+        birim = m2_birim(
+            demand, df_table['Üretim'], df_table['Stok'], total_cost, detay['total_normal_labor'], detay['total_overtime'], detay['total_production'], detay['total_holding'], detay['total_stockout'], production_cost
+        )
         st.subheader("Birim Maliyet Analizi")
-        total_demand = demand.sum() if hasattr(demand, 'sum') else sum(demand)
-        total_produced = df_table['Üretim'].sum()
-        st.markdown(f"- Toplam Talep: {total_demand:,} birim")
-        st.markdown(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
+        st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
+        st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
         if 'Fazla Mesai' in df_table.columns:
             st.markdown(f"- Toplam Fazla Mesai: {df_table['Fazla Mesai'].sum():,.2f} saat")
-        st.markdown(f"- Ortalama Birim Maliyet (Toplam): {total_cost/total_produced:.2f} TL/birim" if total_produced > 0 else "- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
+        if birim['total_produced'] > 0:
+            st.markdown(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
+            st.markdown(f"  * Normal İşçilik: {birim['normal_labor_unit_cost']:.2f} TL/birim")
+            st.markdown(f"  * Fazla Mesai: {birim['overtime_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
+        else:
+            st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
 if model == "Toplu Üretim ve Stoklama (Model 3)":
     st.header("Toplu Üretim ve Stoklama (Model 3)")
@@ -570,34 +582,22 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         st.pyplot(fig)
 
         # Ayrıntılı Toplam maliyetler ve Birim Maliyet Analizi
-        total_holding = df["Stok Maliyeti"].sum()
-        total_stockout = df["Stoksuzluk Maliyeti"].sum()
-        total_labor = df["İşçilik Maliyeti"].sum()
-        total_production_cost = df["Üretim Maliyeti"].sum()
-        total_demand = demand.sum()
-        total_produced = df["Üretim"].sum()
-        total_unfilled = df["Karşılanmayan Talep"].sum()
-        # Birim maliyetler
-        if total_produced > 0:
-            avg_unit_cost = cost / total_produced
-            avg_labor_unit = total_labor / total_produced
-            avg_prod_unit = total_production_cost / total_produced
-            avg_other_unit = (total_holding + total_stockout) / total_produced
-        else:
-            avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+        detay = m3_ayrintili(df)
         st.subheader("Ayrıntılı Toplam Maliyetler")
-        st.markdown(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
-        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {total_stockout:,.2f} TL")
-        st.markdown(f"- İşçilik Maliyeti Toplamı: {total_labor:,.2f} TL")
-        st.markdown(f"- Üretim Maliyeti Toplamı: {total_production_cost:,.2f} TL")
+        st.markdown(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+        st.markdown(f"- İşçilik Maliyeti Toplamı: {detay['total_labor']:,.2f} TL")
+        st.markdown(f"- Üretim Maliyeti Toplamı: {detay['total_production_cost']:,.2f} TL")
+        birim = m3_birim(demand, df['Üretim'], df['Stok'], cost, df, fixed_workers, len(demand))
         st.subheader("Birim Maliyet Analizi")
-        st.markdown(f"- Toplam Talep: {total_demand:,} birim")
-        st.markdown(f"- Toplam Üretim: {total_produced:,} birim ({total_produced/total_demand*100:.2f}%)")
-        st.markdown(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({total_unfilled/total_demand*100:.2f}%)")
-        if total_produced > 0:
-            st.markdown(f"- Ortalama Birim Maliyet (Toplam): {cost/total_produced:.2f} TL/birim")
-            st.markdown(f"- İşçilik Birim Maliyeti: {total_labor/total_produced:.2f} TL/birim")
-            st.markdown(f"- Üretim Birim Maliyeti: {total_production_cost/total_produced:.2f} TL/birim")
+        st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
+        st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+        st.markdown(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+        if birim['total_produced'] > 0:
+            st.markdown(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
@@ -643,22 +643,24 @@ if model == "Dinamik Programlama (Model 4)":
         st.pyplot(fig)
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
+        detay = m4_ayrintili(total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing)
         st.subheader("Ayrıntılı Toplam Maliyetler")
-        st.markdown(f"- İşçilik Maliyeti Toplamı: {total_labor:,.2f} TL")
-        st.markdown(f"- Üretim Maliyeti Toplamı: {total_production:,.2f} TL")
-        st.markdown(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
-        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {total_stockout:,.2f} TL")
-        st.markdown(f"- İşe Alım Maliyeti Toplamı: {total_hiring:,.2f} TL")
-        st.markdown(f"- İşten Çıkarma Maliyeti Toplamı: {total_firing:,.2f} TL")
+        st.markdown(f"- İşçilik Maliyeti Toplamı: {detay['total_labor']:,.2f} TL")
+        st.markdown(f"- Üretim Maliyeti Toplamı: {detay['total_production']:,.2f} TL")
+        st.markdown(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+        st.markdown(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring']:,.2f} TL")
+        st.markdown(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing']:,.2f} TL")
+        birim = m4_birim(total_demand, total_produced, total_unfilled, min_cost, total_labor, total_production, total_holding, total_hiring, total_firing)
         st.subheader("Birim Maliyet Analizi")
-        st.markdown(f"- Toplam Talep: {total_demand:,} birim")
-        st.markdown(f"- Toplam Üretim: {total_produced:,} birim ({(total_produced/total_demand*100 if total_demand else 0):.2f}%)")
-        st.markdown(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({(total_unfilled/total_demand*100 if total_demand else 0):.2f}%)")
-        if total_produced > 0:
-            st.markdown(f"- Ortalama Birim Maliyet (Toplam): {avg_unit_cost:.2f} TL/birim")
-            st.markdown(f"- İşçilik Birim Maliyeti: {avg_labor_unit:.2f} TL/birim")
-            st.markdown(f"- Üretim Birim Maliyeti: {avg_prod_unit:.2f} TL/birim")
-            st.markdown(f"- Diğer Birim Maliyetler (Stok+Alım+Çıkış): {avg_other_unit:.2f} TL/birim")
+        st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
+        st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({(birim['total_produced']/birim['total_demand']*100 if birim['total_demand'] else 0):.2f}%)")
+        st.markdown(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({(birim['total_unfilled']/birim['total_demand']*100 if birim['total_demand'] else 0):.2f}%)")
+        if birim['total_produced'] > 0:
+            st.markdown(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- İşçilik Birim Maliyeti: {birim['avg_labor_unit']:.2f} TL/birim")
+            st.markdown(f"- Üretim Birim Maliyeti: {birim['avg_prod_unit']:.2f} TL/birim")
+            st.markdown(f"- Diğer Birim Maliyetler (Stok+Alım+Çıkış): {birim['avg_other_unit']:.2f} TL/birim")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
@@ -689,7 +691,7 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         ax.bar(months_list, df['Tedarikçi A'], color='#3498db', label='Tedarikçi A (Düşük Maliyet)', alpha=0.7)
         ax.bar(months_list, df['Tedarikçi B'], bottom=df['Tedarikçi A'], color='#e74c3c', label='Tedarikçi B (Yüksek Maliyet)', alpha=0.7)
         ax.plot(months_list, demand, marker='o', label='Talep', color='#2c3e50', linewidth=2, linestyle='--')
-        ax.plot(months_list, df['Stok'], marker='s', label='Stok', color='#27ae60', linewidth=2)
+        ax.plot(months_list, df['Stok'], marker='d', label='Stok', color='#27ae60', linewidth=2)
         ax.plot(months_list, df['Karşılanmayan Talep'], marker='x', label='Karşılanmayan Talep', color='#8e44ad', linewidth=2)
         ax.axhline(y=capacity_supplier_A, color='#f39c12', linestyle='-.', label=f'Tedarikçi A Kapasite Limiti ({capacity_supplier_A})')
         ax.set_xlabel('Ay')
@@ -704,23 +706,25 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         total_cost_B = df['Tedarikçi B'].sum() * cost_supplier_B
         total_holding = df['Stok'].sum() * holding_cost
         total_stockout = df['Karşılanmayan Talep'].sum() * stockout_cost
+        detay = m5_ayrintili(total_cost_A, total_cost_B, total_holding, total_stockout)
         st.subheader("Ayrıntılı Toplam Maliyetler")
-        st.markdown(f"- Tedarikçi A Toplam Maliyet: {total_cost_A:,.2f} TL")
-        st.markdown(f"- Tedarikçi B Toplam Maliyet: {total_cost_B:,.2f} TL")
-        st.markdown(f"- Stok Tutma Toplam Maliyet: {total_holding:,.2f} TL")
-        st.markdown(f"- Karşılanmayan Talep Toplam Maliyet: {total_stockout:,.2f} TL")
+        st.markdown(f"- Tedarikçi A Toplam Maliyet: {detay['total_cost_A']:,.2f} TL")
+        st.markdown(f"- Tedarikçi B Toplam Maliyet: {detay['total_cost_B']:,.2f} TL")
+        st.markdown(f"- Stok Tutma Toplam Maliyet: {detay['total_holding']:,.2f} TL")
+        st.markdown(f"- Karşılanmayan Talep Toplam Maliyet: {detay['total_stockout']:,.2f} TL")
         # Birim Maliyet Analizi
         total_demand = sum(demand)
         total_fulfilled = df['Tedarikçi A'].sum() + df['Tedarikçi B'].sum()
+        birim = m5_birim(sum(demand), df['Tedarikçi A'].sum() + df['Tedarikçi B'].sum(), toplam_maliyet, cost_supplier_A, cost_supplier_B)
         st.subheader("Birim Maliyet Analizi")
-        st.markdown(f"- Toplam Talep: {total_demand:,} birim")
-        st.markdown(f"- Karşılanan Talep: {total_fulfilled:,} birim ({(total_fulfilled/total_demand*100 if total_demand else 0):.2f}%)")
-        if total_fulfilled > 0:
-            st.markdown(f"- Ortalama Birim Maliyet: {toplam_maliyet/total_fulfilled:.2f} TL/birim")
+        st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
+        st.markdown(f"- Karşılanan Talep: {birim['total_fulfilled']:,} birim ({(birim['total_fulfilled']/birim['total_demand']*100 if birim['total_demand'] else 0):.2f}%)")
+        if birim['total_fulfilled'] > 0:
+            st.markdown(f"- Ortalama Birim Maliyet: {birim['avg_unit_cost']:.2f} TL/birim")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim karşılandı)")
-        st.markdown(f"- Tedarikçi A Birim Maliyet: {cost_supplier_A:.2f} TL/birim")
-        st.markdown(f"- Tedarikçi B Birim Maliyeti: {cost_supplier_B:.2f} TL/birim")
+        st.markdown(f"- Tedarikçi A Birim Maliyeti: {birim['cost_supplier_A']:.2f} TL/birim")
+        st.markdown(f"- Tedarikçi B Birim Maliyeti: {birim['cost_supplier_B']:.2f} TL/birim")
 
 
 if model == "Mevsimsellik ve Dalga (Model 6)":
@@ -760,20 +764,22 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         total_stockout = df['Stoksuzluk Maliyeti'].sum()
         total_production_cost = df['Üretim Maliyeti'].sum()
         total_labor_cost = df['İşçilik Maliyeti'].sum()
+        detay = m6_ayrintili(total_holding, total_stockout, total_production_cost, total_labor_cost)
         st.subheader("Ayrıntılı Toplam Maliyetler")
-        st.markdown(f"- Stok Maliyeti Toplamı: {total_holding:,.2f} TL")
-        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {total_stockout:,.2f} TL")
-        st.markdown(f"- Üretim Maliyeti Toplamı: {total_production_cost:,.2f} TL")
-        st.markdown(f"- İşçilik Maliyeti Toplamı: {total_labor_cost:,.2f} TL")
+        st.markdown(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
+        st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
+        st.markdown(f"- Üretim Maliyeti Toplamı: {detay['total_production_cost']:,.2f} TL")
+        st.markdown(f"- İşçilik Maliyeti Toplamı: {detay['total_labor_cost']:,.2f} TL")
         # Birim Maliyet Analizi
         total_demand = df['Talep'].sum()
         total_produced = df['Üretim'].sum()
         total_unfilled = df['Stoksuzluk'].sum()
+        birim = m6_birim(total_demand, total_produced, total_unfilled, total_cost, total_labor_cost, total_production_cost, total_holding, total_stockout)
         st.subheader("Birim Maliyet Analizi")
-        st.markdown(f"- Toplam Talep: {total_demand:,} birim")
-        st.markdown(f"- Toplam Üretim: {total_produced:,} birim ({(total_produced/total_demand*100 if total_demand else 0):.2f}%)")
-        st.markdown(f"- Karşılanmayan Talep: {total_unfilled:,} birim ({(total_unfilled/total_demand*100 if total_demand else 0):.2f}%)")
-        if total_produced > 0:
+        st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
+        st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({(birim['total_produced']/birim['total_demand']*100 if birim['total_demand'] else 0):.2f}%)")
+        st.markdown(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({(birim['total_unfilled']/birim['total_demand']*100 if birim['total_demand'] else 0):.2f}%)")
+        if birim['total_produced'] > 0:
             avg_unit_cost = total_cost / total_produced
             avg_labor_unit = total_labor_cost / total_produced
             avg_prod_unit = total_production_cost / total_produced
@@ -781,7 +787,7 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
             st.markdown(f"- Ortalama Birim Maliyet (Toplam): {avg_unit_cost:.2f} TL/birim")
             st.markdown(f"- İşçilik Birim Maliyeti: {avg_labor_unit:.2f} TL/birim")
             st.markdown(f"- Üretim Birim Maliyeti: {avg_prod_unit:.2f} TL/birim")
-            st.markdown(f"- Diğer Birim Maliyetler (Stok+Stoksuzluk): {avg_other_unit:.2f} TL/birim")
+            st.markdown(f"- Diğer Birim Maliyetler (Stok, Stoksuzluk): {avg_other_unit:.2f} TL/birim")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
