@@ -749,7 +749,6 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         st.markdown(f"- Tedarikçi A Birim Maliyeti: {birim['cost_supplier_A']:.2f} TL/birim")
         st.markdown(f"- Tedarikçi B Birim Maliyeti: {birim['cost_supplier_B']:.2f} TL/birim")
 
-
 if model == "Mevsimsellik ve Dalga (Model 6)":
     st.header("Mevsimsel Talep Dalgaları ve Stok Optimizasyonu (Model 6)")
     with st.sidebar:

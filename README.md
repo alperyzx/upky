@@ -1,6 +1,8 @@
 # Üretim Planlama Modelleri Python Projesi Kurulum ve Kullanım Kılavuzu
 
-## Kurulum
+### Canlı demo: https://yzupky.streamlit.app/ 
+
+## Kurulum 
 
 1. **Python Kurulumu**
    - Python 3.8 veya üzeri bir sürüm kurulu olmalıdır.
@@ -89,7 +91,7 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 - **Model 4: Dinamik Programlama**
   - İşgücü planlamasının ve işçi değişim maliyetlerinin önemli olduğu, uzun vadeli ve değişken talep yapısında kullanılır.
 - **Model 5: Dış Kaynak Kullanımı Karşılaştırması**
-  - Farklı tedarikçi seçeneklerinin ve kapasite kısıtlarının olduğu, dış kaynak ve iç üretim arasında maliyet karşılaştırması yapılacaksa uygundur.
+  - Farklı tedarikçi seçeneklerinin ve kapasite kısıtlarının olduğu, dış kaynak tercihinde maliyet karşılaştırması yapılacaksa uygundur.
 - **Model 6: Mevsimsellik ve Talep Dalgaları**
   - Talebin mevsimsel dalgalandığı, stok ve üretim optimizasyonunun önemli olduğu sektörlerde kullanılır.
 
