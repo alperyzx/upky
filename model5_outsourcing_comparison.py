@@ -22,40 +22,125 @@ capacity_supplier_B = params['capacity']['capacity_supplier_B']
 if len(demand) != len(working_days):
     raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
 
-# Model
-decision_model = pulp.LpProblem('Dis_Kaynak_Karsilastirma', pulp.LpMinimize)
+def solve_model(
+    demand,
+    working_days,
+    holding_cost,
+    stockout_cost,
+    cost_supplier_A,
+    cost_supplier_B,
+    capacity_supplier_A,
+    capacity_supplier_B
+):
+    """
+    Core model logic for the outsourcing comparison model (Model 5)
+    Returns calculated values as a dictionary
+    """
+    months = len(demand)
 
-# Karar değişkenleri
-out_A = [pulp.LpVariable(f'out_A_{t}', lowBound=0, cat='Integer') for t in range(months)]
-out_B = [pulp.LpVariable(f'out_B_{t}', lowBound=0, cat='Integer') for t in range(months)]
-inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
-stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
+    # Model
+    decision_model = pulp.LpProblem('Dis_Kaynak_Karsilastirma', pulp.LpMinimize)
 
-# Amaç fonksiyonu
-decision_model += pulp.lpSum([
-    cost_supplier_A * out_A[t] +
-    cost_supplier_B * out_B[t] +
-    holding_cost * inventory[t] +
-    stockout_cost * stockout[t]
-    for t in range(months)
-])
+    # Karar değişkenleri
+    out_A = [pulp.LpVariable(f'out_A_{t}', lowBound=0, cat='Integer') for t in range(months)]
+    out_B = [pulp.LpVariable(f'out_B_{t}', lowBound=0, cat='Integer') for t in range(months)]
+    inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
+    stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
 
-# Kısıtlar
-for t in range(months):
-    # Talep karşılanmalı (tedarik + önceki stok + karşılanmayan talep = talep + yeni stok)
-    if t == 0:
-        prev_inventory = 0
-    else:
-        prev_inventory = inventory[t-1]
-    decision_model += (out_A[t] + out_B[t] + prev_inventory + stockout[t] == demand[t] + inventory[t])
+    # Amaç fonksiyonu
+    decision_model += pulp.lpSum([
+        cost_supplier_A * out_A[t] +
+        cost_supplier_B * out_B[t] +
+        holding_cost * inventory[t] +
+        stockout_cost * stockout[t]
+        for t in range(months)
+    ])
 
-    # Tedarikçi kapasiteleri
-    decision_model += (out_A[t] <= capacity_supplier_A)  # A tedarikçisi sınırlı kapasite
-    # B tedarikçisi için kapasite sınırı yok (pratikte çok büyük bir değer)
+    # Kısıtlar
+    for t in range(months):
+        # Talep karşılanmalı (tedarik + önceki stok + karşılanmayan talep = talep + yeni stok)
+        if t == 0:
+            prev_inventory = 0
+        else:
+            prev_inventory = inventory[t-1]
+        decision_model += (out_A[t] + out_B[t] + prev_inventory + stockout[t] == demand[t] + inventory[t])
 
-# Modeli çöz
-solver = pulp.PULP_CBC_CMD(msg=0)
-decision_model.solve(solver)
+        # Tedarikçi kapasiteleri
+        decision_model += (out_A[t] <= capacity_supplier_A)  # A tedarikçisi sınırlı kapasite
+        # B tedarikçisi için kapasite sınırı yok (pratikte çok büyük bir değer)
+
+    # Modeli çöz
+    solver = pulp.PULP_CBC_CMD(msg=0)
+    decision_model.solve(solver)
+
+    # Results as variables, total calculations, etc.
+    total_A = 0
+    total_B = 0
+    total_holding = 0
+    total_stockout = 0
+    total_produced = 0
+    total_demand = sum(demand)
+    total_unfilled = 0
+
+    results = []
+    for t in range(months):
+        a = int(out_A[t].varValue)
+        b = int(out_B[t].varValue)
+        inv = int(inventory[t].varValue)
+        so = int(stockout[t].varValue)
+
+        cost_A = a * cost_supplier_A
+        cost_B = b * cost_supplier_B
+        holding = inv * holding_cost
+        stockout_val = so * stockout_cost
+
+        total_A += a
+        total_B += b
+        total_holding += holding
+        total_stockout += stockout_val
+        total_produced += a + b
+        total_unfilled += so
+
+        results.append([
+            t+1, a, b, inv, so, cost_A, cost_B, holding, stockout_val
+        ])
+
+    toplam_maliyet = total_A * cost_supplier_A + total_B * cost_supplier_B + total_holding + total_stockout
+
+    df = pd.DataFrame(results, columns=[
+        'Ay', 'Tedarikçi A', 'Tedarikçi B', 'Stok', 'Karşılanmayan Talep',
+        'Tedarikçi A Maliyeti', 'Tedarikçi B Maliyeti', 'Stok Maliyeti', 'Stoksuzluk Maliyeti'
+    ])
+
+    return {
+        'out_A': out_A,
+        'out_B': out_B,
+        'inventory': inventory,
+        'stockout': stockout,
+        'objective_value': pulp.value(decision_model.objective),
+        'df': df,
+        'total_cost_A': total_A * cost_supplier_A,
+        'total_cost_B': total_B * cost_supplier_B,
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+        'total_demand': total_demand,
+        'toplam_maliyet': toplam_maliyet
+    }
+
+# Use the shared solver function
+model_results = solve_model(
+    demand, working_days, holding_cost, stockout_cost, cost_supplier_A,
+    cost_supplier_B, capacity_supplier_A, capacity_supplier_B
+)
+
+# Extract variables from model_results for global use
+out_A = model_results['out_A']
+out_B = model_results['out_B']
+inventory = model_results['inventory']
+stockout = model_results['stockout']
+decision_model = pulp.LpProblem('Dis_Kaynak_Karsilastirma', pulp.LpMinimize)  # Dummy model for compatibility
 
 # Sonuçlar
 def ayrintili_toplam_maliyetler(total_cost_A, total_cost_B, total_holding, total_stockout):
@@ -77,38 +162,41 @@ def birim_maliyet_analizi(total_demand, total_fulfilled, total_cost, cost_suppli
 
 def print_results():
     from tabulate import tabulate
+
+    # Use the model results from the shared solver
+    df = model_results['df']
+    total_cost_A = model_results['total_cost_A']
+    total_cost_B = model_results['total_cost_B']
+    total_holding = model_results['total_holding']
+    total_stockout = model_results['total_stockout']
+    toplam_maliyet = model_results['toplam_maliyet']
+    total_demand = model_results['total_demand']
+    total_fulfilled = model_results['total_produced']
+
+    # Format the DataFrame for display
     table = []
-    total_cost_A = 0
-    total_cost_B = 0
-    total_holding = 0
-    total_stockout = 0
-    for t in range(months):
-        cost_A = int(out_A[t].varValue) * cost_supplier_A
-        cost_B = int(out_B[t].varValue) * cost_supplier_B
-        holding = int(inventory[t].varValue) * holding_cost
-        stockout_val = int(stockout[t].varValue) * stockout_cost
-        total_cost_A += cost_A
-        total_cost_B += cost_B
-        total_holding += holding
-        total_stockout += stockout_val
+    for _, row in df.iterrows():
         table.append([
-            t+1,
-            int(out_A[t].varValue),
-            int(out_B[t].varValue),
-            int(inventory[t].varValue),
-            int(stockout[t].varValue),
-            f"{cost_A:,} TL",
-            f"{cost_B:,} TL",
-            f"{holding:,} TL",
-            f"{stockout_val:,} TL"
+            int(row['Ay']),
+            int(row['Tedarikçi A']),
+            int(row['Tedarikçi B']),
+            int(row['Stok']),
+            int(row['Karşılanmayan Talep']),
+            f"{row['Tedarikçi A Maliyeti']:,} TL",
+            f"{row['Tedarikçi B Maliyeti']:,} TL",
+            f"{row['Stok Maliyeti']:,} TL",
+            f"{row['Stoksuzluk Maliyeti']:,} TL"
         ])
+
     headers = ['Ay', 'Tedarikçi A', 'Tedarikçi B', 'Stok', 'Karşılanmayan Talep',
               'Tedarikçi A Maliyeti (₺)', 'Tedarikçi B Maliyeti (₺)',
               'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)']
+
     print(f"Tedarikçi A: {cost_supplier_A} TL/birim, Kapasite: {capacity_supplier_A} birim/ay")
     print(f"Tedarikçi B: {cost_supplier_B} TL/birim, Kapasite: Sınırsız")
     print(tabulate(table, headers, tablefmt='fancy_grid', numalign='right', stralign='center'))
-    print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
+    print(f'\nToplam Maliyet: {toplam_maliyet:,.2f} TL')
+
     # Ayrıntılı Toplam Maliyetler fonksiyonundan alınır
     detay = ayrintili_toplam_maliyetler(total_cost_A, total_cost_B, total_holding, total_stockout)
     print(f"\nAyrıntılı Maliyet Dağılımı:")
@@ -116,11 +204,9 @@ def print_results():
     print(f"- Tedarikçi B Toplam Maliyet: {detay['total_cost_B']:,} TL")
     print(f"- Stok Tutma Toplam Maliyet: {detay['total_holding']:,} TL")
     print(f"- Karşılanmayan Talep Toplam Maliyet: {detay['total_stockout']:,} TL")
+
     # Birim Maliyet Analizi fonksiyonundan alınır
-    total_demand = sum(demand)
-    total_fulfilled = sum([int(out_A[t].varValue) + int(out_B[t].varValue) for t in range(months)])
-    total_cost = pulp.value(decision_model.objective)
-    birim = birim_maliyet_analizi(total_demand, total_fulfilled, total_cost, cost_supplier_A, cost_supplier_B)
+    birim = birim_maliyet_analizi(total_demand, total_fulfilled, toplam_maliyet, cost_supplier_A, cost_supplier_B)
     print(f"\nBirim Maliyet Analizi:")
     print(f"- Toplam Talep: {birim['total_demand']:,} birim")
     print(f"- Karşılanan Talep: {birim['total_fulfilled']:,} birim ({birim['total_fulfilled']/birim['total_demand']*100:.2f}%)")
@@ -180,58 +266,34 @@ def maliyet_analizi(
     capacity_supplier_A=capacity_supplier_A,
     capacity_supplier_B=capacity_supplier_B
 ):
-    months = len(demand)
-    # Model ve değişkenler yukarıdaki gibi tanımlanıyor
-    decision_model = pulp.LpProblem('Dis_Kaynak_Karsilastirma', pulp.LpMinimize)
-    out_A = [pulp.LpVariable(f'out_A_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    out_B = [pulp.LpVariable(f'out_B_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    decision_model += pulp.lpSum([
-        cost_supplier_A * out_A[t] +
-        cost_supplier_B * out_B[t] +
-        holding_cost * inventory[t] +
-        stockout_cost * stockout[t]
-        for t in range(months)
-    ])
-    for t in range(months):
-        if t == 0:
-            prev_inventory = 0
-        else:
-            prev_inventory = inventory[t-1]
-        decision_model += (out_A[t] + out_B[t] + prev_inventory + stockout[t] == demand[t] + inventory[t])
-        decision_model += (out_A[t] <= capacity_supplier_A)
-    solver = pulp.PULP_CBC_CMD(msg=0)
-    decision_model.solve(solver)
-    total_A = 0
-    total_B = 0
-    total_holding = 0
-    total_stockout = 0
-    total_produced = 0
-    total_demand = sum(demand)
-    total_unfilled = 0
-    for t in range(months):
-        a = int(out_A[t].varValue)
-        b = int(out_B[t].varValue)
-        inv = int(inventory[t].varValue)
-        so = int(stockout[t].varValue)
-        total_A += a
-        total_B += b
-        total_holding += inv * holding_cost
-        total_stockout += so * stockout_cost
-        total_produced += a + b
-        total_unfilled += so
-    toplam_maliyet = total_A * cost_supplier_A + total_B * cost_supplier_B + total_holding + total_stockout
+    # Use the shared model solver function
+    model_results = solve_model(
+        demand, working_days, holding_cost, stockout_cost,
+        cost_supplier_A, cost_supplier_B,
+        capacity_supplier_A, capacity_supplier_B
+    )
+
+    toplam_maliyet = model_results['toplam_maliyet']
+    total_cost_A = model_results['total_cost_A']
+    total_cost_B = model_results['total_cost_B']
+    total_holding = model_results['total_holding']
+    total_stockout = model_results['total_stockout']
+    total_produced = model_results['total_produced']
+    total_unfilled = model_results['total_unfilled']
+    total_demand = model_results['total_demand']
+
+    # Calculate unit costs
     if total_produced > 0:
         avg_unit_cost = toplam_maliyet / total_produced
-        avg_prod_unit = (total_A * cost_supplier_A + total_B * cost_supplier_B) / total_produced
+        avg_prod_unit = (total_cost_A + total_cost_B) / total_produced
         avg_other_unit = (total_holding + total_stockout) / total_produced
     else:
         avg_unit_cost = avg_prod_unit = avg_other_unit = 0
+
     return {
         "Toplam Maliyet": toplam_maliyet,
         "İşçilik Maliyeti": 0,
-        "Üretim Maliyeti": total_A * cost_supplier_A + total_B * cost_supplier_B,
+        "Üretim Maliyeti": total_cost_A + total_cost_B,
         "Stok Maliyeti": total_holding,
         "Stoksuzluk Maliyeti": total_stockout,
         "İşe Alım Maliyeti": 0,

@@ -31,101 +31,174 @@ if len(demand) != len(working_days):
 def prod_capacity(workers, t):
     return workers * working_days[t] * daily_hours / labor_per_unit
 
-# DP tabloları
-cost_table = np.full((months+1, max_workers+1), np.inf)
-backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
+def solve_model(
+    demand,
+    working_days,
+    holding_cost,
+    stockout_cost,
+    hiring_cost,
+    firing_cost,
+    daily_hours,
+    labor_per_unit,
+    min_workers,
+    max_workers,
+    max_workforce_change,
+    hourly_wage,
+    production_cost
+):
+    """
+    Core model logic for Dynamic Programming model (Model 4)
+    Returns calculated values as a dictionary
+    """
+    months = len(demand)
 
-# Başlangıç: 0. ayda 0 stok ve her işçi sayısı için maliyet 0
-cost_table[0, min_workers:max_workers+1] = 0
+    # Üretim kapasitesi: işçi * gün * saat / birim işgücü
+    def prod_capacity(workers, t):
+        return workers * working_days[t] * daily_hours / labor_per_unit
 
-# DP algoritması
-for t in range(months):
-    for prev_w in range(min_workers, max_workers+1):
-        if cost_table[t, prev_w] < np.inf:
-            for w in range(max(min_workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
-                capacity = prod_capacity(w, t)
-                # Karşılanamayan talep varsa ceza maliyeti uygula
-                unmet = max(0, demand[t] - capacity)
-                inventory = max(0, capacity - demand[t])
-                hire = max(0, w - prev_w) * hiring_cost
-                fire = max(0, prev_w - w) * firing_cost
-                holding = inventory * holding_cost
-                stockout = unmet * stockout_cost
-                labor = w * working_days[t] * daily_hours * hourly_wage
+    # DP tabloları
+    cost_table = np.full((months+1, max_workers+1), np.inf)
+    backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
 
-                # Kapasiteye değil, gerçek üretim miktarına göre maliyet hesaplanmalı
-                actual_prod = min(capacity, demand[t])
-                prod_cost = actual_prod * production_cost  # Kapasite değil, gerçek üretim miktarı
+    # Başlangıç: 0. ayda 0 stok ve her işçi sayısı için maliyet 0
+    cost_table[0, min_workers:max_workers+1] = 0
 
-                total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor + prod_cost
-                if total_cost < cost_table[t+1, w]:
-                    cost_table[t+1, w] = total_cost
-                    backtrack[t+1, w] = prev_w
+    # DP algoritması
+    for t in range(months):
+        for prev_w in range(min_workers, max_workers+1):
+            if cost_table[t, prev_w] < np.inf:
+                for w in range(max(min_workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
+                    capacity = prod_capacity(w, t)
+                    # Karşılanamayan talep varsa ceza maliyeti uygula
+                    unmet = max(0, demand[t] - capacity)
+                    inventory = max(0, capacity - demand[t])
+                    hire = max(0, w - prev_w) * hiring_cost
+                    fire = max(0, prev_w - w) * firing_cost
+                    holding = inventory * holding_cost
+                    stockout = unmet * stockout_cost
+                    labor = w * working_days[t] * daily_hours * hourly_wage
 
-# En düşük maliyetli yolun sonundaki işçi sayısı
-final_workers = np.argmin(cost_table[months])
-min_cost = cost_table[months, final_workers]
+                    # Kapasiteye değil, gerçek üretim miktarına göre maliyet hesaplanmalı
+                    actual_prod = min(capacity, demand[t])
+                    prod_cost = actual_prod * production_cost  # Kapasite değil, gerçek üretim miktarı
 
-# Geriye doğru optimal yolun çıkarılması
-workers_seq = []
-w = final_workers
-for t in range(months, 0, -1):
-    workers_seq.append(w)
-    w = backtrack[t, w]
-workers_seq = workers_seq[::-1]
+                    total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor + prod_cost
+                    if total_cost < cost_table[t+1, w]:
+                        cost_table[t+1, w] = total_cost
+                        backtrack[t+1, w] = prev_w
 
-# Üretim ve stok hesaplama
-production_seq = []
-inventory_seq = []
-stockout_seq = []
-for t, w in enumerate(workers_seq):
-    cap = prod_capacity(w, t)
-    prod = min(cap, demand[t])
-    production_seq.append(prod)
-    inventory_seq.append(max(0, cap - demand[t]))
-    stockout_seq.append(max(0, demand[t] - cap))
+    # En düşük maliyetli yolun sonundaki işçi sayısı
+    final_workers = np.argmin(cost_table[months])
+    min_cost = cost_table[months, final_workers]
 
-# Sonuç tablosu
-results = []
-total_labor = 0
-total_production = 0
-total_holding = 0
-total_stockout = 0
-total_hiring = 0
-total_firing = 0
+    # Geriye doğru optimal yolun çıkarılması
+    workers_seq = []
+    w = final_workers
+    for t in range(months, 0, -1):
+        workers_seq.append(w)
+        w = backtrack[t, w]
+    workers_seq = workers_seq[::-1]
 
-for t in range(months):
-    # İşçi sayısı değişiminden kaynaklanan maliyetler
-    if t > 0:
-        hire = max(0, workers_seq[t] - workers_seq[t-1]) * hiring_cost
-        fire = max(0, workers_seq[t-1] - workers_seq[t]) * firing_cost
-    else:
-        hire = workers_seq[t] * hiring_cost
-        fire = 0
+    # Üretim, stok, ve diğer hesaplamalar
+    production_seq = []
+    inventory_seq = []
+    labor_cost_seq = []
+    unmet_seq = []
+    stockout_cost_seq = []
+    prod_cost_seq = []
+    hiring_seq = []
+    firing_seq = []
 
-    labor_cost = workers_seq[t] * working_days[t] * daily_hours * hourly_wage
-    prod_cost = production_seq[t] * production_cost
-    holding = inventory_seq[t] * holding_cost
-    stockout = stockout_seq[t] * stockout_cost
+    for t, w in enumerate(workers_seq):
+        cap = prod_capacity(w, t)
+        prod = min(cap, demand[t])
+        unmet = max(0, demand[t] - cap)
+        inventory = max(0, cap - demand[t])
+        labor_cost = w * working_days[t] * daily_hours * hourly_wage
+        prod_cost = prod * production_cost
 
-    # Toplam maliyetleri hesapla
-    total_labor += labor_cost
-    total_production += prod_cost
-    total_holding += holding
-    total_stockout += stockout
-    total_hiring += hire
-    total_firing += fire
+        if t > 0:
+            hire = max(0, w - workers_seq[t-1]) * hiring_cost
+            fire = max(0, workers_seq[t-1] - w) * firing_cost
+        else:
+            hire = w * hiring_cost
+            fire = 0
 
-    results.append([
-        t+1, workers_seq[t], production_seq[t], inventory_seq[t], stockout_seq[t],
-        labor_cost, prod_cost, hire, fire, holding, stockout
+        production_seq.append(prod)
+        inventory_seq.append(inventory)
+        labor_cost_seq.append(labor_cost)
+        unmet_seq.append(unmet)
+        stockout_cost_seq.append(unmet * stockout_cost)
+        prod_cost_seq.append(prod_cost)
+        hiring_seq.append(hire)
+        firing_seq.append(fire)
+
+    # Calculate totals
+    total_labor = sum(labor_cost_seq)
+    total_production = sum(prod_cost_seq)
+    total_holding = sum(inventory * holding_cost for inventory in inventory_seq)
+    total_stockout = sum(unmet * stockout_cost for unmet in unmet_seq)
+    total_hiring = sum(hiring_seq)
+    total_firing = sum(firing_seq)
+    total_demand = sum(demand)
+    total_produced = sum(production_seq)
+    total_unfilled = sum(unmet_seq)
+
+    # Create results dataframe
+    results = []
+    for t in range(months):
+        holding = inventory_seq[t] * holding_cost
+        stockout = unmet_seq[t] * stockout_cost
+
+        results.append([
+            t+1, workers_seq[t], production_seq[t], inventory_seq[t], unmet_seq[t],
+            labor_cost_seq[t], prod_cost_seq[t], hiring_seq[t], firing_seq[t], holding, stockout
+        ])
+
+    df = pd.DataFrame(results, columns=[
+        'Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep',
+        'İşçilik Maliyeti', 'Üretim Maliyeti', 'İşe Alım Maliyeti',
+        'İşten Çıkarma Maliyeti', 'Stok Maliyeti', 'Stoksuzluk Maliyeti'
     ])
 
-df = pd.DataFrame(results, columns=[
-    'Ay', 'İşçi', 'Üretim', 'Stok', 'Karşılanmayan Talep',
-    'İşçilik Maliyeti (₺)', 'Üretim Maliyeti (₺)', 'İşe Alım Maliyeti (₺)',
-    'İşten Çıkarma Maliyeti (₺)', 'Stok Maliyeti (₺)', 'Stoksuzluk Maliyeti (₺)'
-])
+    # Return comprehensive results
+    return {
+        'df': df,
+        'workers_seq': workers_seq,
+        'production_seq': production_seq,
+        'inventory_seq': inventory_seq,
+        'unmet_seq': unmet_seq,
+        'min_cost': min_cost,
+        'total_labor': total_labor,
+        'total_production': total_production,
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_hiring': total_hiring,
+        'total_firing': total_firing,
+        'total_demand': total_demand,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled
+    }
+
+# Use the solve_model function for the main execution path
+model_results = solve_model(
+    demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
+    daily_hours, labor_per_unit, min_workers, max_workers, max_workforce_change,
+    hourly_wage, production_cost
+)
+
+df = model_results['df']
+min_cost = model_results['min_cost']
+workers_seq = model_results['workers_seq']
+production_seq = model_results['production_seq']
+inventory_seq = model_results['inventory_seq']
+stockout_seq = model_results['unmet_seq']
+total_labor = model_results['total_labor']
+total_production = model_results['total_production']
+total_holding = model_results['total_holding']
+total_stockout = model_results['total_stockout']
+total_hiring = model_results['total_hiring']
+total_firing = model_results['total_firing']
 
 print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right'))
 
@@ -144,68 +217,25 @@ def maliyet_analizi(
     hourly_wage=hourly_wage,
     production_cost=production_cost
 ):
-    months = len(demand)
-    # DP tabloları
-    cost_table = np.full((months+1, max_workers+1), np.inf)
-    backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
-    cost_table[0, min_workers:max_workers+1] = 0
-    for t in range(months):
-        for prev_w in range(min_workers, max_workers+1):
-            if cost_table[t, prev_w] < np.inf:
-                for w in range(max(min_workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
-                    capacity = w * working_days[t] * daily_hours / labor_per_unit
-                    unmet = max(0, demand[t] - capacity)
-                    inventory = max(0, capacity - demand[t])
-                    hire = max(0, w - prev_w) * hiring_cost
-                    fire = max(0, prev_w - w) * firing_cost
-                    holding = inventory * holding_cost
-                    stockout = unmet * stockout_cost
-                    labor = w * working_days[t] * daily_hours * hourly_wage
-                    actual_prod = min(capacity, demand[t])
-                    prod_cost = actual_prod * production_cost
-                    total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor + prod_cost
-                    if total_cost < cost_table[t+1, w]:
-                        cost_table[t+1, w] = total_cost
-                        backtrack[t+1, w] = prev_w
-    # En düşük maliyetli yolun sonundaki işçi sayısı
-    min_cost = np.min(cost_table[months, min_workers:max_workers+1])
-    last_worker = np.argmin(cost_table[months, min_workers:max_workers+1]) + min_workers
-    # Geriye doğru izleme
-    workers = [0]*months
-    w = last_worker
-    for t in range(months, 0, -1):
-        workers[t-1] = w
-        w = backtrack[t, w]
-    # Sonuçların hesaplanması
-    total_labor = 0
-    total_production = 0
-    total_holding = 0
-    total_stockout = 0
-    total_hiring = 0
-    total_firing = 0
-    total_demand = sum(demand)
-    total_produced = 0
-    total_unfilled = 0
-    for t in range(months):
-        capacity = workers[t] * working_days[t] * daily_hours / labor_per_unit
-        actual_prod = min(capacity, demand[t])
-        unmet = max(0, demand[t] - capacity)
-        inventory = max(0, capacity - demand[t])
-        hire = max(0, workers[t] - (workers[t-1] if t > 0 else min_workers)) * hiring_cost
-        fire = max(0, (workers[t-1] if t > 0 else min_workers) - workers[t]) * firing_cost
-        holding = inventory * holding_cost
-        stockout = unmet * stockout_cost
-        labor = workers[t] * working_days[t] * daily_hours * hourly_wage
-        prod_cost = actual_prod * production_cost
-        total_labor += labor
-        total_production += prod_cost
-        total_holding += holding
-        total_stockout += stockout
-        total_hiring += hire
-        total_firing += fire
-        total_produced += actual_prod
-        total_unfilled += unmet
-    toplam_maliyet = total_labor + total_production + total_holding + total_stockout + total_hiring + total_firing
+    # Use the shared model solver function
+    model_results = solve_model(
+        demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
+        daily_hours, labor_per_unit, min_workers, max_workers, max_workforce_change,
+        hourly_wage, production_cost
+    )
+
+    toplam_maliyet = model_results['min_cost']
+    total_labor = model_results['total_labor']
+    total_production = model_results['total_production']
+    total_holding = model_results['total_holding']
+    total_stockout = model_results['total_stockout']
+    total_hiring = model_results['total_hiring']
+    total_firing = model_results['total_firing']
+    total_demand = model_results['total_demand']
+    total_produced = model_results['total_produced']
+    total_unfilled = model_results['total_unfilled']
+
+    # Calculate unit costs
     if total_produced > 0:
         avg_unit_cost = toplam_maliyet / total_produced
         avg_labor_unit = total_labor / total_produced
@@ -213,6 +243,7 @@ def maliyet_analizi(
         avg_other_unit = (total_holding + total_stockout + total_hiring + total_firing) / total_produced
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+
     return {
         "Toplam Maliyet": toplam_maliyet,
         "İşçilik Maliyeti": total_labor,
@@ -269,9 +300,9 @@ print(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring']:,.2f} TL")
 print(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing']:,.2f} TL")
 
 birim = birim_maliyet_analizi(
-    sum(demand),
-    sum(production_seq),
-    sum(stockout_seq),
+    model_results['total_demand'],
+    model_results['total_produced'],
+    model_results['total_unfilled'],
     min_cost,
     total_labor,
     total_production,

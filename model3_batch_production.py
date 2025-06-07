@@ -24,32 +24,89 @@ production_cost = params['costs']['production_cost']
 if len(demand) != len(working_days):
     raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
 
-# Sabit üretim kapasitesi (işçi * gün * saat * hız)
-monthly_capacity = fixed_workers * daily_hours * working_days * production_rate
+def solve_model(
+    demand,
+    working_days,
+    holding_cost,
+    stockout_cost,
+    fixed_workers,
+    production_rate,
+    daily_hours,
+    worker_monthly_cost=None,
+    production_cost=20
+):
+    """
+    Core model logic for Model 3 (Toplu Üretim ve Stoklama)
+    Returns calculated values as a dictionary
+    """
+    months = len(demand)
 
-results = []
-production = np.zeros(months)
-inventory = np.zeros(months)
-cost = 0
-prev_inventory = 0
+    # Sabit üretim kapasitesi (işçi * gün * saat * hız)
+    monthly_capacity = fixed_workers * daily_hours * working_days * production_rate
 
-for t in range(months):
-    # Sabit üretim
-    production[t] = monthly_capacity[t]
-    inventory[t] = prev_inventory + production[t] - demand[t]
-    holding = max(inventory[t], 0) * holding_cost
-    stockout = abs(min(inventory[t], 0)) * stockout_cost
-    labor = fixed_workers * worker_monthly_cost
-    prod_cost = production[t] * production_cost
-    cost += holding + stockout + labor + prod_cost
-    results.append([
-        t+1, production[t], inventory[t], holding, stockout, labor, prod_cost
-    ])
-    prev_inventory = inventory[t]
+    production = np.zeros(months)
+    inventory = np.zeros(months)
+    prev_inventory = 0
+    results = []
+    total_cost = 0
 
-df = pd.DataFrame(results, columns=[
-    'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'İşçilik Maliyeti', 'Üretim Maliyeti'
-])
+    # Use default monthly cost if not provided
+    if worker_monthly_cost is None:
+        worker_monthly_cost = fixed_workers * np.mean(working_days) * daily_hours * 10
+
+    for t in range(months):
+        # Sabit üretim
+        production[t] = monthly_capacity[t]
+        inventory[t] = prev_inventory + production[t] - demand[t]
+        holding = max(inventory[t], 0) * holding_cost
+        stockout = abs(min(inventory[t], 0)) * stockout_cost
+        unfilled = abs(min(inventory[t], 0))
+        labor_cost = fixed_workers * worker_monthly_cost
+        prod_cost = production[t] * production_cost
+
+        total_cost += holding + stockout + labor_cost + prod_cost
+
+        results.append([
+            t+1, production[t], inventory[t], holding, stockout, labor_cost, prod_cost, unfilled
+        ])
+        prev_inventory = inventory[t]
+
+    headers = [
+        'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti',
+        'İşçilik Maliyeti', 'Üretim Maliyeti', 'Karşılanmayan Talep'
+    ]
+
+    df = pd.DataFrame(results, columns=headers)
+
+    # Calculate summary statistics
+    total_produced = np.sum(production)
+    total_unfilled = np.sum([abs(min(inv, 0)) for inv in inventory])
+    total_holding = df["Stok Maliyeti"].sum()
+    total_stockout = df["Stoksuzluk Maliyeti"].sum()
+    total_labor = df["İşçilik Maliyeti"].sum()
+    total_production_cost = df["Üretim Maliyeti"].sum()
+
+    return {
+        'df': df,
+        'production': production,
+        'inventory': inventory,
+        'total_cost': total_cost,
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_labor': total_labor,
+        'total_production_cost': total_production_cost,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+    }
+
+# Use the solve_model function for the main execution path
+model_results = solve_model(
+    demand, working_days, holding_cost, stockout_cost, fixed_workers,
+    production_rate, daily_hours, worker_monthly_cost, production_cost
+)
+
+df = model_results['df']
+cost = model_results['total_cost']
 
 # Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
 df['Stok Maliyeti'] = df['Stok Maliyeti'].astype(int)
@@ -96,7 +153,10 @@ print(f'İşçilik Maliyeti Toplamı: {detay["total_labor"]:,} TL')
 print(f'Üretim Maliyeti Toplamı: {detay["total_production_cost"]:,} TL')
 
 # Birim maliyet analizini fonksiyon ile yap
-birim = birim_maliyet_analizi(demand, production, inventory, cost, df, fixed_workers, months)
+birim = birim_maliyet_analizi(
+    demand, model_results['production'], model_results['inventory'],
+    cost, df, fixed_workers, months
+)
 print(f"\nBirim Maliyet Analizi:")
 print(f"- Toplam Talep: {birim['total_demand']:,} birim")
 print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
@@ -120,9 +180,9 @@ except ImportError:
     exit(1)
 months_list = list(range(1, months+1))
 plt.figure(figsize=(10,6))
-plt.bar(months_list, production, color='skyblue', label='Üretim', alpha=0.7)
-plt.plot(months_list, inventory, marker='d', label='Stok', color='red')
-plt.plot(months_list, df['Stoksuzluk Maliyeti'], marker='x', label='Stoksuzluk Maliyeti', color='black')
+plt.bar(months_list, model_results['production'], color='skyblue', label='Üretim', alpha=0.7)
+plt.plot(months_list, model_results['inventory'], marker='d', label='Stok', color='red')
+plt.plot(months_list, df['Karşılanmayan Talep'], marker='x', label='Karşılanmayan Talep', color='black')
 plt.xlabel('Ay')
 plt.ylabel('Adet / TL')
 plt.title('Toplu Üretim ve Stoklama Modeli Sonuçları')
@@ -142,34 +202,22 @@ def maliyet_analizi(
     daily_hours=daily_hours,
     production_cost=production_cost
 ):
-    months = len(demand)
-    monthly_capacity = fixed_workers * daily_hours * working_days * production_rate
-    production = np.zeros(months)
-    inventory = np.zeros(months)
-    prev_inventory = 0
-    total_holding = 0
-    total_stockout = 0
-    total_labor = 0
-    total_prod_cost = 0
-    total_production = 0
+    # Use the shared model solver function
+    model_results = solve_model(
+        demand, working_days, holding_cost, stockout_cost,
+        fixed_workers, production_rate, daily_hours,
+        worker_monthly_cost, production_cost
+    )
+
+    total_production = model_results['total_produced']
+    toplam_maliyet = model_results['total_cost']
+    total_holding = model_results['total_holding']
+    total_stockout = model_results['total_stockout']
+    total_labor = model_results['total_labor']
+    total_prod_cost = model_results['total_production_cost']
+    total_unfilled = model_results['total_unfilled']
     total_demand = sum(demand)
-    total_unfilled = 0
-    for t in range(months):
-        production[t] = monthly_capacity[t]
-        inventory[t] = prev_inventory + production[t] - demand[t]
-        holding = max(inventory[t], 0) * holding_cost
-        stockout = abs(min(inventory[t], 0)) * stockout_cost
-        labor = fixed_workers * worker_monthly_cost
-        prod_cost = production[t] * production_cost
-        total_holding += holding
-        total_stockout += stockout
-        total_labor += labor
-        total_prod_cost += prod_cost
-        total_production += production[t]
-        prev_inventory = inventory[t]
-        if inventory[t] < 0:
-            total_unfilled += abs(inventory[t])
-    toplam_maliyet = total_holding + total_stockout + total_labor + total_prod_cost
+
     if total_production > 0:
         avg_unit_cost = toplam_maliyet / total_production
         avg_labor_unit = total_labor / total_production
@@ -177,6 +225,7 @@ def maliyet_analizi(
         avg_other_unit = (total_holding + total_stockout) / total_production
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+
     return {
         "Toplam Maliyet": toplam_maliyet,
         "İşçilik Maliyeti": total_labor,
