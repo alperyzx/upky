@@ -1,8 +1,9 @@
 # Talep ve Zaman Parametreleri
 demand:
-  high: [3500, 3300, 3500, 3800, 3600, 3900, 4210, 4250, 3750, 4250, 3900, 4150]  # Yüksek dalgalanmalı talep değerleri
-  normal: [300, 230, 250, 260, 370, 250, 400, 250, 270, 250, 320, 250]  # Varsayılan talep değerleri
-  seasonal: [300, 310, 350, 300, 350, 450, 460, 450, 320, 350, 350, 300]  # Mevsimsel talep değerleri
+  normal: [300, 230, 250, 260, 370, 250, 400, 250, 270, 250, 320, 250]  # Normal talep
+  high: [1500, 1600, 1900, 1800, 1600, 1900, 1710, 1550, 1750, 1450, 1900, 1410]  # Yüksek dalgalı talep
+  veryHigh: [3300, 3310, 3450, 3300, 3350, 3345, 3246, 3145, 3153, 3530, 3235, 3430]  # Aşırı talep
+  seasonal: [300, 310, 350, 300, 350, 450, 460, 450, 320, 350, 350, 300]  # Mevsimsel talep
 
 # Maliyet Parametreleri
 costs:
@@ -22,7 +23,7 @@ costs:
 
 # İşgücü Parametreleri
 workforce:
-  working_days: [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]  # Ay başına çalışma günleri
+  working_days: [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]  # Ay başına çalışma günleri, 2026 yılı için
   daily_hours: 8  # Günlük normal çalışma saatleri
   labor_per_unit: 4  # Birim başına gerekli işçilik saati
   workers: 8  #  minimum & başlangıç işçi sayısı
