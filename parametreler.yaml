@@ -18,8 +18,8 @@ costs:
   overtime_wage_multiplier: 1.5  # Fazla mesai ücret çarpanı
 
   # Tedarikçi Maliyetleri
-  cost_supplier_A: 50  # Tedarikçi A'dan birim maliyet (TL)
-  cost_supplier_B: 75  # Tedarikçi B'den birim maliyet (TL)
+  cost_supplier_A: 75  # Tedarikçi A'dan birim maliyet (TL)
+  cost_supplier_B: 100  # Tedarikçi B'den birim maliyet (TL)
 
 # İşgücü Parametreleri
 workforce:
