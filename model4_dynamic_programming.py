@@ -1,23 +1,27 @@
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
+import yaml
+import os
 
-# Parametreler
-# Çok yüksek talep için örnek:
-demand = np.array([300, 230, 250, 260, 370, 250, 400, 250, 270, 250, 320, 250])
-working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
-holding_cost = 5
-stockout_cost = 80
-hiring_cost = 1800
-firing_cost = 1500
-daily_hours = 8
-labor_per_unit = 4 # 1 birim üretim için gereken işgücü (saat)
-max_workers = 50  # Daha yüksek üst sınır
-min_workers = 8
-max_workforce_change = 2  # Daha hızlı işçi artışı
+# parametreler.yaml dosyasını oku
+with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
+    params = yaml.safe_load(f)
+
+demand = np.array(params['demand']['normal'])  # veya 'high', 'seasonal' seçilebilir
+working_days = np.array(params['workforce']['working_days'])
+holding_cost = params['costs']['holding_cost']
+stockout_cost = params['costs']['stockout_cost']
+hiring_cost = params['costs']['hiring_cost']
+firing_cost = params['costs']['firing_cost']
+daily_hours = params['workforce']['daily_hours']
+labor_per_unit = params['workforce']['labor_per_unit']
+max_workers = params['workforce']['max_workers']
+min_workers = params['workforce']['workers']
+max_workforce_change = params['workforce']['max_workforce_change']
 months = len(demand)
-hourly_wage = 10
-production_cost = 30  # birim üretim maliyeti (TL)
+hourly_wage = params['costs']['hourly_wage']
+production_cost = params['costs']['production_cost']
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -312,4 +316,3 @@ plt.title('Dinamik Programlama Tabanlı Model Sonuçları')
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
-

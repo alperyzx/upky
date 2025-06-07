@@ -1,21 +1,26 @@
 import numpy as np
 import pandas as pd
+import yaml
+import os
 
-# Parametreler
-months = 12
-demand = np.array([500, 520, 500, 490, 500, 490, 500, 510, 520, 510, 510, 500])
-working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
-holding_cost = 5
-stockout_cost = 80
-labor_per_unit = 4
-daily_hours = 8
-fixed_workers = 11
-overtime_wage_multiplier = 1.5
-max_overtime_per_worker = 20  # saat/ay
-normal_hourly_wage = 10  # TL/saat
-overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier  # Fazla mesai saatlik ücret otomatik hesaplanır
-production_cost = 30  # birim üretim maliyeti (TL)
-hiring_cost = 1800  # İşe alım maliyeti (TL/işçi)
+# parametreler.yaml dosyasını oku
+with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
+    params = yaml.safe_load(f)
+
+demand = np.array(params['demand']['normal'])  # veya 'high', 'seasonal' seçilebilir
+working_days = np.array(params['workforce']['working_days'])
+holding_cost = params['costs']['holding_cost']
+stockout_cost = params['costs']['stockout_cost']
+labor_per_unit = params['workforce']['labor_per_unit']
+daily_hours = params['workforce']['daily_hours']
+fixed_workers = params['workforce']['workers']
+overtime_wage_multiplier = params['costs']['overtime_wage_multiplier']
+max_overtime_per_worker = params['costs']['max_overtime_per_worker']
+normal_hourly_wage = params['costs']['hourly_wage']
+overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier
+production_cost = params['costs']['production_cost']
+hiring_cost = params['costs']['hiring_cost']
+months = len(demand)
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):

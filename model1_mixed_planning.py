@@ -1,24 +1,29 @@
 import pulp
 import numpy as np
+import yaml
+import os
 
-# Örnek parametreler
-demand = [200, 500, 800, 1000, 700, 600, 400, 300, 250, 300, 200, 250]
-working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
-holding_cost = 5
-stockout_cost = 80
-outsourcing_cost = 80  # Fason üretim maliyeti (TL)
-labor_per_unit = 4
-hiring_cost = 1800
-firing_cost = 1500  # işçi çıkarma maliyeti
-daily_hours = 8
-min_internal_ratio = 0.70
-max_workforce_change = 12  # Daha hızlı işçi azaltımı
-max_outsourcing_ratio = 0.30
-outsourcing_capacity = 500
-hourly_wage = 10  # İşçi saatlik ücreti (TL)
-production_cost = 30  # birim üretim maliyeti (TL)
-overtime_wage_multiplier = 1.5  # Fazla mesai ücret çarpanı
-max_overtime_per_worker = 20  # İşçi başına maksimum fazla mesai saati/ay
+# parametreler.yaml dosyasını oku
+with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
+    params = yaml.safe_load(f)
+
+demand = params['demand']['normal']  # veya 'high', 'seasonal' seçilebilir
+working_days = params['workforce']['working_days']
+holding_cost = params['costs']['holding_cost']
+stockout_cost = params['costs']['stockout_cost']
+outsourcing_cost = params['costs']['cost_supplier_A']  # Fason üretim maliyeti (Tedarikçi A)
+labor_per_unit = params['workforce']['labor_per_unit']
+hiring_cost = params['costs']['hiring_cost']
+firing_cost = params['costs']['firing_cost']
+daily_hours = params['workforce']['daily_hours']
+min_internal_ratio = params['capacity']['min_internal_ratio']
+max_workforce_change = params['workforce']['max_workforce_change']
+max_outsourcing_ratio = params['capacity']['max_outsourcing_ratio']
+outsourcing_capacity = params['capacity']['capacity_supplier_A']
+hourly_wage = params['costs']['hourly_wage']
+production_cost = params['costs']['production_cost']
+overtime_wage_multiplier = params['costs']['overtime_wage_multiplier']
+max_overtime_per_worker = params['costs']['max_overtime_per_worker']
 
 T = len(demand)
 
@@ -66,7 +71,7 @@ for t in range(T):
 
     # Toplam üretimin en az %70'i iç üretim olmalı
     decision_model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
-    # Fason üretim toplam üretimin %Z'sini geçemez
+    # Fason üretim toplam üretimin %30'unu geçemez
     decision_model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
     # Fason kapasite
     decision_model += (outsourced_production[t] <= outsourcing_capacity)

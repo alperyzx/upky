@@ -1,18 +1,24 @@
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
+import yaml
+import os
 
-# Parametreler
-demand = np.array([650, 650, 750, 650, 700, 600, 700, 650,650, 670, 750, 650])
-working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
-holding_cost = 5
-stockout_cost = 80
-fixed_workers = 20
-worker_monthly_cost = 1680  # İşçi başı aylık maliyet (ör: asgari ücret)
-production_rate = 0.25 # Bir işçi günde 0.25 birim üretim yapabiliyor
-daily_hours = 8
+# parametreler.yaml dosyasını oku
+with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
+    params = yaml.safe_load(f)
+
+demand = np.array(params['demand']['normal'])  # veya 'high', 'seasonal' seçilebilir
+working_days = np.array(params['workforce']['working_days'])
+holding_cost = params['costs']['holding_cost']
+stockout_cost = params['costs']['stockout_cost']
+fixed_workers = params['workforce']['workers']
+worker_monthly_cost = params['costs']['monthly_wage']
+production_rate = 1 / params['workforce']['labor_per_unit']  # Bir işçi günde kaç birim üretir
+# (ör: labor_per_unit=4 ise, 1/4=0.25 birim/işçi/gün)
+daily_hours = params['workforce']['daily_hours']
 months = len(demand)
-production_cost = 20  # birim üretim maliyeti (TL)
+production_cost = params['costs']['production_cost']
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):

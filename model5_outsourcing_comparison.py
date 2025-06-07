@@ -1,20 +1,22 @@
 import pulp
 import numpy as np
 import pandas as pd
+import yaml
+import os
 
-# Parametreler
-demand = [350, 330, 350, 380, 250, 900, 650, 250, 750, 250, 900, 550]
-working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
+# parametreler.yaml dosyasını oku
+with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
+    params = yaml.safe_load(f)
+
+demand = params['demand']['high']  # veya 'normal', 'seasonal' seçilebilir
+working_days = params['workforce']['working_days']
 months = len(demand)
-holding_cost = 5
-stockout_cost = 80  # Karşılanmayan talep maliyetini yükseltiyoruz ki tedarikçiler kullanılsın
-
-# Tedarikçi özellikleri
-cost_supplier_A = 50  # Düşük maliyetli tedarikçi (TL/birim)
-cost_supplier_B = 75  # Yüksek maliyetli tedarikçi (TL/birim)
-capacity_supplier_A = 300  # Tedarikçi A'nın sınırlı kapasitesi
-# Tedarikçi B'nin sınırsız kapasitesi (pratikte çok büyük bir değer)
-capacity_supplier_B = 9999
+holding_cost = params['costs']['holding_cost']
+stockout_cost = params['costs']['stockout_cost']
+cost_supplier_A = params['costs']['cost_supplier_A']
+cost_supplier_B = params['costs']['cost_supplier_B']
+capacity_supplier_A = params['capacity']['capacity_supplier_A']
+capacity_supplier_B = params['capacity']['capacity_supplier_B']
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):

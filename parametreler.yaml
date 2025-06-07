@@ -1,0 +1,42 @@
+# Talep ve Zaman Parametreleri
+demand:
+  high: [3500, 3300, 3500, 3800, 3600, 3900, 4210, 4250, 3750, 4250, 3900, 4150]  # Yüksek dalgalanmalı talep değerleri
+  normal: [300, 230, 250, 260, 370, 250, 400, 250, 270, 250, 320, 250]  # Varsayılan talep değerleri
+  seasonal: [300, 310, 350, 300, 350, 450, 460, 450, 320, 350, 350, 300]  # Mevsimsel talep değerleri
+
+# Maliyet Parametreleri
+costs:
+  holding_cost: 5  # Stok tutma birim maliyeti (TL)
+  stockout_cost: 80  # Karşılanmayan talep birim maliyeti (TL)
+  production_cost: 30  # Üretim birim maliyeti (TL)
+  hiring_cost: 1800  # İşçi başına işe alım maliyeti (TL)
+  firing_cost: 1500  # İşçi başına işten çıkarma maliyeti (TL)
+  hourly_wage: 10  # Normal saatlik ücret (TL)
+  monthly_wage: 1680  # İşçi başına aylık maliyet (TL)
+  max_overtime_per_worker: 20  # İşçi başına aylık maksimum fazla mesai saati
+  overtime_wage_multiplier: 1.5  # Fazla mesai ücret çarpanı
+
+  # Tedarikçi Maliyetleri
+  cost_supplier_A: 50  # Tedarikçi A'dan birim maliyet (TL)
+  cost_supplier_B: 75  # Tedarikçi B'den birim maliyet (TL)
+
+# İşgücü Parametreleri
+workforce:
+  working_days: [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]  # Ay başına çalışma günleri
+  daily_hours: 8  # Günlük normal çalışma saatleri
+  labor_per_unit: 4  # Birim başına gerekli işçilik saati
+  workers: 8  #  minimum & başlangıç işçi sayısı
+  max_workers: 100  # İzin verilen maksimum işçi sayısı
+  max_workforce_change: 5  # Dönem başına maksimum işçi değişimi
+
+# Tedarikçi Kapasite Parametreleri
+capacity:
+  min_internal_ratio : 0.70
+  max_outsourcing_ratio : 0.30
+  capacity_supplier_A: 300   # Tedarikçi A'nın aylık maksimum kapasitesi
+  capacity_supplier_B: 9999  # Tedarikçi B için pratik olarak sınırsız kapasite
+
+# Çözücü Yapılandırması
+solver:
+  pulp_solver: "PULP_CBC_CMD"
+  msg: 0  # Çözücü mesajlarını gizle

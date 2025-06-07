@@ -2,27 +2,28 @@ import pulp
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
+import yaml
+import os
 
-# 12 aylık talep verisi
-demand = np.array([300, 310, 350, 300, 350, 450, 460, 450, 320, 350, 350, 300])
-working_days= [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]  # Aylık çalışma günleri
+# parametreler.yaml dosyasını oku
+with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
+    params = yaml.safe_load(f)
+
+demand = np.array(params['demand']['seasonal'])
+working_days = np.array(params['workforce']['working_days'])
 months = len(demand)
-holding_cost = 5
-stockout_cost = 80
-production_cost = 30
-labor_per_unit = 4  # 1 ürün için gereken işçilik süresi (saat)
-hiring_cost = 1800
-daily_hours = 8  # Günlük çalışma saati
-max_production = int(demand.mean() + demand.std())  # 12 a ylık talep ortalaması * 1,1
+holding_cost = params['costs']['holding_cost']
+stockout_cost = params['costs']['stockout_cost']
+production_cost = params['costs']['production_cost']
+labor_per_unit = params['workforce']['labor_per_unit']
+hiring_cost = params['costs']['hiring_cost']
+daily_hours = params['workforce']['daily_hours']
+hourly_wage = params['costs']['hourly_wage']
 
-# max_production'a göre ihtiyaç duyulan işçi sayısı
-# max_production = işçi_sayısı * günlük_saat * aylık_gün / labor_per_unit
-# işçi_sayısı = max_production * labor_per_unit / (günlük_saat * ortalama_aylık_gün)
+max_production = int(demand.mean() + demand.std())
 needed_workers = int(np.ceil(max_production * labor_per_unit / (daily_hours * np.mean(working_days))))
 print(f"Optimum üretim kapasitesi için gereken işçi sayısı: {needed_workers}")
 
-# Her ay işçilik maliyeti
-hourly_wage = 10
 monthly_labor_cost = needed_workers * np.mean(working_days) * daily_hours * hourly_wage
 
 # Doğrusal programlama modeli
