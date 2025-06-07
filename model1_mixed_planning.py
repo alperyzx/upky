@@ -7,7 +7,7 @@ import os
 with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
     params = yaml.safe_load(f)
 
-demand = params['demand']['normal']  # veya 'high', 'seasonal' seçilebilir
+demand = params['demand']['seasonal']  # veya 'high', 'seasonal' seçilebilir
 working_days = params['workforce']['working_days']
 holding_cost = params['costs']['holding_cost']
 stockout_cost = params['costs']['stockout_cost']
@@ -373,7 +373,7 @@ def maliyet_analizi(
         total_overtime += overtime_cost
         total_produced += int(internal_production[t].varValue) + int(outsourced_production[t].varValue)
         total_unfilled += int(stockout[t].varValue)
-    toplam_maliyet = total_internal_labor + total_internal_prod + total_outsource + total_holding + total_stockout + total_hiring + total_firing
+    toplam_maliyet = pulp.value(model.objective)
     if total_produced > 0:
         avg_unit_cost = toplam_maliyet / total_produced
         avg_labor_unit = total_internal_labor / total_produced
@@ -389,6 +389,7 @@ def maliyet_analizi(
         "Stoksuzluk Maliyeti": total_stockout,
         "İşe Alım Maliyeti": total_hiring,
         "İşten Çıkarma Maliyeti": total_firing,
+        "Fazla Mesai Maliyeti": total_overtime,
         "Toplam Talep": total_demand,
         "Toplam Üretim": total_produced,
         "Karşılanmayan Talep": total_unfilled,

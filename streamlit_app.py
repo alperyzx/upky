@@ -35,7 +35,7 @@ model = st.sidebar.selectbox("Model Seçiniz", [
 
 st.sidebar.markdown("---")
 
-def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost=20, min_workers=10, hourly_wage=10, production_cost=30, overtime_wage_multiplier=1.5, max_overtime_per_worker=20):
+def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage, production_cost, overtime_wage_multiplier, max_overtime_per_worker):
     T = len(demand)
     decision_model = pulp.LpProblem('Karma_Planlama_Modeli', pulp.LpMinimize)
     workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, cat='Integer') for t in range(T)]
@@ -45,6 +45,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
     hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range(T)]
     fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
     stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]
+    overtime_hours = [pulp.LpVariable(f'overtime_{t}', lowBound=0, cat='Integer') for t in range(T)]
     cost = (
         pulp.lpSum([
             holding_cost * inventory[t] +
@@ -53,6 +54,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
             hiring_cost * hired[t] +
             firing_cost * fired[t] +
             workers[t] * working_days[t] * daily_hours * hourly_wage +
+            overtime_hours[t] * hourly_wage * overtime_wage_multiplier +  # <-- add this line
             production_cost * internal_production[t]
             for t in range(T)
         ])
@@ -67,16 +69,20 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
         decision_model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
         decision_model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
         decision_model += (outsourced_production[t] <= outsourcing_capacity)
-        decision_model += (internal_production[t] <= workers[t] * working_days[t] * daily_hours / labor_per_unit)
+        decision_model += (internal_production[t] <= (workers[t] * working_days[t] * daily_hours + overtime_hours[t]) / labor_per_unit)
         if t > 0:
             decision_model += (workers[t] - workers[t-1] <= max_workforce_change)
             decision_model += (workers[t-1] - workers[t] <= max_workforce_change)
             decision_model += (workers[t] - workers[t-1] == hired[t] - fired[t])
         else:
             decision_model += (hired[t] - fired[t] == workers[t])
-            decision_model += (workers[t] >= min_workers)
         decision_model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
         decision_model += (workers[t] >= 0)
+        decision_model += (internal_production[t] <= (
+                    workers[t] * working_days[t] * daily_hours + overtime_hours[t]) / labor_per_unit)
+        decision_model += (overtime_hours[t] <= workers[t] * max_overtime_per_worker)
+        decision_model += (overtime_hours[t] <= max_overtime_per_worker)
+        decision_model += (overtime_hours[t] >= 0)
     solver = pulp.PULP_CBC_CMD(msg=0)
     decision_model.solve(solver)
     results = []
@@ -84,6 +90,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
         internal_prod_cost = int(internal_production[t].varValue) * production_cost
         outsourcing_cost_val = int(outsourced_production[t].varValue) * outsourcing_cost
         labor_cost = int(workers[t].varValue) * working_days[t] * daily_hours * hourly_wage
+        overtime_cost = int(overtime_hours[t].varValue) * hourly_wage * overtime_wage_multiplier
         results.append([
             t+1,
             int(workers[t].varValue),
@@ -95,11 +102,24 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
             int(stockout[t].varValue),
             internal_prod_cost,
             outsourcing_cost_val,
-            labor_cost
+            labor_cost,
+            overtime_cost
         ])
-    df = pd.DataFrame(results, columns=["Ay", "İşçi", "İç Üretim", "Fason", "Stok", "Alım", "Çıkış", "Karşılanmayan Talep", "İç Üretim Maliyeti", "Fason Üretim Maliyeti", "İşçilik Maliyeti"])
+    df = pd.DataFrame(results, columns=["Ay", "İşçi", "İç Üretim", "Fason", "Stok", "Alım", "Çıkış", "Karşılanmayan Talep", "İç Üretim Maliyeti", "Fason Üretim Maliyeti", "İşçilik Maliyeti", "Fazla Mesai Maliyeti"])
     toplam_maliyet = pulp.value(decision_model.objective)
-    return df, toplam_maliyet
+
+    # Model değişkenlerini dictionary olarak döndür
+    model_vars = {
+        'internal_production': internal_production,
+        'outsourced_production': outsourced_production,
+        'inventory': inventory,
+        'hired': hired,
+        'fired': fired,
+        'stockout': stockout,
+        'overtime_hours': overtime_hours
+    }
+
+    return df, toplam_maliyet, model_vars
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost=12):
     months = len(demand)
@@ -413,15 +433,16 @@ if model == "Karma Planlama (Model 1)":
         min_internal_ratio = st.slider("En Az İç Üretim Oranı (%)", min_value=0, max_value=100, value=int(model1.min_internal_ratio*100), key="m1_min_internal") / 100
         max_workforce_change = st.number_input("İşgücü Değişim Sınırı (kişi)", min_value=1, max_value=100, value=int(model1.max_workforce_change), step=1, key="m1_max_workforce")
         max_outsourcing_ratio = st.slider("En Fazla Fason Oranı (%)", min_value=0, max_value=100, value=int(model1.max_outsourcing_ratio*100), key="m1_max_outsourcing") / 100
-        min_workers = st.number_input("Başlangıç Minimum İşçi Sayısı", min_value=1, max_value=100, value=10, step=1, key="m1_min_workers")
+        hourly_wage = st.number_input("Saatlik Ücret (TL)", min_value=1, max_value=1000, value=int(model1.hourly_wage), step=1, key="m1_hourly_wage")
+        production_cost = st.number_input("Birim Üretim Maliyeti (TL)", min_value=1, max_value=1000, value=int(model1.production_cost), step=1, key="m1_production_cost")
         overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=float(model1.overtime_wage_multiplier), step=0.1, key="m1_overtime_multiplier")
         max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=int(model1.max_overtime_per_worker), step=1, key="m1_max_overtime")
         run_model = st.button("Modeli Çalıştır", key="m1_run")
     if run_model:
-        df, toplam_maliyet = model1_run(
+        df, toplam_maliyet, model_vars = model1_run(
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
-            outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, min_workers,
-            hourly_wage=10, production_cost=30, overtime_wage_multiplier=overtime_wage_multiplier, max_overtime_per_worker=max_overtime_per_worker
+            outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost,
+            hourly_wage, production_cost, overtime_wage_multiplier=overtime_wage_multiplier, max_overtime_per_worker=max_overtime_per_worker
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -450,7 +471,12 @@ if model == "Karma Planlama (Model 1)":
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
         detay = m1_ayrintili(
-            len(demand), model1.internal_production, model1.outsourced_production, model1.inventory, model1.hired, model1.fired, model1.stockout, model1.overtime_hours, working_days, daily_hours, model1.hourly_wage, model1.production_cost, model1.outsourcing_cost, holding_cost, stockout_cost, hiring_cost, firing_cost, model1.overtime_wage_multiplier
+            len(demand), model_vars['internal_production'], model_vars['outsourced_production'],
+            model_vars['inventory'], model_vars['hired'], model_vars['fired'],
+            model_vars['stockout'], model_vars['overtime_hours'],
+            working_days, daily_hours, hourly_wage, production_cost,
+            outsourcing_cost, holding_cost, stockout_cost, hiring_cost,
+            firing_cost, overtime_wage_multiplier
         )
         st.subheader("Ayrıntılı Toplam Maliyetler")
         st.markdown(f"- İç Üretim İşçilik Maliyeti Toplamı: {detay['total_internal_labor']:,.2f} TL")
