@@ -13,7 +13,7 @@ import model5_outsourcing_comparison as model5
 import model6_seasonal_planning as model6
 
 # Import ayrintili_toplam_maliyetler and birim_maliyet_analizi from each model
-from model1_mixed_planning import ayrintili_toplam_maliyetler as m1_ayrintili, birim_maliyet_analizi as m1_birim
+from model1_mixed_planning import ayrintili_toplam_maliyetler as m1_ayrintili, birim_maliyet_analizi as m1_birim, solve_model as model1_solver
 from model2_overtime_production import ayrintili_toplam_maliyetler as m2_ayrintili, birim_maliyet_analizi as m2_birim
 from model3_batch_production import ayrintili_toplam_maliyetler as m3_ayrintili, birim_maliyet_analizi as m3_birim
 from model4_dynamic_programming import ayrintili_toplam_maliyetler as m4_ayrintili, birim_maliyet_analizi as m4_birim
@@ -36,55 +36,27 @@ model = st.sidebar.selectbox("Model Seçiniz", [
 st.sidebar.markdown("---")
 
 def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage, production_cost, overtime_wage_multiplier, max_overtime_per_worker):
-    T = len(demand)
-    decision_model = pulp.LpProblem('Karma_Planlama_Modeli', pulp.LpMinimize)
-    workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    internal_production = [pulp.LpVariable(f'internal_prod_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    outsourced_production = [pulp.LpVariable(f'outsourced_prod_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    overtime_hours = [pulp.LpVariable(f'overtime_{t}', lowBound=0, cat='Integer') for t in range(T)]
-    cost = (
-        pulp.lpSum([
-            holding_cost * inventory[t] +
-            stockout_cost * stockout[t] +
-            outsourcing_cost * outsourced_production[t] +
-            hiring_cost * hired[t] +
-            firing_cost * fired[t] +
-            workers[t] * working_days[t] * daily_hours * hourly_wage +
-            overtime_hours[t] * hourly_wage * overtime_wage_multiplier +  # <-- add this line
-            production_cost * internal_production[t]
-            for t in range(T)
-        ])
+    # Use the shared model solver function from model1_mixed_planning
+    model_vars = model1_solver(
+        demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
+        hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
+        max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
+        production_cost, overtime_wage_multiplier, max_overtime_per_worker
     )
-    decision_model += cost
-    for t in range(T):
-        if t == 0:
-            prev_inventory = 0
-        else:
-            prev_inventory = inventory[t-1]
-        decision_model += (internal_production[t] + outsourced_production[t] + prev_inventory == demand[t] + inventory[t] + stockout[t])
-        decision_model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
-        decision_model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
-        decision_model += (outsourced_production[t] <= outsourcing_capacity)
-        decision_model += (internal_production[t] <= (workers[t] * working_days[t] * daily_hours + overtime_hours[t]) / labor_per_unit)
-        if t > 0:
-            decision_model += (workers[t] - workers[t-1] <= max_workforce_change)
-            decision_model += (workers[t-1] - workers[t] <= max_workforce_change)
-            decision_model += (workers[t] - workers[t-1] == hired[t] - fired[t])
-        else:
-            decision_model += (hired[t] - fired[t] == workers[t])
-        decision_model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
-        decision_model += (workers[t] >= 0)
-        decision_model += (internal_production[t] <= (
-                    workers[t] * working_days[t] * daily_hours + overtime_hours[t]) / labor_per_unit)
-        decision_model += (overtime_hours[t] <= workers[t] * max_overtime_per_worker)
-        decision_model += (overtime_hours[t] <= max_overtime_per_worker)
-        decision_model += (overtime_hours[t] >= 0)
-    solver = pulp.PULP_CBC_CMD(msg=0)
-    decision_model.solve(solver)
+
+    # Extract variables from model_vars
+    workers = model_vars['workers']
+    internal_production = model_vars['internal_production']
+    outsourced_production = model_vars['outsourced_production']
+    inventory = model_vars['inventory']
+    hired = model_vars['hired']
+    fired = model_vars['fired']
+    stockout = model_vars['stockout']
+    overtime_hours = model_vars['overtime_hours']
+    toplam_maliyet = model_vars['objective_value']
+
+    # Create results dataframe
+    T = len(demand)
     results = []
     for t in range(T):
         internal_prod_cost = int(internal_production[t].varValue) * production_cost
@@ -106,10 +78,9 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
             overtime_cost
         ])
     df = pd.DataFrame(results, columns=["Ay", "İşçi", "İç Üretim", "Fason", "Stok", "Alım", "Çıkış", "Karşılanmayan Talep", "İç Üretim Maliyeti", "Fason Üretim Maliyeti", "İşçilik Maliyeti", "Fazla Mesai Maliyeti"])
-    toplam_maliyet = pulp.value(decision_model.objective)
 
     # Model değişkenlerini dictionary olarak döndür
-    model_vars = {
+    model_results = {
         'internal_production': internal_production,
         'outsourced_production': outsourced_production,
         'inventory': inventory,
@@ -119,7 +90,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
         'overtime_hours': overtime_hours
     }
 
-    return df, toplam_maliyet, model_vars
+    return df, toplam_maliyet, model_results
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost=12):
     months = len(demand)
