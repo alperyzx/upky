@@ -132,72 +132,6 @@ def solve_model(
 
     return model_vars
 
-# Model
-decision_model = pulp.LpProblem('Karma_Planlama_Modeli', pulp.LpMinimize)
-
-# Karar değişkenleri
-workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, cat='Integer') for t in range(T)]
-internal_production = [pulp.LpVariable(f'internal_prod_{t}', lowBound=0, cat='Integer') for t in range(T)]
-outsourced_production = [pulp.LpVariable(f'outsourced_prod_{t}', lowBound=0, cat='Integer') for t in range(T)]
-inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(T)]
-hired = [pulp.LpVariable(f'hired_{t}', lowBound=0, cat='Integer') for t in range(T)]
-fired = [pulp.LpVariable(f'fired_{t}', lowBound=0, cat='Integer') for t in range(T)]
-stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Karşılanmayan talep
-overtime_hours = [pulp.LpVariable(f'overtime_{t}', lowBound=0, cat='Integer') for t in range(T)]  # Fazla mesai saatleri
-
-# Amaç fonksiyonu: işçi ücretleri ve fazla mesai ücretleri eklendi
-cost = (
-    pulp.lpSum([
-        holding_cost * inventory[t] +
-        stockout_cost * stockout[t] +
-        outsourcing_cost * outsourced_production[t] +
-        hiring_cost * hired[t] +
-        firing_cost * fired[t] +
-        workers[t] * working_days[t] * daily_hours * hourly_wage +  # işçi ücretleri
-        overtime_hours[t] * hourly_wage * overtime_wage_multiplier +  # fazla mesai ücretleri
-        production_cost * internal_production[t]  # iç üretim birim üretim maliyeti
-        for t in range(T)
-    ])
-)
-decision_model += cost
-
-# Kısıtlar
-for t in range(T):
-    # Talep karşılanmalı (stok + üretim + fason = talep + stok + karşılanmayan talep)
-    if t == 0:
-        prev_inventory = 0
-    else:
-        prev_inventory = inventory[t-1]
-    decision_model += (internal_production[t] + outsourced_production[t] + prev_inventory == demand[t] + inventory[t] + stockout[t])
-
-    # Toplam üretimin en az %70'i iç üretim olmalı
-    decision_model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
-    # Fason üretim toplam üretimin %30'unu geçemez
-    decision_model += (outsourced_production[t] <= max_outsourcing_ratio * (internal_production[t] + outsourced_production[t]))
-    # Fason kapasite
-    decision_model += (outsourced_production[t] <= outsourcing_capacity)
-    # İç üretim kapasitesi (işçi * gün * saat / birim işgücü) + fazla mesai kapasitesi
-    decision_model += (internal_production[t] <= (workers[t] * working_days[t] * daily_hours + overtime_hours[t]) / labor_per_unit)
-    # Fazla mesai işçi sayısı ile ilişkili olmalı
-    decision_model += (overtime_hours[t] <= workers[t] * max_overtime_per_worker)
-    # İşgücü değişim sınırı
-    if t > 0:
-        decision_model += (workers[t] - workers[t-1] <= max_workforce_change)
-        decision_model += (workers[t-1] - workers[t] <= max_workforce_change)
-        decision_model += (workers[t] - workers[t-1] == hired[t] - fired[t])
-    else:
-        decision_model += (hired[t] - fired[t] == workers[t])
-    # İşçi sayısı, iç üretim ihtiyacından fazla olamaz (yuvarlama payı ile)
-    decision_model += (workers[t] <= internal_production[t] * labor_per_unit / (working_days[t] * daily_hours) + 1)
-    decision_model += (workers[t] >= 0)
-    # Fazla mesai kısıtı
-    decision_model += (overtime_hours[t] <= max_overtime_per_worker)
-    decision_model += (overtime_hours[t] >= 0)
-
-# Modeli çöz
-solver = pulp.PULP_CBC_CMD(msg=0)
-decision_model.solve(solver)
-
 # Sonuçlar
 def ayrintili_toplam_maliyetler(T, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours, working_days, daily_hours, hourly_wage, production_cost, outsourcing_cost, holding_cost, stockout_cost, hiring_cost, firing_cost, overtime_wage_multiplier):
     total_internal_labor = 0
@@ -262,6 +196,26 @@ def birim_maliyet_analizi(T, demand, internal_production, outsourced_production,
 
 def print_results():
     from tabulate import tabulate
+
+    # Use solve_model() to get the model variables
+    model_vars = solve_model(
+        demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
+        hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
+        max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
+        production_cost, overtime_wage_multiplier, max_overtime_per_worker
+    )
+
+    # Extract variables from model_vars
+    workers = model_vars['workers']
+    internal_production = model_vars['internal_production']
+    outsourced_production = model_vars['outsourced_production']
+    inventory = model_vars['inventory']
+    hired = model_vars['hired']
+    fired = model_vars['fired']
+    stockout = model_vars['stockout']
+    overtime_hours = model_vars['overtime_hours']
+    objective_value = model_vars['objective_value']
+
     table = []
     for t in range(T):
         internal_cost = int(internal_production[t].varValue) * working_days[t] * daily_hours * hourly_wage / (working_days[t] * daily_hours / labor_per_unit)
@@ -297,7 +251,7 @@ def print_results():
         row[10] = f'{int(row[10]):,} TL'
         row[11] = f'{int(row[11]):,} TL'
     print(tabulate(table, headers, tablefmt='fancy_grid', numalign='right', stralign='center'))
-    print(f'\nToplam Maliyet: {pulp.value(decision_model.objective):,.2f} TL')
+    print(f'\nToplam Maliyet: {objective_value:,.2f} TL')
     detay = ayrintili_toplam_maliyetler(
         T, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours,
         working_days, daily_hours, hourly_wage, production_cost, outsourcing_cost, holding_cost, stockout_cost, hiring_cost, firing_cost, overtime_wage_multiplier
@@ -313,7 +267,7 @@ def print_results():
     print(f"- Fazla Mesai Maliyeti Toplamı: {detay['total_overtime']:,.2f} TL")
     birim = birim_maliyet_analizi(
         T, demand, internal_production, outsourced_production, stockout,
-        detay['total_internal_labor'], detay['total_internal_prod'], detay['total_outsource'], detay['total_holding'], detay['total_hiring'], detay['total_firing'], pulp.value(decision_model.objective)
+        detay['total_internal_labor'], detay['total_internal_prod'], detay['total_outsource'], detay['total_holding'], detay['total_hiring'], detay['total_firing'], objective_value
     )
     print(f"\nBirim Maliyet Analizi:")
     print(f"- Toplam Talep: {birim['total_demand']:,} birim")

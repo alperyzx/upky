@@ -278,7 +278,10 @@ if model == "Karma Planlama (Model 1)":
         st.markdown(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing']:,.2f} TL")
         st.markdown(f"- Fazla Mesai Maliyeti Toplamı: {detay['total_overtime']:,.2f} TL")
         birim = m1_birim(
-            len(demand), demand, model1.internal_production, model1.outsourced_production, model1.stockout, detay['total_internal_labor'], detay['total_internal_prod'], detay['total_outsource'], detay['total_holding'], detay['total_hiring'], detay['total_firing'], toplam_maliyet
+            len(demand), demand, model_vars['internal_production'], model_vars['outsourced_production'],
+            model_vars['stockout'], detay['total_internal_labor'], detay['total_internal_prod'],
+            detay['total_outsource'], detay['total_holding'], detay['total_hiring'],
+            detay['total_firing'], toplam_maliyet
         )
         st.subheader("Birim Maliyet Analizi")
         st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")

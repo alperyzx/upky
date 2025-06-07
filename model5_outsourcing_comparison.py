@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import yaml
 import os
+from tabulate import tabulate  # Fix: Import tabulate function directly
 
 # parametreler.yaml dosyasını oku
 with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
@@ -129,18 +130,6 @@ def solve_model(
         'toplam_maliyet': toplam_maliyet
     }
 
-# Use the shared solver function
-model_results = solve_model(
-    demand, working_days, holding_cost, stockout_cost, cost_supplier_A,
-    cost_supplier_B, capacity_supplier_A, capacity_supplier_B
-)
-
-# Extract variables from model_results for global use
-out_A = model_results['out_A']
-out_B = model_results['out_B']
-inventory = model_results['inventory']
-stockout = model_results['stockout']
-decision_model = pulp.LpProblem('Dis_Kaynak_Karsilastirma', pulp.LpMinimize)  # Dummy model for compatibility
 
 # Sonuçlar
 def ayrintili_toplam_maliyetler(total_cost_A, total_cost_B, total_holding, total_stockout):
@@ -161,10 +150,18 @@ def birim_maliyet_analizi(total_demand, total_fulfilled, total_cost, cost_suppli
     }
 
 def print_results():
-    from tabulate import tabulate
+    # Get model results by running the model
+    model_results = solve_model(
+        demand, working_days, holding_cost, stockout_cost, cost_supplier_A,
+        cost_supplier_B, capacity_supplier_A, capacity_supplier_B
+    )
 
     # Use the model results from the shared solver
     df = model_results['df']
+    out_A = model_results['out_A']
+    out_B = model_results['out_B']
+    inventory = model_results['inventory']
+    stockout = model_results['stockout']
     total_cost_A = model_results['total_cost_A']
     total_cost_B = model_results['total_cost_B']
     total_holding = model_results['total_holding']
@@ -309,7 +306,7 @@ def maliyet_analizi(
 
 if __name__ == '__main__':
     try:
-        import tabulate
+        from tabulate import tabulate
     except ImportError:
         print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
         exit(1)
