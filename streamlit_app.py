@@ -699,6 +699,29 @@ if model == "Karşılaştırma Tablosu":
         summary_df,
         use_container_width=True
     )
+    # --- Grafiksel Karşılaştırma ---
+    st.subheader("Ana Metriklerde Grafiksel Karşılaştırma")
+    # Sadece sayısal metrikleri al ve ortalama birim maliyeti hesapla
+    metrics = ["Toplam Maliyet (₺)", "Ortalama Birim Maliyet", "Toplam Üretim", "Stoksuzluk Oranı (%)"]
+    plot_df = summary_df[["Toplam Maliyet (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)"]].copy()
+    # Ortalama birim maliyet hesapla
+    plot_df["Ortalama Birim Maliyet"] = plot_df["Toplam Maliyet (₺)"] / plot_df["Toplam Üretim"]
+    # Sütun sırasını ayarla
+    plot_df = plot_df[["Toplam Maliyet (₺)", "Ortalama Birim Maliyet", "Toplam Üretim", "Stoksuzluk Oranı (%)"]]
+    plot_df = plot_df.apply(pd.to_numeric, errors='coerce')
+    fig, axes = plt.subplots(1, len(metrics), figsize=(4*len(metrics), 5))
+    if len(metrics) == 1:
+        axes = [axes]
+    for i, metric in enumerate(metrics):
+        ax = axes[i]
+        ax.bar(plot_df.index, plot_df[metric], color='steelblue', alpha=0.8)
+        ax.set_title(metric)
+        ax.set_xticklabels(plot_df.index, rotation=30, ha='right')
+        ax.grid(axis='y', linestyle='--', alpha=0.5)
+        if metric == "Stoksuzluk Oranı (%)":
+            ax.set_ylim(0, 100)
+    plt.tight_layout()
+    st.pyplot(fig)
     st.markdown("---")
     # Detaylı tabloyu da göster
     st.subheader("Detaylı Karşılaştırma Tablosu")
@@ -718,3 +741,4 @@ if model == "Karşılaştırma Tablosu":
     # Add explanation about Model 1's production cost
     if any(name[0] == "Model 1" for name in model_names):
         st.info("Model 1'de Üretim Birim Maliyeti, iç üretim ve fason üretimin ağırlıklı ortalamasıdır.")
+
