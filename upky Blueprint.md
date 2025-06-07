@@ -8,7 +8,7 @@
 - `labor_per_unit`: 0.5 saat/adet (üretim başına işgücü).
 - `stockout_cost`: 20 TL/adet (birim stokta bulundurmama maliyeti).
 
-> Diğer parametreler modellerde sabit olarak tanımlıdır ve karşılaştırma tablosunda kullanıcı tarafından değiştirilemez.
+> Diğer parametreler modellerde sabit olarak tanımlıdır ve karşılaştırma tablosunda kullanıcı tarafından değiştirilebilir.
 
 ## Model 1: Karma Planlama Modeli
 ### Değişkenler
@@ -66,7 +66,7 @@
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
 
 ### Python Yaklaşımı
-- Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`.
+- Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Sabit işçi ve fazla mesaiyle talebin karşılanması, toplam maliyetin ve birim maliyetlerin ayrıntılı analizi.
 - Kısıtlar: Normal kapasite ve fazla mesai kapasitesi limitleri, stok ve stoksuzluk yönetimi.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok, fazla mesai).
@@ -90,9 +90,10 @@
 - `production_cost`: Birim üretim maliyeti (TL/adet).
 - `holding_cost`: Stok tutma maliyeti (TL/adet/ay).
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
+- `worker_monthly_cost`: Aylık işçi maliyeti (TL/kişi/ay).
 
 ### Python Yaklaşımı
-- Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`.
+- Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Sabit işçiyle toplu üretim ve stoklama, toplam maliyetin ve birim maliyetlerin ayrıntılı analizi.
 - Kısıtlar: Sabit işçi kapasitesi, stok ve stoksuzluk yönetimi.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok).
@@ -123,9 +124,12 @@
 - `firing_cost`: İşten çıkarma maliyeti (TL/kişi).
 - `daily_hours`: Günlük çalışma saati.
 - `working_days[t]`: t ayındaki toplam çalışma günü.
+- `min_workers`: Minimum işçi sayısı.
+- `max_workers`: Maksimum işçi sayısı.
+- `max_workforce_change`: Maksimum işgücü değişimi (kişi/ay).
 
 ### Python Yaklaşımı
-- Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`.
+- Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Dinamik programlama ile toplam maliyeti minimize etmek, işgücü değişimi ve stok yönetimini optimize etmek.
 - Kısıtlar: İşgücü, üretim, stok ve stoksuzluk denge denklemleri, işçi değişim sınırları.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksal çıktı (işçi, üretim, stok, maliyetler).
@@ -133,8 +137,8 @@
 
 ## Model 5: Dış Kaynak Kullanımı Modelleri Karşılaştırması
 ### Değişkenler
-- `outsourced_supplier_A[t]`: t ayındaki Tedarikçi A’dan alınan üretim.
-- `outsourced_supplier_B[t]`: t ayındaki Tedarikçi B’den alınan üretim.
+- `outsourced_supplier_A[t]`: t ayındaki Tedarikçi A'dan alınan üretim.
+- `outsourced_supplier_B[t]`: t ayındaki Tedarikçi B'den alınan üretim.
 - `inventory[t]`: t ayı sonundaki stok.
 - `stockout[t]`: t ayındaki karşılanmayan talep (stokta bulundurmama).
 - `cost_A[t]`: t ayındaki Tedarikçi A maliyeti.
@@ -152,7 +156,7 @@
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
 
 ### Python Yaklaşımı
-- Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`.
+- Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Tedarikçi seçimi ve kapasite kısıtları altında toplam maliyeti minimize etmek, karşılanamayan talebi ve stok seviyesini optimize etmek.
 - Kısıtlar: Tedarikçi kapasite limitleri, stok ve stoksuzluk denge denklemleri.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (tedarikçi kullanımı, stok, karşılanmayan talep, kapasite limitleri).
@@ -168,6 +172,9 @@
 - `production_cost[t]`: t ayındaki üretim maliyeti.
 - `labor_cost[t]`: t ayındaki işçilik maliyeti.
 - `total_cost[t]`: t ayındaki toplam maliyet.
+- `workers[t]`: t ayındaki işçi sayısı.
+- `hire[t]`: t ayındaki işe alınan işçi sayısı.
+- `fire[t]`: t ayındaki işten çıkarılan işçi sayısı.
 
 ### Sabit Parametreler
 - `demand`: Mevsimsel talep desenleri (12 aylık dizi).
@@ -175,24 +182,36 @@
 - `holding_cost`: Stok maliyeti (TL/adet/ay).
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
 - `production_cost`: Üretim maliyeti (TL/adet).
-- `max_production`: Maksimum aylık üretim kapasitesi (adet).
 - `labor_per_unit`: Birim başına işçilik süresi (saat/adet).
 - `hourly_wage`: Saatlik işçi ücreti (TL/saat).
+- `daily_hours`: Günlük çalışma saati.
 - `hiring_cost`: İşe alım maliyeti (TL/kişi).
+- `firing_cost`: İşten çıkarma maliyeti (TL/kişi).
+- `min_workers`: Minimum işçi sayısı.
+- `max_workers`: Maksimum işçi sayısı.
+- `max_workforce_change`: Maksimum işgücü değişimi (kişi/ay).
 
 ### Python Yaklaşımı
-- Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`.
+- Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Mevsimsel talep dalgalanmalarında üretim, stok ve stoksuzluk maliyetlerinin toplamını minimize etmek.
-- Kısıtlar: Üretim kapasitesi, stok ve stoksuzluk denge denklemleri.
+- Kısıtlar: Üretim kapasitesi, stok ve stoksuzluk denge denklemleri, işçi sayısı değişim kısıtları.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksal çıktı (üretim, stok, stoksuzluk, maliyetler).
 - Özellikler: İşçilik, üretim, stok, stoksuzluk maliyetlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme, birim maliyet analizi fonksiyonu.
 
-## Toplam Maliyet Hesaplaması
-- İşçilik, üretim, stok.
+## Toplam Maliyet Hesaplaması ve Maliyet Analizi
+Her model için aşağıdaki toplam maliyet kalemleri hesaplanır:
+- İşçilik maliyeti (normal ve fazla mesai)
+- Üretim maliyeti
+- Stok maliyeti
+- Stoksuzluk maliyeti
+- İşe alım/çıkarma maliyetleri
+- Fason üretim maliyeti (uygulanabilirse)
 
-## Karar Destek Aracı
-- Kütüphaneler: `Pandas`, `NumPy`, `PuLP`, `Matplotlib`.
-- Özellikler: Parametre girişi, model çalıştırma, görselleştirme.
+Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaştırma sağlar:
+- Toplam talep ve karşılanma oranı
+- Ortalama birim maliyet
+- Maliyet kategorilerine göre birim maliyet dağılımı
+- Stoksuzluk oranı ve maliyeti
 
 ## Streamlit Arayüzü ve Karar Destek Paneli
 ### Genel Özellikler
@@ -201,11 +220,12 @@
 - Sonuçları tablo ve grafiklerle (üretim, stok, maliyet, stoksuzluk vb.) görselleştirir.
 - Model fonksiyonları ayrı dosyalarda, arayüzde fonksiyon olarak çağrılır.
 - Hataları kullanıcıya açıkça bildirir.
+- Parametreleri yaml dosyasından yükler ve kullanıcı arayüzünden değiştirilebilir.
 
 ### Temel Akış
 1. **Parametre Girişi:**
    - Yan panelde (sidebar) kullanıcıdan talep, işçilik, stok, kapasite gibi parametreler alınır.
-   - Varsayılan değerler ve örnek veri yükleme seçenekleri sunulur.
+   - Varsayılan değerler ve örnek veri yüklenir.
 2. **Model Seçimi ve Çalıştırma:**
    - Kullanıcı tek model veya tüm modelleri seçip çalıştırabilir.
    - Her modelin fonksiyonu çağrılır, sonuçlar toplanır.
@@ -218,12 +238,11 @@
 5. **Görselleştirme:**
    - Üretim, stok, maliyet, stoksuzluk gibi metrikler için çizgi ve çubuk grafikler sunulur.
    - Model bazında ve karşılaştırmalı grafikler desteklenir.
-6. **Raporlama ve İndirme:**
-   - Sonuç tabloları ve grafikler indirilebilir veya dışa aktarılabilir (isteğe bağlı).
 
 ### Teknik Notlar
 - Ana dosya: `streamlit_app.py`
 - Model fonksiyonları: `modelX_*.py` dosyalarında.
-- Kullanılan kütüphaneler: `streamlit`, `pandas`, `numpy`, `matplotlib`, `tabulate`, `PuLP`.
+- Parametre yönetimi: `parametreler.yaml` dosyasında.
+- Kullanılan kütüphaneler: `streamlit`, `pandas`, `numpy`, `matplotlib`, `tabulate`, `PuLP`, `yaml`.
 - Kodda hata yönetimi ve kullanıcıya açıklama ön planda tutulur.
 - Tüm modellerin çıktıları ortak formatta toplanır ve karşılaştırılır.
