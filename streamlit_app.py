@@ -14,7 +14,7 @@ import model6_seasonal_planning as model6
 
 # Import ayrintili_toplam_maliyetler and birim_maliyet_analizi from each model
 from model1_mixed_planning import ayrintili_toplam_maliyetler as m1_ayrintili, birim_maliyet_analizi as m1_birim, solve_model as model1_solver
-from model2_overtime_production import ayrintili_toplam_maliyetler as m2_ayrintili, birim_maliyet_analizi as m2_birim
+from model2_overtime_production import ayrintili_toplam_maliyetler as m2_ayrintili, birim_maliyet_analizi as m2_birim, solve_model as model2_solver
 from model3_batch_production import ayrintili_toplam_maliyetler as m3_ayrintili, birim_maliyet_analizi as m3_birim
 from model4_dynamic_programming import ayrintili_toplam_maliyetler as m4_ayrintili, birim_maliyet_analizi as m4_birim
 from model5_outsourcing_comparison import ayrintili_toplam_maliyetler as m5_ayrintili, birim_maliyet_analizi as m5_birim
@@ -93,48 +93,17 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
     return df, toplam_maliyet, model_results
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost=12):
-    months = len(demand)
-    production = np.zeros(months)
-    overtime_hours = np.zeros(months)
-    inventory = np.zeros(months)
-    prev_inventory = 0
-    results = []
-    total_cost = 0
-    overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier
-    for t in range(months):
-        normal_prod = fixed_workers * working_days[t] * daily_hours / labor_per_unit
-        max_overtime_total_hours = fixed_workers * max_overtime_per_worker
-        max_overtime_units = max_overtime_total_hours / labor_per_unit
-        remaining_demand = demand[t] - prev_inventory
-        if remaining_demand <= 0:
-            prod = 0
-            ot_hours = 0
-        elif remaining_demand <= normal_prod:
-            prod = remaining_demand
-            ot_hours = 0
-        else:
-            prod = normal_prod
-            extra_needed = remaining_demand - normal_prod
-            overtime_units = min(extra_needed, max_overtime_units)
-            ot_hours = overtime_units * labor_per_unit
-            prod += overtime_units
-        production[t] = prod
-        overtime_hours[t] = ot_hours
-        inventory[t] = prev_inventory + prod - demand[t]
-        holding = max(inventory[t], 0) * holding_cost
-        stockout = abs(min(inventory[t], 0)) * stockout_cost
-        overtime = max(ot_hours, 0) * overtime_cost_per_hour
-        normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
-        production_cost_val = prod * production_cost
-        total_cost += holding + stockout + overtime + normal_labor_cost + production_cost_val
-        results.append([
-            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost, production_cost_val
-        ])
-        prev_inventory = inventory[t]
-    headers = [
-        'Ay', 'İşçi', 'Üretim', 'Fazla Mesai', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti', 'Üretim Maliyeti'
-    ]
-    df = pd.DataFrame(results, columns=headers)
+    # Use the shared model solver function
+    model_results = model2_solver(
+        demand, working_days, holding_cost, labor_per_unit, fixed_workers,
+        daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
+        stockout_cost, normal_hourly_wage, production_cost
+    )
+
+    # Get the dataframe and total_cost from model_results
+    df = model_results['df']
+    total_cost = model_results['total_cost']
+
     return df, total_cost
 
 def model3_run(demand, working_days, holding_cost, stockout_cost, fixed_workers, production_rate, daily_hours, worker_monthly_cost=None, production_cost=20):
