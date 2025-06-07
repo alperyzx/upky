@@ -903,4 +903,4 @@ if model == "Karşılaştırma Tablosu":
     df = pd.DataFrame(results)
 
     cols = ["Model"] + [c for c in df.columns if c != "Model"]
-    st.dataframe(df[cols], use_container_width=True)
+    st.dataframe(df[cols], use_container_width=True, hide_index=True)

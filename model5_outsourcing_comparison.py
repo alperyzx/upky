@@ -8,7 +8,7 @@ import os
 with open(os.path.join(os.path.dirname(__file__), 'parametreler.yaml'), 'r', encoding='utf-8') as f:
     params = yaml.safe_load(f)
 
-demand = params['demand']['high']  # veya 'normal', 'seasonal' seçilebilir
+demand = params['demand']['normal']  # veya 'normal', 'seasonal' seçilebilir
 working_days = params['workforce']['working_days']
 months = len(demand)
 holding_cost = params['costs']['holding_cost']
