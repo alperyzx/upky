@@ -5,7 +5,7 @@ import numpy as np
 demand = [200, 500, 800, 1000, 700, 600, 400, 300, 250, 300, 200, 250]
 working_days = [22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21]
 holding_cost = 5
-stockout_cost = 20
+stockout_cost = 80
 outsourcing_cost = 80  # Fason üretim maliyeti (TL)
 labor_per_unit = 4
 hiring_cost = 1800

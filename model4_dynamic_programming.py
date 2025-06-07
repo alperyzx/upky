@@ -7,7 +7,7 @@ from tabulate import tabulate
 demand = np.array([300, 230, 250, 260, 370, 250, 400, 250, 270, 250, 320, 250])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
-stockout_cost = 20
+stockout_cost = 80
 hiring_cost = 1800
 firing_cost = 1500
 daily_hours = 8
@@ -312,3 +312,4 @@ plt.title('Dinamik Programlama Tabanlı Model Sonuçları')
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
+

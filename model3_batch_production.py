@@ -6,7 +6,7 @@ from tabulate import tabulate
 demand = np.array([650, 650, 750, 650, 700, 600, 700, 650,650, 670, 750, 650])
 working_days = np.array([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
 holding_cost = 5
-stockout_cost = 20
+stockout_cost = 80
 fixed_workers = 20
 worker_monthly_cost = 1680  # İşçi başı aylık maliyet (ör: asgari ücret)
 production_rate = 0.25 # Bir işçi günde 0.25 birim üretim yapabiliyor
