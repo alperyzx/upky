@@ -242,6 +242,10 @@ def birim_maliyet_analizi(T, demand, internal_production, outsourced_production,
     total_outsourced = sum([int(outsourced_production[t].varValue) for t in range(T)])
     total_produced = total_internal_produced + total_outsourced
     total_unfilled = sum([int(stockout[t].varValue) for t in range(T)])
+
+    # Calculate weighted average production cost - Fix the variable name from total_outsourcing_cost to total_outsource
+    weighted_avg_prod_unit = (total_internal_prod + total_outsource) / total_produced if total_produced > 0 else 0
+
     result = {
         'total_demand': total_demand,
         'total_internal_produced': total_internal_produced,
@@ -250,10 +254,8 @@ def birim_maliyet_analizi(T, demand, internal_production, outsourced_production,
         'total_unfilled': total_unfilled,
         'total_cost': total_cost,
         'avg_unit_cost': total_cost/total_produced if total_produced > 0 else 0,
-        'internal_unit_cost': (total_internal_labor+total_internal_prod)/total_internal_produced if total_internal_produced > 0 else 0,
         'internal_labor_unit_cost': total_internal_labor/total_internal_produced if total_internal_produced > 0 else 0,
-        'internal_prod_unit_cost': total_internal_prod/total_internal_produced if total_internal_produced > 0 else 0,
-        'outsourced_unit_cost': total_outsource/total_outsourced if total_outsourced > 0 else 0,
+        'weighted_avg_prod_unit': weighted_avg_prod_unit,  # Add weighted average
         'other_unit_cost': (total_holding+total_hiring+total_firing)/total_produced if total_produced > 0 else 0
     }
     return result
@@ -322,11 +324,11 @@ def print_results():
     if birim['total_produced'] > 0:
         print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
         if birim['total_internal_produced'] > 0:
-            print(f"- İç Üretim Birim Maliyeti: {birim['internal_unit_cost']:.2f} TL/birim")
-            print(f"  * İşçilik Birim Maliyeti: {birim['internal_labor_unit_cost']:.2f} TL/birim")
-            print(f"  * Üretim Birim Maliyeti: {birim['internal_prod_unit_cost']:.2f} TL/birim")
-        if birim['total_outsourced'] > 0:
-            print(f"- Fason Üretim Birim Maliyeti: {birim['outsourced_unit_cost']:.2f} TL/birim")
+            print(f"- İşçilik Birim Maliyeti: {birim['internal_labor_unit_cost']:.2f} TL/birim")
+            # Display weighted average production cost
+            print(f"- Üretim Birim Maliyeti (Ağırlıklı Ortalama): {birim['weighted_avg_prod_unit']:.2f} TL/birim")
+            # Add note about the weighted average
+            print(f"  Not: Bu maliyet, iç üretim ({production_cost} TL/birim) ve fason üretimin ({outsourcing_cost} TL/birim) ağırlıklı ortalamasıdır.")
         print(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {birim['other_unit_cost']:.2f} TL/birim")
     else:
         print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
@@ -434,6 +436,7 @@ def maliyet_analizi(
     if total_produced > 0:
         avg_unit_cost = toplam_maliyet / total_produced
         avg_labor_unit = total_internal_labor / total_produced
+        # This is the correct weighted average calculation
         avg_prod_unit = (total_internal_prod + total_outsource) / total_produced
         avg_other_unit = (total_holding + total_stockout + total_hiring + total_firing) / total_produced
     else:

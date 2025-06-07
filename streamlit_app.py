@@ -289,11 +289,12 @@ if model == "Karma Planlama (Model 1)":
         if birim['total_produced'] > 0:
             st.markdown(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
             if birim['total_internal_produced'] > 0:
-                st.markdown(f"- İç Üretim Birim Maliyeti: {birim['internal_unit_cost']:.2f} TL/birim")
-                st.markdown(f"  * İşçilik Birim Maliyeti: {birim['internal_labor_unit_cost']:.2f} TL/birim")
-                st.markdown(f"  * Üretim Birim Maliyeti: {birim['internal_prod_unit_cost']:.2f} TL/birim")
-            if birim['total_outsourced'] > 0:
-                st.markdown(f"- Fason Üretim Birim Maliyeti: {birim['outsourced_unit_cost']:.2f} TL/birim")
+                st.markdown(f"- İşçilik Birim Maliyeti: {birim['internal_labor_unit_cost']:.2f} TL/birim")
+                # Replace the separate production costs with the weighted average
+                avg_prod_unit = (detay['total_internal_prod'] + detay['total_outsource']) / birim['total_produced']
+                st.markdown(f"- Üretim Birim Maliyeti (Ağırlıklı Ortalama): {avg_prod_unit:.2f} TL/birim")
+                # Add note about the weighted average
+                st.info(f"Bu maliyet, iç üretim ({production_cost} TL/birim) ve fason üretimin ({outsourcing_cost} TL/birim) ağırlıklı ortalamasıdır.")
             st.markdown(f"- Diğer Maliyetler (Stok, İşe Alım/Çıkarma): {birim['other_unit_cost']:.2f} TL/birim")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
@@ -710,3 +711,7 @@ if model == "Karşılaştırma Tablosu":
 
     cols = ["Model"] + [c for c in df.columns if c != "Model"]
     st.dataframe(df[cols], use_container_width=True, hide_index=True)
+
+    # Add explanation about Model 1's production cost
+    if any(name[0] == "Model 1" for name in model_names):
+        st.info("Model 1'de Üretim Birim Maliyeti, iç üretim ve fason üretimin ağırlıklı ortalamasıdır.")
