@@ -18,7 +18,7 @@ from model2_overtime_production import ayrintili_toplam_maliyetler as m2_ayrinti
 from model3_batch_production import ayrintili_toplam_maliyetler as m3_ayrintili, birim_maliyet_analizi as m3_birim, solve_model as model3_solver
 from model4_dynamic_programming import ayrintili_toplam_maliyetler as m4_ayrintili, birim_maliyet_analizi as m4_birim, solve_model as model4_solver
 from model5_outsourcing_comparison import ayrintili_toplam_maliyetler as m5_ayrintili, birim_maliyet_analizi as m5_birim, solve_model as model5_solver
-from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili, birim_maliyet_analizi as m6_birim
+from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili, birim_maliyet_analizi as m6_birim, solve_model as model6_solver
 
 st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initial_sidebar_state="expanded")
 st.title("Üretim Planlama Modelleri Karar Destek Arayüzü")
@@ -183,64 +183,18 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
     return df, toplam_maliyet
 
 def model6_run(demand, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours):
-    demand = np.array(demand)  # Listeyi NumPy array'e çevir
-    months = len(demand)
-    max_production = int(np.mean(demand) + np.std(demand))  # Doğru formül
-    avg_working_days = np.mean([22, 20, 23, 19, 21, 19, 22, 22, 22, 21, 21, 21])
-    needed_workers = int(np.ceil(max_production * labor_per_unit / (daily_hours * np.mean(working_days))))
-    monthly_labor_cost = needed_workers * np.mean(working_days) * daily_hours * hourly_wage
-    model = pulp.LpProblem('Mevsimsel_Stok_Optimizasyonu', pulp.LpMinimize)
-    y_production = [pulp.LpVariable(f'production_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    model += pulp.lpSum([
-        production_cost * y_production[t] +
-        holding_cost * y_inventory[t] +
-        stockout_cost * y_stockout[t] +
-        monthly_labor_cost
-        for t in range(months)
-    ]) + model6.hiring_cost * needed_workers  # Add hiring cost directly to objective
-    for t in range(months):
-        model += y_production[t] <= max_production
-        if t == 0:
-            prev_inventory = 0
-        else:
-            prev_inventory = y_inventory[t-1]
-        model += prev_inventory + y_production[t] + y_stockout[t] == demand[t] + y_inventory[t]
-        model += y_inventory[t] >= 0
-        model += y_stockout[t] >= 0
-    solver = pulp.PULP_CBC_CMD(msg=0)
-    model.solve(solver)
-    results = []
-    total_holding = 0
-    total_stockout = 0
-    total_production_cost = 0
-    total_labor_cost = 0
-    for t in range(months):
-        labor_cost = monthly_labor_cost
-        holding = int(y_inventory[t].varValue) * holding_cost
-        stockout = int(y_stockout[t].varValue) * stockout_cost
-        prod_cost = int(y_production[t].varValue) * production_cost
-        total_holding += holding
-        total_stockout += stockout
-        total_production_cost += prod_cost
-        total_labor_cost += labor_cost
-        results.append([
-            t+1,
-            demand[t],
-            int(y_production[t].varValue),
-            int(y_inventory[t].varValue),
-            int(y_stockout[t].varValue),
-            holding,
-            stockout,
-            prod_cost,
-            labor_cost
-        ])
-    df = pd.DataFrame(results, columns=[
-        'Ay', 'Talep', 'Üretim', 'Stok', 'Stoksuzluk', 'Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti', 'İşçilik Maliyeti'
-    ])
-    # Calculate the total cost from the model's objective value
-    total_cost = pulp.value(model.objective)
+    # Use the shared model solver function
+    model_results = model6_solver(
+        demand, holding_cost, stockout_cost, production_cost,
+        labor_per_unit, hourly_wage, daily_hours
+    )
+
+    # Extract the results from the model
+    df = model_results['df']
+    total_cost = model_results['total_cost']
+    needed_workers = model_results['needed_workers']
+    max_production = model_results['max_production']
+
     return df, total_cost, needed_workers, max_production
 
 if model == "Karma Planlama (Model 1)":
