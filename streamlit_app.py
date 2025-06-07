@@ -424,7 +424,7 @@ if model == "Karma Planlama (Model 1)":
             hourly_wage=10, production_cost=30, overtime_wage_multiplier=overtime_wage_multiplier, max_overtime_per_worker=max_overtime_per_worker
         )
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {toplam_maliyet:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         fig, ax1 = plt.subplots(figsize=(10,6))
@@ -508,7 +508,7 @@ if model == "Fazla Mesaili Üretim (Model 2)":
             overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost
         )
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df_table, use_container_width=True)
+        st.dataframe(df_table, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {total_cost:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         fig, ax1 = plt.subplots(figsize=(10,6))
@@ -580,7 +580,7 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
     if run_model:
         df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit = model3_run(demand, working_days, holding_cost, stockout_cost, fixed_workers, production_rate, daily_hours, worker_monthly_cost, production_cost)
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {cost:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         months_list = df["Ay"].tolist()
@@ -638,7 +638,7 @@ if model == "Dinamik Programlama (Model 4)":
     if run_model:
         df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit = model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, min_workers, max_workers, max_workforce_change, hourly_wage=10, stockout_cost=stockout_cost)
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {min_cost:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         months_list = list(range(1, len(demand)+1))
@@ -705,7 +705,7 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
             demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost
         )
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {toplam_maliyet:,.2f} TL")
 
         # Grafiksel Sonuçlar
@@ -773,7 +773,7 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         )
         st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Gerekli Optimum İşçi Sayısı: {needed_workers}")
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {total_cost:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         months_list = list(range(1, len(demand)+1))
