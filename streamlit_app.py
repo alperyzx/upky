@@ -2,8 +2,8 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import pulp
 import yaml
+import inspect # Add this import
 
 # Import default parameters from model files
 import model1_mixed_planning as model1
@@ -673,7 +673,6 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
 if model == "Karşılaştırma Tablosu":
     st.header("Karşılaştırma Tablosu")
     with st.sidebar:
-        st.subheader("Ortak Parametreler")
         # Demand type selection
         demand_types = list(params['demand'].keys())
         selected_demand_type = st.selectbox("Talep Tipi Seçiniz", demand_types, index=0, key="cmp_demand_type")
@@ -701,11 +700,28 @@ if model == "Karşılaştırma Tablosu":
         working_days = get_param('workforce', 'working_days', [22]*12)
         # Add more fields as needed for other models
         compare_btn = st.button("Modelleri Karşılaştır", key="cmp_compare_btn")
+
     # Run comparison on first load or when button pressed
     if compare_btn or st.session_state.get("cmp_first_run", True):
         st.session_state["cmp_first_run"] = False
-        # Ortak parametreleri model fonksiyonlarına iletmek için global değişkenler veya parametre geçişi yapılabilir
-        # ...Aşağıda mevcut karşılaştırma kodu devam ediyor...
+
+        # Collect current parameters from sidebar inputs and session state
+        # 'demand' and 'working_days' are already defined in the scope
+        current_params = {
+            "demand": demand,
+            "holding_cost": st.session_state.cmp_holding,
+            "stockout_cost": st.session_state.cmp_stockout,
+            "production_cost": st.session_state.cmp_production_cost,
+            "hiring_cost": st.session_state.cmp_hire,
+            "firing_cost": st.session_state.cmp_fire,
+            "hourly_wage": st.session_state.cmp_hourly_wage,
+            "daily_hours": st.session_state.cmp_daily_hours,
+            "labor_per_unit": st.session_state.cmp_labor,
+            "max_overtime_per_worker": st.session_state.cmp_max_overtime,
+            "overtime_wage_multiplier": st.session_state.cmp_overtime_multiplier,
+            "working_days": working_days
+        }
+
         model_names = [
             ("Model 1", "Karma Planlama (Model 1)", model1.maliyet_analizi, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"),
             ("Model 2", "Fazla Mesaili Üretim (Model 2)", model2.maliyet_analizi, "Orta", "Fazla mesai ile esneklik"),
@@ -717,18 +733,34 @@ if model == "Karşılaştırma Tablosu":
         summary_rows = []
         for idx, (short_name, display_name, func, flex, scenario) in enumerate(model_names, 1):
             try:
-                res = func()
+                sig_params = inspect.signature(func).parameters
+                params_to_pass = {}
+
+                for p_name, p_value in current_params.items():
+                    if short_name == "Model 2" and p_name == "hourly_wage":
+                        if "normal_hourly_wage" in sig_params:
+                            params_to_pass["normal_hourly_wage"] = p_value
+                        # If Model 2 could also accept "hourly_wage" directly (it doesn't based on its signature)
+                        # elif "hourly_wage" in sig_params:
+                        # params_to_pass["hourly_wage"] = p_value
+                    elif p_name in sig_params:
+                        params_to_pass[p_name] = p_value
+
+                res = func(**params_to_pass)
                 cost = res.get("Toplam Maliyet", None)
                 labor_cost = res.get("İşçilik Maliyeti", None)
                 total_prod = res.get("Toplam Üretim", None)
                 total_demand = res.get("Toplam Talep", None)
                 stockout = res.get("Karşılanmayan Talep", 0)
                 stockout_rate = (stockout / total_demand * 100) if (total_demand and total_demand > 0) else 0
+
                 summary_rows.append([
                     cost, labor_cost, total_prod, stockout_rate, flex, scenario
                 ])
             except Exception as e:
                 summary_rows.append([None, None, None, None, flex, f"Hata: {str(e)}"])
+                st.error(f"{short_name} hata: {str(e)}")
+
         summary_df = pd.DataFrame(
             summary_rows,
             columns=["Toplam Maliyet (₺)", "Toplam İşçilik Maliyeti (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)", "İşgücü Esnekliği", "Uygun Senaryo"],
@@ -772,18 +804,29 @@ if model == "Karşılaştırma Tablosu":
         st.markdown("---")
         # Detaylı tabloyu da göster
         st.subheader("Detaylı Karşılaştırma Tablosu")
-        results = []
-        for name, display_name, func, _, _ in model_names:
+        results_detail_list = []
+        for short_name, display_name, func, _, _ in model_names:
             try:
-                res = func()
-                res["Model"] = display_name
-                results.append(res)
-            except Exception as e:
-                results.append({"Model": display_name, "Hata": str(e)})
-        df = pd.DataFrame(results)
+                sig_params = inspect.signature(func).parameters
+                params_to_pass_detail = {}
+                for p_name, p_value in current_params.items():
+                    if short_name == "Model 2" and p_name == "hourly_wage":
+                        if "normal_hourly_wage" in sig_params:
+                            params_to_pass_detail["normal_hourly_wage"] = p_value
+                    elif p_name in sig_params:
+                        params_to_pass_detail[p_name] = p_value
 
-        cols = ["Model"] + [c for c in df.columns if c != "Model"]
-        st.dataframe(df[cols], use_container_width=True, hide_index=True)
+                res_detail = func(**params_to_pass_detail)
+                res_detail["Model"] = display_name
+                results_detail_list.append(res_detail)
+            except Exception as e:
+                results_detail_list.append({"Model": display_name, "Hata": str(e)})
+                # Optionally, display this error in the detailed section as well
+                # st.error(f"{display_name} için detaylı tablo hatası: {str(e)}")
+        df_detail = pd.DataFrame(results_detail_list)
+
+        cols = ["Model"] + [c for c in df_detail.columns if c != "Model"]
+        st.dataframe(df_detail[cols], use_container_width=True, hide_index=True)
 
         # Add explanation about Model 1's production cost
         if any(name[0] == "Model 1" for name in model_names):
