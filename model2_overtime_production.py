@@ -145,24 +145,31 @@ def birim_maliyet_analizi(
     }
     return result
 
-def overtime_model():
-    # Use the shared model solver function
+def print_results():
+    from tabulate import tabulate
+
+    # Use solve_model() to get the model variables
     model_results = solve_model(
         demand, working_days, holding_cost, labor_per_unit, fixed_workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
         stockout_cost, normal_hourly_wage, production_cost
     )
 
+    # Extract variables from model_results
     df = model_results['df']
+    production = model_results['production']
+    overtime_hours = model_results['overtime_hours']
+    inventory = model_results['inventory']
     total_cost = model_results['total_cost']
 
-    from tabulate import tabulate
     # Format cost columns
     for col in ['Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Fazla Mesai Maliyeti', 'Normal İşçilik Maliyeti', 'Üretim Maliyeti']:
         df[col] = df[col].apply(lambda x: f'{int(x):,} TL')
+
     print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
     print(f'\nToplam Maliyet: {total_cost:,.2f} TL')
-    # Ayrıntılı Toplam Maliyetler fonksiyonundan alınır
+
+    # Ayrıntılı Toplam Maliyetler
     detay = ayrintili_toplam_maliyetler(
         model_results['total_holding'],
         model_results['total_stockout'],
@@ -171,6 +178,7 @@ def overtime_model():
         model_results['total_production_cost'],
         model_results['total_hiring_cost']
     )
+
     print(f"\nAyrıntılı Toplam Maliyetler:")
     print(f"- Toplam Stok Maliyeti: {detay['total_holding']:,.2f} TL")
     print(f"- Toplam Stoksuzluk Maliyeti: {detay['total_stockout']:,.2f} TL")
@@ -178,11 +186,12 @@ def overtime_model():
     print(f"- Toplam Normal İşçilik Maliyeti: {detay['total_normal_labor']:,.2f} TL")
     print(f"- Toplam Üretim Maliyeti: {detay['total_production']:,.2f} TL")
     print(f"- Toplam İşe Alım Maliyeti: {detay['total_hiring_cost']:,.2f} TL")
-    # Birim maliyet analizini fonksiyon ile yap
+
+    # Birim maliyet analizi
     birim = birim_maliyet_analizi(
         demand,
-        model_results['production'],
-        model_results['inventory'],
+        production,
+        inventory,
         total_cost,
         model_results['total_normal_labor'],
         model_results['total_overtime'],
@@ -192,11 +201,13 @@ def overtime_model():
         production_cost,
         model_results['total_hiring_cost']
     )
+
     print(f"\nBirim Maliyet Analizi:")
     print(f"- Toplam Talep: {birim['total_demand']:,} birim")
     print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
     if birim['total_unfilled'] > 0:
         print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+
     if birim['total_produced'] > 0:
         print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
         print(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
@@ -208,17 +219,22 @@ def overtime_model():
         print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
     # Grafiksel çıktı
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
+        return
+
     # Grafik: Fazla Mesai saatlerini bar olarak göster
-    import matplotlib.pyplot as plt
     months_list = df['Ay'].tolist()
     fig, ax1 = plt.subplots(figsize=(10,6))
-    ax1.bar(months_list, df['Fazla Mesai'], color='orange', label='Fazla Mesai (saat)', alpha=0.7)
+    ax1.bar(months_list, overtime_hours, color='orange', label='Fazla Mesai (saat)', alpha=0.7)
     ax1.set_xlabel('Ay')
     ax1.set_ylabel('Fazla Mesai (saat)', color='orange')
     ax1.tick_params(axis='y', labelcolor='orange')
     ax2 = ax1.twinx()
-    ax2.plot(months_list, df['Üretim'], marker='s', label='Üretim', color='green')
-    ax2.plot(months_list, df['Stok'], marker='d', label='Stok', color='red')
+    ax2.plot(months_list, production, marker='s', label='Üretim', color='green')
+    ax2.plot(months_list, inventory, marker='d', label='Stok', color='red')
     ax2.set_ylabel('Adet', color='gray')
     ax2.tick_params(axis='y', labelcolor='gray')
     lines1, labels1 = ax1.get_legend_handles_labels()
@@ -228,7 +244,18 @@ def overtime_model():
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.show()
-    return df, total_cost
+
+def overtime_model():
+    # Use the print_results function instead of duplicating code
+    print_results()
+
+    # For compatibility with existing code that expects a return value from overtime_model()
+    model_results = solve_model(
+        demand, working_days, holding_cost, labor_per_unit, fixed_workers,
+        daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
+        stockout_cost, normal_hourly_wage, production_cost
+    )
+    return model_results['df'], model_results['total_cost']
 
 def maliyet_analizi(
     demand=demand,
@@ -296,4 +323,9 @@ def ayrintili_toplam_maliyetler(total_holding, total_stockout, total_overtime, t
     }
 
 if __name__ == '__main__':
-    overtime_model()
+    try:
+        import tabulate
+    except ImportError:
+        print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
+        exit(1)
+    print_results()

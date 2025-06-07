@@ -99,6 +99,77 @@ def solve_model(
         'total_unfilled': total_unfilled,
     }
 
+def print_results():
+    """
+    Runs the model and displays formatted results, detailed analyses, and visualizations.
+    """
+    from tabulate import tabulate
+
+    # Use solve_model to get the model variables
+    model_results = solve_model(
+        demand, working_days, holding_cost, stockout_cost, fixed_workers,
+        production_rate, daily_hours, worker_monthly_cost, production_cost
+    )
+
+    df = model_results['df']
+    cost = model_results['total_cost']
+
+    # Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
+    df['Stok Maliyeti'] = df['Stok Maliyeti'].astype(int)
+    df['Stoksuzluk Maliyeti'] = df['Stoksuzluk Maliyeti'].astype(int)
+    df.rename(columns={df.columns[5]: 'İşçilik Maliyeti'}, inplace=True)  # Fix encoding issue
+    df['İşçilik Maliyeti'] = df['İşçilik Maliyeti'].astype(int)
+    df['Üretim Maliyeti'] = df['Üretim Maliyeti'].astype(int)
+    print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
+
+    detay = ayrintili_toplam_maliyetler(df)
+    print(f'\nToplam Maliyet: {cost:,.2f} TL')
+    print(f'Stok Maliyeti Toplamı: {detay["total_holding"]:,} TL')
+    print(f'Stoksuzluk Maliyeti Toplamı: {detay["total_stockout"]:,} TL')
+    print(f'İşçilik Maliyeti Toplamı: {detay["total_labor"]:,} TL')
+    print(f'Üretim Maliyeti Toplamı: {detay["total_production_cost"]:,} TL')
+
+    # Birim maliyet analizini fonksiyon ile yap
+    birim = birim_maliyet_analizi(
+        demand, model_results['production'], model_results['inventory'],
+        cost, df, fixed_workers, months
+    )
+    print(f"\nBirim Maliyet Analizi:")
+    print(f"- Toplam Talep: {birim['total_demand']:,} birim")
+    print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
+    if birim['total_unfilled'] > 0:
+        print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
+    if birim['total_produced'] > 0:
+        print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
+        print(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
+        print(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
+        print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
+        print(f"- Sabit İşçi Sayısı: {birim['fixed_workers']} kişi")
+        print(f"- İşçi Başına Aylık Ortalama Üretim: {birim['avg_prod_per_worker']:.2f} birim/ay")
+    else:
+        print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
+
+    # Grafiksel çıktı
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
+        exit(1)
+    months_list = list(range(1, months+1))
+    plt.figure(figsize=(10,6))
+    plt.bar(months_list, model_results['production'], color='skyblue', label='Üretim', alpha=0.7)
+    plt.plot(months_list, model_results['inventory'], marker='d', label='Stok', color='red')
+    plt.plot(months_list, df['Karşılanmayan Talep'], marker='x', label='Karşılanmayan Talep', color='black')
+    plt.xlabel('Ay')
+    plt.ylabel('Adet / TL')
+    plt.title('Toplu Üretim ve Stoklama Modeli Sonuçları')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+    return df, cost
+
 def ayrintili_toplam_maliyetler(df):
     return {
         'total_holding': df["Stok Maliyeti"].sum(),
@@ -181,66 +252,11 @@ def maliyet_analizi(
     }
 
 if __name__ == '__main__':
-    # Model execution code moved here, so it only runs when this file is directly executed
-    # Use the solve_model function for model execution
-    model_results = solve_model(
-        demand, working_days, holding_cost, stockout_cost, fixed_workers,
-        production_rate, daily_hours, worker_monthly_cost, production_cost
-    )
-
-    df = model_results['df']
-    cost = model_results['total_cost']
-
-    # Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
-    df['Stok Maliyeti'] = df['Stok Maliyeti'].astype(int)
-    df['Stoksuzluk Maliyeti'] = df['Stoksuzluk Maliyeti'].astype(int)
-    df.rename(columns={df.columns[5]: 'İşçilik Maliyeti'}, inplace=True)  # Fix encoding issue
-    df['İşçilik Maliyeti'] = df['İşçilik Maliyeti'].astype(int)
-    df['Üretim Maliyeti'] = df['Üretim Maliyeti'].astype(int)
-    print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
-
-    detay = ayrintili_toplam_maliyetler(df)
-    print(f'\nToplam Maliyet: {cost:,.2f} TL')
-    print(f'Stok Maliyeti Toplamı: {detay["total_holding"]:,} TL')
-    print(f'Stoksuzluk Maliyeti Toplamı: {detay["total_stockout"]:,} TL')
-    print(f'İşçilik Maliyeti Toplamı: {detay["total_labor"]:,} TL')
-    print(f'Üretim Maliyeti Toplamı: {detay["total_production_cost"]:,} TL')
-
-    # Birim maliyet analizini fonksiyon ile yap
-    birim = birim_maliyet_analizi(
-        demand, model_results['production'], model_results['inventory'],
-        cost, df, fixed_workers, months
-    )
-    print(f"\nBirim Maliyet Analizi:")
-    print(f"- Toplam Talep: {birim['total_demand']:,} birim")
-    print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
-    if birim['total_unfilled'] > 0:
-        print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
-    if birim['total_produced'] > 0:
-        print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
-        print(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
-        print(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
-        print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
-        print(f"- Sabit İşçi Sayısı: {birim['fixed_workers']} kişi")
-        print(f"- İşçi Başına Aylık Ortalama Üretim: {birim['avg_prod_per_worker']:.2f} birim/ay")
-    else:
-        print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
-
-    # Grafiksel çıktı
     try:
-        import matplotlib.pyplot as plt
+        from tabulate import tabulate
     except ImportError:
-        print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
+        print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
         exit(1)
-    months_list = list(range(1, months+1))
-    plt.figure(figsize=(10,6))
-    plt.bar(months_list, model_results['production'], color='skyblue', label='Üretim', alpha=0.7)
-    plt.plot(months_list, model_results['inventory'], marker='d', label='Stok', color='red')
-    plt.plot(months_list, df['Karşılanmayan Talep'], marker='x', label='Karşılanmayan Talep', color='black')
-    plt.xlabel('Ay')
-    plt.ylabel('Adet / TL')
-    plt.title('Toplu Üretim ve Stoklama Modeli Sonuçları')
-    plt.legend()
-    plt.grid(True, linestyle='--', alpha=0.5)
-    plt.tight_layout()
-    plt.show()
+
+    # Call the print_results function to run the model and display results
+    print_results()

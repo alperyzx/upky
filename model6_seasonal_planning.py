@@ -173,194 +173,11 @@ def solve_model(
         'y_fire': y_fire
     }
 
-def ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost, total_hiring_cost, total_firing_cost=0):
-    return {
-        'total_holding': total_holding,
-        'total_stockout': total_stockout,
-        'total_production_cost': total_production_cost,
-        'total_labor_cost': total_labor_cost,
-        'total_hiring_cost': total_hiring_cost,
-        'total_firing_cost': total_firing_cost
-    }
-
-def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_cost, total_labor_cost, total_production_cost, total_holding, total_stockout, total_hiring_cost=0, total_firing_cost=0):
-    if total_produced > 0:
-        avg_unit_cost = total_cost / total_produced
-        avg_labor_unit = total_labor_cost / total_produced
-        avg_prod_unit = total_production_cost / total_produced
-        avg_hiring_unit = total_hiring_cost / total_produced if total_hiring_cost else 0
-        avg_firing_unit = total_firing_cost / total_produced if total_firing_cost else 0
-        avg_holding_unit = total_holding / total_produced
-        avg_stockout_unit = total_stockout / total_produced
-        other_costs = total_holding + total_stockout + total_hiring_cost + total_firing_cost
-        avg_other_unit = other_costs / total_produced
-    else:
-        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_hiring_unit = avg_firing_unit = avg_holding_unit = avg_stockout_unit = avg_other_unit = 0
-    return {
-        'total_demand': total_demand,
-        'total_produced': total_produced,
-        'total_unfilled': total_unfilled,
-        'avg_unit_cost': avg_unit_cost,
-        'avg_labor_unit': avg_labor_unit,
-        'avg_prod_unit': avg_prod_unit,
-        'avg_hiring_unit': avg_hiring_unit,
-        'avg_firing_unit': avg_firing_unit,
-        'avg_holding_unit': avg_holding_unit,
-        'avg_stockout_unit': avg_stockout_unit,
-        'avg_other_unit': avg_other_unit
-    }
-
-# Modeli çalıştır
-model_results = solve_model(
-    demand, holding_cost, stockout_cost, production_cost,
-    labor_per_unit, hourly_wage, daily_hours, working_days,
-    hiring_cost, firing_cost, min_workers, max_workers, max_workforce_change
-)
-
-df = model_results['df']
-total_cost = model_results['total_cost']
-
-y_production = model_results['y_production']
-y_inventory = model_results['y_inventory']
-y_stockout = model_results['y_stockout']
-y_workers = model_results['y_workers']
-y_hire = model_results['y_hire']
-y_fire = model_results['y_fire']
-
-print(f"Mevsimsel talebe göre optimize edilen işçi sayıları ve maliyetler:")
-
-# Format cost columns
-for col in ['Stok Maliyeti', 'Stoksuzluk Maliyeti', 'Üretim Maliyeti', 'İşçilik Maliyeti', 'İşe Alım Maliyeti', 'İşten Çıkarma Maliyeti']:
-    df[col] = df[col].apply(lambda x: f'{int(x):,} TL')
-print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
-
-# Print the total cost
-print(f'\nToplam Maliyet: {total_cost:,.2f} TL')
-
-# Ayrıntılı maliyetleri hesapla ve yazdır
-total_holding = model_results['total_holding']
-total_stockout = model_results['total_stockout']
-total_production_cost = model_results['total_production_cost']
-total_labor_cost = model_results['total_labor_cost']
-total_hiring_cost = model_results['total_hiring_cost']
-total_produced = model_results['total_produced']
-total_unfilled = model_results['total_unfilled']
-total_demand = model_results['total_demand']
-
-detay = ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost, total_hiring_cost, model_results['total_firing_cost'])
-print(f"\nAyrıntılı Toplam Maliyetler:")
-print(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
-print(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
-print(f"- Üretim Maliyeti Toplamı: {detay['total_production_cost']:,.2f} TL")
-print(f"- İşçilik Maliyeti Toplamı: {detay['total_labor_cost']:,.2f} TL")
-print(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring_cost']:,.2f} TL")
-print(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing_cost']:,.2f} TL")
-
-birim = birim_maliyet_analizi(
-    total_demand,
-    total_produced,
-    total_unfilled,
-    total_cost,
-    total_labor_cost,
-    total_production_cost,
-    total_holding,
-    total_stockout,
-    total_hiring_cost,
-    model_results['total_firing_cost']
-)
-print(f"\nBirim Maliyet Analizi:")
-print(f"- Toplam Talep: {birim['total_demand']:,} birim")
-print(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
-print(f"- Karşılanmayan Talep: {birim['total_unfilled']:,} birim ({birim['total_unfilled']/birim['total_demand']*100:.2f}%)")
-if birim['total_produced'] > 0:
-    print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
-    print(f"- Ortalama İşçilik Birim Maliyeti: {birim['avg_labor_unit']:.2f} TL/birim")
-    print(f"- Ortalama Üretim Birim Maliyeti: {birim['avg_prod_unit']:.2f} TL/birim")
-    print(f"- Ortalama İşe Alım Birim Maliyeti: {birim['avg_hiring_unit']:.2f} TL/birim")
-    print(f"- Ortalama İşten Çıkarma Birim Maliyeti: {birim['avg_firing_unit']:.2f} TL/birim")
-    print(f"- Ortalama Stok Birim Maliyeti: {birim['avg_holding_unit']:.2f} TL/birim")
-    print(f"- Ortalama Stoksuzluk Birim Maliyeti: {birim['avg_stockout_unit']:.2f} TL/birim")
-    print(f"- Diğer Maliyetler: {birim['avg_other_unit']:.2f} TL/birim")
-else:
-    print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
-
-# Grafiksel çıktı
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
-    exit(1)
-months_list = list(range(1, months+1))
-plt.figure(figsize=(14,7))
-plt.plot(months_list, demand, marker='o', label='Talep', color='orange')
-plt.bar(months_list, df['Üretim'], color='skyblue', label='Üretim', alpha=0.7)
-plt.plot(months_list, df['Stok'], marker='d', label='Stok', color='red')
-plt.plot(months_list, df['Stoksuzluk'], marker='x', label='Stoksuzluk', color='black')
-plt.plot(months_list, df['İşçi'], marker='s', label='İşçi Sayısı', color='green')
-plt.xlabel('Ay')
-plt.ylabel('Adet / Kişi')
-plt.title('Mevsimsellik ve Dinamik İşgücü ile Stok Optimizasyonu Sonuçları')
-plt.legend()
-plt.grid(True, linestyle='--', alpha=0.5)
-plt.tight_layout()
-plt.show()
-
-def maliyet_analizi(
-    demand=demand,
-    holding_cost=holding_cost,
-    stockout_cost=stockout_cost,
-    production_cost=production_cost,
-    labor_per_unit=labor_per_unit,
-    hourly_wage=hourly_wage,
-    daily_hours=daily_hours
-):
-    # Use the shared model solver function
-    model_results = solve_model(
-        demand, holding_cost, stockout_cost, production_cost,
-        labor_per_unit, hourly_wage, daily_hours, working_days,
-        hiring_cost, firing_cost, min_workers, max_workers, max_workforce_change
-    )
-
-    # Extract results
-    total_cost = model_results['total_cost']
-    total_labor_cost = model_results['total_labor_cost']
-    total_production_cost = model_results['total_production_cost']
-    total_holding = model_results['total_holding']
-    total_stockout = model_results['total_stockout']
-    total_hiring_cost = model_results['total_hiring_cost']
-    total_firing_cost = model_results['total_firing_cost']
-    total_produced = model_results['total_produced']
-    total_unfilled = model_results['total_unfilled']
-    total_demand = model_results['total_demand']
-
-    # Calculate unit costs
-    if total_produced > 0:
-        avg_unit_cost = total_cost / total_produced
-        avg_labor_unit = total_labor_cost / total_produced
-        avg_prod_unit = total_production_cost / total_produced
-        avg_other_unit = (total_holding + total_stockout + total_hiring_cost + total_firing_cost) / total_produced
-    else:
-        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
-
-    return {
-        "Toplam Maliyet": total_cost,
-        "İşçilik Maliyeti": total_labor_cost,
-        "Üretim Maliyeti": total_production_cost,
-        "Stok Maliyeti": total_holding,
-        "Stoksuzluk Maliyeti": total_stockout,
-        "İşe Alım Maliyeti": total_hiring_cost,
-        "İşten Çıkarma Maliyeti": total_firing_cost,
-        "Toplam Talep": total_demand,
-        "Toplam Üretim": total_produced,
-        "Karşılanmayan Talep": total_unfilled,
-        "Ortalama Birim Maliyet": avg_unit_cost,
-        "İşçilik Birim Maliyeti": avg_labor_unit,
-        "Üretim Birim Maliyeti": avg_prod_unit,
-        "Diğer Birim Maliyetler": avg_other_unit
-    }
-
-if __name__ == '__main__':
-    # Model execution code moved here, so it only runs when the file is directly executed
+def print_results():
+    """
+    Runs the model and displays formatted results, detailed analyses, and visualizations.
+    """
+    # Get model results by running the model
     model_results = solve_model(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
@@ -454,3 +271,100 @@ if __name__ == '__main__':
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.show()
+
+    return model_results
+
+def ayrintili_toplam_maliyetler(total_holding, total_stockout, total_production_cost, total_labor_cost, total_hiring_cost, total_firing_cost=0):
+    return {
+        'total_holding': total_holding,
+        'total_stockout': total_stockout,
+        'total_production_cost': total_production_cost,
+        'total_labor_cost': total_labor_cost,
+        'total_hiring_cost': total_hiring_cost,
+        'total_firing_cost': total_firing_cost
+    }
+
+def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_cost, total_labor_cost, total_production_cost, total_holding, total_stockout, total_hiring_cost=0, total_firing_cost=0):
+    if total_produced > 0:
+        avg_unit_cost = total_cost / total_produced
+        avg_labor_unit = total_labor_cost / total_produced
+        avg_prod_unit = total_production_cost / total_produced
+        avg_hiring_unit = total_hiring_cost / total_produced if total_hiring_cost else 0
+        avg_firing_unit = total_firing_cost / total_produced if total_firing_cost else 0
+        avg_holding_unit = total_holding / total_produced
+        avg_stockout_unit = total_stockout / total_produced
+        other_costs = total_holding + total_stockout + total_hiring_cost + total_firing_cost
+        avg_other_unit = other_costs / total_produced
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_hiring_unit = avg_firing_unit = avg_holding_unit = avg_stockout_unit = avg_other_unit = 0
+    return {
+        'total_demand': total_demand,
+        'total_produced': total_produced,
+        'total_unfilled': total_unfilled,
+        'avg_unit_cost': avg_unit_cost,
+        'avg_labor_unit': avg_labor_unit,
+        'avg_prod_unit': avg_prod_unit,
+        'avg_hiring_unit': avg_hiring_unit,
+        'avg_firing_unit': avg_firing_unit,
+        'avg_holding_unit': avg_holding_unit,
+        'avg_stockout_unit': avg_stockout_unit,
+        'avg_other_unit': avg_other_unit
+    }
+
+def maliyet_analizi(
+    demand=demand,
+    holding_cost=holding_cost,
+    stockout_cost=stockout_cost,
+    production_cost=production_cost,
+    labor_per_unit=labor_per_unit,
+    hourly_wage=hourly_wage,
+    daily_hours=daily_hours
+):
+    # Use the shared model solver function
+    model_results = solve_model(
+        demand, holding_cost, stockout_cost, production_cost,
+        labor_per_unit, hourly_wage, daily_hours, working_days,
+        hiring_cost, firing_cost, min_workers, max_workers, max_workforce_change
+    )
+
+    # Extract results
+    total_cost = model_results['total_cost']
+    total_labor_cost = model_results['total_labor_cost']
+    total_production_cost = model_results['total_production_cost']
+    total_holding = model_results['total_holding']
+    total_stockout = model_results['total_stockout']
+    total_hiring_cost = model_results['total_hiring_cost']
+    total_firing_cost = model_results['total_firing_cost']
+    total_produced = model_results['total_produced']
+    total_unfilled = model_results['total_unfilled']
+    total_demand = model_results['total_demand']
+
+    # Calculate unit costs
+    if total_produced > 0:
+        avg_unit_cost = total_cost / total_produced
+        avg_labor_unit = total_labor_cost / total_produced
+        avg_prod_unit = total_production_cost / total_produced
+        avg_other_unit = (total_holding + total_stockout + total_hiring_cost + total_firing_cost) / total_produced
+    else:
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+
+    return {
+        "Toplam Maliyet": total_cost,
+        "İşçilik Maliyeti": total_labor_cost,
+        "Üretim Maliyeti": total_production_cost,
+        "Stok Maliyeti": total_holding,
+        "Stoksuzluk Maliyeti": total_stockout,
+        "İşe Alım Maliyeti": total_hiring_cost,
+        "İşten Çıkarma Maliyeti": total_firing_cost,
+        "Toplam Talep": total_demand,
+        "Toplam Üretim": total_produced,
+        "Karşılanmayan Talep": total_unfilled,
+        "Ortalama Birim Maliyet": avg_unit_cost,
+        "İşçilik Birim Maliyeti": avg_labor_unit,
+        "Üretim Birim Maliyeti": avg_prod_unit,
+        "Diğer Birim Maliyetler": avg_other_unit
+    }
+
+if __name__ == '__main__':
+    # Call the print_results function to run the model and display results
+    print_results()
