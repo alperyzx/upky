@@ -501,6 +501,7 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", min_value=1, max_value=100, value=model2.stockout_cost, step=1, key="m2_stockout")
         normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", min_value=1, max_value=1000, value=model2.normal_hourly_wage, step=1, key="m2_normal_wage")
         production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model2.production_cost, key="m2_prod_cost", step=1)
+        hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(model2.hiring_cost), step=1, key="m2_hire")
         run_model = st.button("Modeli Çalıştır", key="m2_run")
     if run_model:
         df_table, total_cost = model2_run(
@@ -533,7 +534,7 @@ if model == "Fazla Mesaili Üretim (Model 2)":
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
         detay = m2_ayrintili(
-            df_table['Stok Maliyeti'].sum(), df_table['Stoksuzluk Maliyeti'].sum(), df_table['Fazla Mesai Maliyeti'].sum() if 'Fazla Mesai Maliyeti' in df_table.columns else 0, df_table['Normal İşçilik Maliyeti'].sum(), df_table['Üretim Maliyeti'].sum()
+            df_table['Stok Maliyeti'].sum(), df_table['Stoksuzluk Maliyeti'].sum(), df_table['Fazla Mesai Maliyeti'].sum() if 'Fazla Mesai Maliyeti' in df_table.columns else 0, df_table['Normal İşçilik Maliyeti'].sum(), df_table['Üretim Maliyeti'].sum(), hiring_cost * fixed_workers
         )
         st.subheader("Ayrıntılı Toplam Maliyetler")
         st.markdown(f"- Stok Maliyeti Toplamı: {detay['total_holding']:,.2f} TL")
@@ -541,8 +542,9 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         st.markdown(f"- Fazla Mesai Maliyeti Toplamı: {detay['total_overtime']:,.2f} TL")
         st.markdown(f"- Normal İşçilik Maliyeti Toplamı: {detay['total_normal_labor']:,.2f} TL")
         st.markdown(f"- Üretim Maliyeti Toplamı: {detay['total_production']:,.2f} TL")
+        st.markdown(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring_cost']:,.2f} TL")
         birim = m2_birim(
-            demand, df_table['Üretim'], df_table['Stok'], total_cost, detay['total_normal_labor'], detay['total_overtime'], detay['total_production'], detay['total_holding'], detay['total_stockout'], production_cost
+            demand, df_table['Üretim'], df_table['Stok'], total_cost, detay['total_normal_labor'], detay['total_overtime'], detay['total_production'], detay['total_holding'], detay['total_stockout'], production_cost, hiring_cost * fixed_workers
         )
         st.subheader("Birim Maliyet Analizi")
         st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
@@ -555,7 +557,7 @@ if model == "Fazla Mesaili Üretim (Model 2)":
             st.markdown(f"  * Normal İşçilik: {birim['normal_labor_unit_cost']:.2f} TL/birim")
             st.markdown(f"  * Fazla Mesai: {birim['overtime_unit_cost']:.2f} TL/birim")
             st.markdown(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
-            st.markdown(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- Diğer Maliyetler (Stok, Stoksuzluk, İşe Alım): {birim['other_unit_cost']:.2f} TL/birim")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
