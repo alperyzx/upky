@@ -24,21 +24,13 @@ from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili
 st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initial_sidebar_state="expanded")
 st.title("Üretim Planlama Modelleri Karar Destek Arayüzü")
 
-model = st.sidebar.selectbox("Model Seçiniz", [
-    "Karşılaştırma Tablosu",
-    "Karma Planlama (Model 1)",
-    "Fazla Mesaili Üretim (Model 2)",
-    "Toplu Üretim ve Stoklama (Model 3)",
-    "Dinamik Programlama (Model 4)",
-    "Dış Kaynak Karşılaştırma (Model 5)",
-    "Mevsimsellik ve Dalga (Model 6)"
-])
-
-st.sidebar.markdown("---")
-
 # Load parameters from YAML
 with open("parametreler.yaml", "r") as f:
     params = yaml.safe_load(f)
+
+model = st.sidebar.selectbox("Model Seçiniz", params['models'])
+
+st.sidebar.markdown("---")
 
 def get_param(key, subkey=None, default=None):
     try:

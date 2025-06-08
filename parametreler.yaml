@@ -1,3 +1,14 @@
+# Parametreler ve Ayarlar
+models:
+  - Karşılaştırma Tablosu
+  - Karma Planlama (Model 1)
+  - Fazla Mesaili Üretim (Model 2)
+  - Toplu Üretim ve Stoklama (Model 3)
+  - Dinamik Programlama (Model 4)
+  - Dış Kaynak Karşılaştırma (Model 5)
+  - Mevsimsellik ve Dalga (Model 6)
+
+
 # Talep ve Zaman Parametreleri
 demand:
   normal: [300, 230, 250, 260, 370, 250, 400, 250, 270, 250, 320, 250]  # Normal talep
