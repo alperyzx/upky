@@ -20,7 +20,7 @@ firing_cost = params['costs']['firing_cost']
 hourly_wage = params['costs']['hourly_wage']
 daily_hours = params['workforce']['daily_hours']
 labor_per_unit = params['workforce']['labor_per_unit']
-min_workers = params['workforce']['workers']
+workers = params['workforce']['workers']
 max_workers = params['workforce']['max_workers']
 max_workforce_change = params['workforce']['max_workforce_change']
 
@@ -36,7 +36,7 @@ def solve_model(
     working_days,
     hiring_cost,
     firing_cost,
-    min_workers,
+    workers,
     max_workers,
     max_workforce_change
 ):
@@ -51,7 +51,7 @@ def solve_model(
     y_production = [pulp.LpVariable(f'production_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    y_workers = [pulp.LpVariable(f'workers_{t}', lowBound=min_workers, upBound=max_workers, cat='Integer') for t in range(months)]
+    y_workers = [pulp.LpVariable(f'workers_{t}', lowBound=workers, upBound=max_workers, cat='Integer') for t in range(months)]
     y_hire = [pulp.LpVariable(f'hire_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_fire = [pulp.LpVariable(f'fire_{t}', lowBound=0, cat='Integer') for t in range(months)]
 
@@ -81,7 +81,7 @@ def solve_model(
         model += y_stockout[t] >= 0
         # İşgücü değişim denklemi
         if t == 0:
-            model += y_workers[t] == min_workers + y_hire[t] - y_fire[t]
+            model += y_workers[t] == workers + y_hire[t] - y_fire[t]
         else:
             model += y_workers[t] == y_workers[t-1] + y_hire[t] - y_fire[t]
         # Maksimum işgücü değişimi kısıtı
@@ -181,7 +181,7 @@ def print_results():
     model_results = solve_model(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
-        hiring_cost, firing_cost, min_workers, max_workers, max_workforce_change
+        hiring_cost, firing_cost, workers, max_workers, max_workforce_change
     )
 
     df = model_results['df']
@@ -324,7 +324,7 @@ def maliyet_analizi(
     model_results = solve_model(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
-        hiring_cost, firing_cost, min_workers, max_workers, max_workforce_change
+        hiring_cost, firing_cost, workers, max_workers, max_workforce_change
     )
 
     # Extract results

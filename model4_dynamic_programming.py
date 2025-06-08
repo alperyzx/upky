@@ -17,7 +17,7 @@ firing_cost = params['costs']['firing_cost']
 daily_hours = params['workforce']['daily_hours']
 labor_per_unit = params['workforce']['labor_per_unit']
 max_workers = params['workforce']['max_workers']
-min_workers = params['workforce']['workers']
+workers = params['workforce']['workers']
 max_workforce_change = params['workforce']['max_workforce_change']
 months = len(demand)
 hourly_wage = params['costs']['hourly_wage']
@@ -40,7 +40,7 @@ def solve_model(
     firing_cost,
     daily_hours,
     labor_per_unit,
-    min_workers,
+    workers,
     max_workers,
     max_workforce_change,
     hourly_wage,
@@ -61,13 +61,13 @@ def solve_model(
     backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
 
     # Başlangıç: 0. ayda 0 stok ve her işçi sayısı için maliyet 0
-    cost_table[0, min_workers:max_workers+1] = 0
+    cost_table[0, workers:max_workers+1] = 0
 
     # DP algoritması
     for t in range(months):
-        for prev_w in range(min_workers, max_workers+1):
+        for prev_w in range(workers, max_workers+1):
             if cost_table[t, prev_w] < np.inf:
-                for w in range(max(min_workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
+                for w in range(max(workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
                     capacity = prod_capacity(w, t)
                     # Karşılanamayan talep varsa ceza maliyeti uygula
                     unmet = max(0, demand[t] - capacity)
@@ -187,7 +187,7 @@ def print_results():
     # Use solve_model to get the model variables
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
-        daily_hours, labor_per_unit, min_workers, max_workers, max_workforce_change,
+        daily_hours, labor_per_unit, workers, max_workers, max_workforce_change,
         hourly_wage, production_cost
     )
 
@@ -276,7 +276,7 @@ def maliyet_analizi(
     firing_cost=firing_cost,
     daily_hours=daily_hours,
     labor_per_unit=labor_per_unit,
-    min_workers=min_workers,
+    workers=workers,
     max_workers=max_workers,
     max_workforce_change=max_workforce_change,
     hourly_wage=hourly_wage,
@@ -285,7 +285,7 @@ def maliyet_analizi(
     # Use the shared model solver function
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
-        daily_hours, labor_per_unit, min_workers, max_workers, max_workforce_change,
+        daily_hours, labor_per_unit, workers, max_workers, max_workforce_change,
         hourly_wage, production_cost
     )
 

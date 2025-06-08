@@ -13,7 +13,7 @@ holding_cost = params['costs']['holding_cost']
 stockout_cost = params['costs']['stockout_cost']
 labor_per_unit = params['workforce']['labor_per_unit']
 daily_hours = params['workforce']['daily_hours']
-fixed_workers = params['workforce']['workers']
+workers = params['workforce']['workers']
 overtime_wage_multiplier = params['costs']['overtime_wage_multiplier']
 max_overtime_per_worker = params['costs']['max_overtime_per_worker']
 normal_hourly_wage = params['costs']['hourly_wage']
@@ -31,7 +31,7 @@ def solve_model(
     working_days,
     holding_cost,
     labor_per_unit,
-    fixed_workers,
+    workers,
     daily_hours,
     overtime_wage_multiplier,
     max_overtime_per_worker,
@@ -56,13 +56,13 @@ def solve_model(
     total_overtime = 0
     total_normal_labor = 0
     total_production_cost = 0
-    total_hiring_cost = hiring_cost * fixed_workers
+    total_hiring_cost = hiring_cost * workers
 
     for t in range(months):
         # Normal kapasiteyle üretilebilecek miktar
-        normal_prod = fixed_workers * working_days[t] * daily_hours / labor_per_unit
+        normal_prod = workers * working_days[t] * daily_hours / labor_per_unit
         # Fazla mesaiyle üretilebilecek maksimum miktar
-        max_overtime_total_hours = fixed_workers * max_overtime_per_worker
+        max_overtime_total_hours = workers * max_overtime_per_worker
         max_overtime_units = max_overtime_total_hours / labor_per_unit
         remaining_demand = demand[t] - prev_inventory
         if remaining_demand <= 0:
@@ -84,7 +84,7 @@ def solve_model(
         holding = max(inventory[t], 0) * holding_cost
         stockout = abs(min(inventory[t], 0)) * stockout_cost
         overtime = max(ot_hours, 0) * overtime_cost_per_hour
-        normal_labor_cost = fixed_workers * working_days[t] * daily_hours * normal_hourly_wage
+        normal_labor_cost = workers * working_days[t] * daily_hours * normal_hourly_wage
         prod_cost = prod * production_cost
 
         total_cost += holding + stockout + overtime + normal_labor_cost + prod_cost
@@ -95,7 +95,7 @@ def solve_model(
         total_production_cost += prod_cost
 
         results.append([
-            t+1, fixed_workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost, prod_cost
+            t+1, workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost, prod_cost
         ])
         prev_inventory = inventory[t]
 
@@ -150,7 +150,7 @@ def print_results():
 
     # Use solve_model() to get the model variables
     model_results = solve_model(
-        demand, working_days, holding_cost, labor_per_unit, fixed_workers,
+        demand, working_days, holding_cost, labor_per_unit, workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
         stockout_cost, normal_hourly_wage, production_cost
     )
@@ -251,7 +251,7 @@ def overtime_model():
 
     # For compatibility with existing code that expects a return value from overtime_model()
     model_results = solve_model(
-        demand, working_days, holding_cost, labor_per_unit, fixed_workers,
+        demand, working_days, holding_cost, labor_per_unit, workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
         stockout_cost, normal_hourly_wage, production_cost
     )
@@ -264,7 +264,7 @@ def maliyet_analizi(
     stockout_cost=stockout_cost,
     labor_per_unit=labor_per_unit,
     daily_hours=daily_hours,
-    fixed_workers=fixed_workers,
+    workers=workers,
     overtime_wage_multiplier=overtime_wage_multiplier,
     max_overtime_per_worker=max_overtime_per_worker,
     normal_hourly_wage=normal_hourly_wage,
@@ -272,7 +272,7 @@ def maliyet_analizi(
 ):
     # Use the shared model solver function
     model_results = solve_model(
-        demand, working_days, holding_cost, labor_per_unit, fixed_workers,
+        demand, working_days, holding_cost, labor_per_unit, workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
         stockout_cost, normal_hourly_wage, production_cost
     )
