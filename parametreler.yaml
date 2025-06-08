@@ -1,6 +1,6 @@
 # Parametreler ve Ayarlar
 models:
-  - Karşılaştırma Tablosu
+  - Modelleri Karşılaştır
   - Karma Planlama (Model 1)
   - Fazla Mesaili Üretim (Model 2)
   - Toplu Üretim ve Stoklama (Model 3)

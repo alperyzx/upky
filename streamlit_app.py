@@ -662,8 +662,8 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
-if model == "Karşılaştırma Tablosu":
-    st.header("Karşılaştırma Tablosu")
+if model == "Modelleri Karşılaştır":
+    st.header("Modelleri Karşılaştır")
     with st.sidebar:
         # Demand type selection
         demand_type_names = {
