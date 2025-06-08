@@ -649,7 +649,10 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Gerekli Optimum İşçi Sayısı: {needed_workers}")
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
+
+        # Display the total cost from the solver, which now includes hiring costs
         st.success(f"Toplam Maliyet: {total_cost:,.2f} TL")
+
         st.subheader("Grafiksel Sonuçlar")
         months_list = list(range(1, len(demand)+1))
         fig, ax = plt.subplots(figsize=(12,6))
@@ -666,19 +669,17 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
+
         # Ayrıntılı Toplam Maliyetler
+        # Convert string formatted costs to float for calculations
         total_holding = df['Stok Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
         total_stockout = df['Stoksuzluk Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
         total_production_cost = df['Üretim Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
         total_labor_cost = df['İşçilik Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
 
-        # Calculate hiring and firing costs if available in DataFrame
-        total_hiring_cost = 0
-        total_firing_cost = 0
-        if 'İşe Alım Maliyeti' in df.columns:
-            total_hiring_cost = df['İşe Alım Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
-        if 'İşten Çıkarma Maliyeti' in df.columns:
-            total_firing_cost = df['İşten Çıkarma Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
+        # For hiring and firing costs, extract directly from the dataframe
+        total_hiring_cost = df['İşe Alım Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
+        total_firing_cost = df['İşten Çıkarma Maliyeti'].astype(str).str.replace(' TL', '').str.replace(',', '').astype(float).sum()
 
         detay = m6_ayrintili(total_holding, total_stockout, total_production_cost, total_labor_cost, total_hiring_cost, total_firing_cost)
         st.subheader("Ayrıntılı Toplam Maliyetler")
@@ -688,11 +689,13 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         st.markdown(f"- İşçilik Maliyeti Toplamı: {detay['total_labor_cost']:,.2f} TL")
         st.markdown(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring_cost']:,.2f} TL")
         st.markdown(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing_cost']:,.2f} TL")
+
         # Birim Maliyet Analizi
         total_demand = df['Talep'].sum()
         total_produced = df['Üretim'].sum()
         total_unfilled = df['Stoksuzluk'].sum()
         birim = m6_birim(total_demand, total_produced, total_unfilled, total_cost, total_labor_cost, total_production_cost, total_holding, total_stockout, total_hiring_cost, total_firing_cost)
+
         st.subheader("Birim Maliyet Analizi")
         st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
         st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({(birim['total_produced']/birim['total_demand']*100 if birim['total_demand'] else 0):.2f}%)")

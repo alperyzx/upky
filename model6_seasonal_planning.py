@@ -51,7 +51,9 @@ def solve_model(
     y_production = [pulp.LpVariable(f'production_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
-    y_workers = [pulp.LpVariable(f'workers_{t}', lowBound=workers, upBound=max_workers, cat='Integer') for t in range(months)]
+
+    # Start with 0 workers and allow up to max_workers
+    y_workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, upBound=max_workers, cat='Integer') for t in range(months)]
     y_hire = [pulp.LpVariable(f'hire_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_fire = [pulp.LpVariable(f'fire_{t}', lowBound=0, cat='Integer') for t in range(months)]
 
@@ -81,7 +83,10 @@ def solve_model(
         model += y_stockout[t] >= 0
         # İşgücü değişim denklemi
         if t == 0:
-            model += y_workers[t] == workers + y_hire[t] - y_fire[t]
+            # Start with 0 workers and hire the initial workers in the first period
+            model += y_workers[t] == y_hire[t] - y_fire[t]
+            # Force hiring the minimum number of workers in the first period
+            model += y_hire[t] >= workers
         else:
             model += y_workers[t] == y_workers[t-1] + y_hire[t] - y_fire[t]
         # Maksimum işgücü değişimi kısıtı
