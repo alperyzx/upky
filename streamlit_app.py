@@ -130,16 +130,21 @@ def model3_run(demand, working_days, holding_cost, stockout_cost, workers, produ
     total_produced = model_results['total_produced']
     total_unfilled = model_results['total_unfilled']
 
+    # Add hiring cost to the total cost
+    hiring_cost = params['costs']['hiring_cost']
+    total_hiring_cost = hiring_cost * workers
+    adjusted_cost = cost + total_hiring_cost
+
     # Calculate unit costs
     if total_produced > 0:
-        avg_unit_cost = cost / total_produced
+        avg_unit_cost = adjusted_cost / total_produced
         avg_labor_unit = total_labor / total_produced
         avg_prod_unit = total_production_cost / total_produced
-        avg_other_unit = (total_holding + total_stockout) / total_produced
+        avg_other_unit = (total_holding + total_stockout + total_hiring_cost) / total_produced
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
 
-    return df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit
+    return df, adjusted_cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost
 
 def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, workers, max_workers, max_workforce_change, hourly_wage, stockout_cost, production_cost):
     # Use the shared model solver function
@@ -456,9 +461,10 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model3.daily_hours, key="m3_daily", step=1)
         worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", min_value=1, max_value=100000, value=model3.worker_monthly_cost, key="m3_worker_monthly_cost", step=1)
         production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model3.production_cost, key="m3_prod_cost", step=1)
+        hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=params['costs']['hiring_cost'], key="m3_hire", step=1)
         run_model = st.button("Modeli Çalıştır", key="m3_run")
     if run_model:
-        df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit = model3_run(demand, working_days, holding_cost, stockout_cost, workers, production_rate, daily_hours, production_cost, worker_monthly_cost)
+        df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost = model3_run(demand, working_days, holding_cost, stockout_cost, workers, production_rate, daily_hours, production_cost, worker_monthly_cost)
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {cost:,.2f} TL")
@@ -482,7 +488,8 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
         st.markdown(f"- İşçilik Maliyeti Toplamı: {detay['total_labor']:,.2f} TL")
         st.markdown(f"- Üretim Maliyeti Toplamı: {detay['total_production_cost']:,.2f} TL")
-        birim = m3_birim(demand, df['Üretim'], df['Stok'], cost, df, workers)
+        st.markdown(f"- İşe Alım Maliyeti Toplamı: {total_hiring_cost:,.2f} TL")
+        birim = m3_birim(demand, df['Üretim'], df['Stok'], cost, df, workers, hiring_cost)
         st.subheader("Birim Maliyet Analizi")
         st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
         st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({birim['total_produced']/birim['total_demand']*100:.2f}%)")
@@ -491,7 +498,8 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
             st.markdown(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
             st.markdown(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
             st.markdown(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
-            st.markdown(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- Diğer Maliyetler (Stok, Stoksuzluk, İşe Alım): {birim['other_unit_cost']:.2f} TL/birim")
+            st.markdown(f"- İşe Alım Maliyeti: {birim['hiring_cost']:,} TL (İşçi başına {hiring_cost:,} TL)")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
@@ -755,11 +763,12 @@ if model == "Modelleri Karşılaştır":
                     if short_name == "Model 2" and p_name == "hourly_wage":
                         if "normal_hourly_wage" in sig_params:
                             params_to_pass["normal_hourly_wage"] = p_value
-                        # If Model 2 could also accept "hourly_wage" directly (it doesn't based on its signature)
-                        # elif "hourly_wage" in sig_params:
-                        # params_to_pass["hourly_wage"] = p_value
                     elif p_name in sig_params:
                         params_to_pass[p_name] = p_value
+
+                # For Model 3, make sure we're including the hiring_cost
+                if short_name == "Model 3" and "hiring_cost" in sig_params:
+                    params_to_pass["hiring_cost"] = current_params.get("hiring_cost")
 
                 res = func(**params_to_pass)
                 cost = res.get("Toplam Maliyet", None)
@@ -846,6 +855,3 @@ if model == "Modelleri Karşılaştır":
         # Add explanation about Model 1's production cost
         if any(name[0] == "Model 1" for name in model_names):
             st.info("Model 1'de Üretim Birim Maliyeti, iç üretim ve fason üretimin ağırlıklı ortalamasıdır.")
-    else:
-        st.info("Parametreleri değiştirip 'Modelleri Karşılaştır' butonuna basınız.")
-        st.stop()

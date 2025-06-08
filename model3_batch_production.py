@@ -137,16 +137,27 @@ def print_results():
     print(tabulate(df, headers='keys', tablefmt='fancy_grid', showindex=False, numalign='right', stralign='center'))
 
     detay = ayrintili_toplam_maliyetler(df)
-    print(f'\nToplam Maliyet: {cost:,.2f} TL')
+
+    # Get hiring cost from params
+    hiring_cost = params['costs']['hiring_cost']
+    total_hiring_cost = hiring_cost * workers
+
+    # Add hiring cost to total cost
+    adjusted_cost = cost + total_hiring_cost
+
+    # Display only the adjusted cost (includes hiring cost)
+    print(f'\nToplam Maliyet: {adjusted_cost:,.2f} TL')
+
     print(f'Stok Maliyeti Toplamı: {detay["total_holding"]:,} TL')
     print(f'Stoksuzluk Maliyeti Toplamı: {detay["total_stockout"]:,} TL')
     print(f'İşçilik Maliyeti Toplamı: {detay["total_labor"]:,} TL')
     print(f'Üretim Maliyeti Toplamı: {detay["total_production_cost"]:,} TL')
+    print(f'İşe Alım Maliyeti Toplamı: {total_hiring_cost:,} TL')
 
     # Birim maliyet analizini fonksiyon ile yap
     birim = birim_maliyet_analizi(
         demand, model_results['production'], model_results['internal_inventory'],
-        cost, df, workers
+        adjusted_cost, df, workers, hiring_cost
     )
     print(f"\nBirim Maliyet Analizi:")
     print(f"- Toplam Talep: {birim['total_demand']:,} birim")
@@ -157,7 +168,8 @@ def print_results():
         print(f"- Ortalama Birim Maliyet (Toplam): {birim['avg_unit_cost']:.2f} TL/birim")
         print(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
         print(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
-        print(f"- Diğer Maliyetler (Stok, Stoksuzluk): {birim['other_unit_cost']:.2f} TL/birim")
+        print(f"- Diğer Maliyetler (Stok, Stoksuzluk, İşe Alım): {birim['other_unit_cost']:.2f} TL/birim")
+        print(f"- İşe Alım Maliyeti: {birim['hiring_cost']:,} TL (İşçi başına {hiring_cost:,} TL)")
         print(f"- Sabit İşçi Sayısı: {birim['workers']} kişi")
         #print(f"- İşçi Başına Aylık Ortalama Üretim: {birim['avg_prod_per_worker']:.2f} birim/ay")
     else:
@@ -192,7 +204,7 @@ def ayrintili_toplam_maliyetler(df):
         'total_production_cost': df["Üretim Maliyeti"].sum(),
     }
 
-def birim_maliyet_analizi(demand, production, inventory, cost, df, workers):
+def birim_maliyet_analizi(demand, production, inventory, cost, df, workers, hiring_cost=params['costs']['hiring_cost']):
     # Convert demand to a sum if it's a list
     total_demand = sum(demand) if isinstance(demand, list) else demand.sum()
     total_produced = production.sum()
@@ -201,15 +213,23 @@ def birim_maliyet_analizi(demand, production, inventory, cost, df, workers):
     total_stockout = df["Stoksuzluk Maliyeti"].sum()
     total_labor = df["İşçilik Maliyeti"].sum()
     total_production_cost = df["Üretim Maliyeti"].sum()
+
+    # Calculate total hiring cost based on worker count
+    total_hiring_cost = hiring_cost * workers
+
+    # Add hiring cost to the total cost for unit cost calculation
+    adjusted_cost = cost + total_hiring_cost
+
     result = {
         'total_demand': total_demand,
         'total_produced': total_produced,
         'total_unfilled': total_unfilled,
-        'avg_unit_cost': cost/total_produced if total_produced > 0 else 0,
+        'avg_unit_cost': adjusted_cost/total_produced if total_produced > 0 else 0,
         'labor_unit_cost': total_labor/total_produced if total_produced > 0 else 0,
         'prod_unit_cost': total_production_cost/total_produced if total_produced > 0 else 0,
-        'other_unit_cost': (total_holding+total_stockout)/total_produced if total_produced > 0 else 0,
-        'workers': workers
+        'other_unit_cost': (total_holding+total_stockout+total_hiring_cost)/total_produced if total_produced > 0 else 0,
+        'workers': workers,
+        'hiring_cost': total_hiring_cost
     }
     return result
 
@@ -222,7 +242,8 @@ def maliyet_analizi(
     worker_monthly_cost=worker_monthly_cost,
     production_rate=production_rate,
     daily_hours=daily_hours,
-    production_cost=production_cost
+    production_cost=production_cost,
+    hiring_cost=params['costs']['hiring_cost']  # Add hiring_cost parameter with default value
 ):
     # Use the shared model solver function
     model_results = solve_model(
@@ -240,11 +261,17 @@ def maliyet_analizi(
     total_unfilled = model_results['total_unfilled']
     total_demand = sum(demand)
 
+    # Calculate the hiring cost for the workers (one-time cost)
+    total_hiring_cost = hiring_cost * workers
+
+    # Update the total cost to include hiring cost
+    toplam_maliyet += total_hiring_cost
+
     if total_production > 0:
         avg_unit_cost = toplam_maliyet / total_production
         avg_labor_unit = total_labor / total_production
         avg_prod_unit = total_prod_cost / total_production
-        avg_other_unit = (total_holding + total_stockout) / total_production
+        avg_other_unit = (total_holding + total_stockout + total_hiring_cost) / total_production
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
 
@@ -254,7 +281,7 @@ def maliyet_analizi(
         "Üretim Maliyeti": total_prod_cost,
         "Stok Maliyeti": total_holding,
         "Stoksuzluk Maliyeti": total_stockout,
-        "İşe Alım Maliyeti": 0,
+        "İşe Alım Maliyeti": total_hiring_cost,  # Now returning actual hiring cost
         "İşten Çıkarma Maliyeti": 0,
         "Toplam Talep": total_demand,
         "Toplam Üretim": total_production,
