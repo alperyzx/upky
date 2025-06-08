@@ -32,8 +32,8 @@ def solve_model(
     fixed_workers,
     production_rate,
     daily_hours,
-    worker_monthly_cost=None,
-    production_cost=20
+    production_cost,
+    worker_monthly_cost=None
 ):
     """
     Core model logic for Model 3 (Toplu Üretim ve Stoklama)
@@ -117,7 +117,7 @@ def print_results():
     # Use solve_model to get the model variables
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, fixed_workers,
-        production_rate, daily_hours, worker_monthly_cost, production_cost
+        production_rate, daily_hours, production_cost, worker_monthly_cost
     )
 
     df = model_results['df']
@@ -223,7 +223,7 @@ def maliyet_analizi(
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost,
         fixed_workers, production_rate, daily_hours,
-        worker_monthly_cost, production_cost
+        production_cost, worker_monthly_cost
     )
 
     total_production = model_results['total_produced']

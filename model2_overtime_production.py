@@ -37,7 +37,7 @@ def solve_model(
     max_overtime_per_worker,
     stockout_cost,
     normal_hourly_wage,
-    production_cost=20
+    production_cost
 ):
     """
     Core model logic for Model 2 (Fazla Mesaili Üretim)

@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import yaml
-import inspect # Add this import
+import inspect
 
 # Import default parameters from model files
 import model1_mixed_planning as model1
@@ -119,12 +119,12 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, fixed_workers
 
     return df, total_cost
 
-def model3_run(demand, working_days, holding_cost, stockout_cost, fixed_workers, production_rate, daily_hours, worker_monthly_cost=None, production_cost=20):
+def model3_run(demand, working_days, holding_cost, stockout_cost, fixed_workers, production_rate, daily_hours, production_cost, worker_monthly_cost=None):
     # Use the shared model solver function
     model_results = model3_solver(
         demand, working_days, holding_cost, stockout_cost,
         fixed_workers, production_rate, daily_hours,
-        worker_monthly_cost, production_cost
+        production_cost, worker_monthly_cost
     )
 
     # Get the results from the model
