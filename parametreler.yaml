@@ -8,7 +8,7 @@ demand:
 # Maliyet Parametreleri
 costs:
   holding_cost: 5  # Stok tutma birim maliyeti (TL)
-  stockout_cost: 80  # Karşılanmayan talep birim maliyeti (TL)
+  stockout_cost: 99  # Karşılanmayan talep birim maliyeti (TL)
   production_cost: 30  # Üretim birim maliyeti (TL)
   hiring_cost: 1800  # İşçi başına işe alım maliyeti (TL)
   firing_cost: 1500  # İşçi başına işten çıkarma maliyeti (TL)
@@ -19,7 +19,7 @@ costs:
 
   # Tedarikçi Maliyetleri
   cost_supplier_A: 75  # Tedarikçi A'dan birim maliyet (TL)
-  cost_supplier_B: 100  # Tedarikçi B'den birim maliyet (TL)
+  cost_supplier_B: 95  # Tedarikçi B'den birim maliyet (TL)
 
 # İşgücü Parametreleri
 workforce:
