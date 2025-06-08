@@ -41,8 +41,17 @@ def solve_model(
     """
     months = len(demand)
 
+    # Convert inputs to numpy arrays to ensure proper broadcasting
+    demand_array = np.array(demand)
+    working_days_array = np.array(working_days)
+
+    # Ensure scalar values are properly handled
+    fixed_workers = float(fixed_workers)
+    daily_hours = float(daily_hours)
+    production_rate = float(production_rate)
+
     # Sabit üretim kapasitesi (işçi * gün * saat * hız)
-    monthly_capacity = fixed_workers * daily_hours * working_days * production_rate
+    monthly_capacity = fixed_workers * daily_hours * working_days_array * production_rate
 
     production = np.zeros(months)
     inventory = np.zeros(months)
@@ -52,12 +61,12 @@ def solve_model(
 
     # Use default monthly cost if not provided
     if worker_monthly_cost is None:
-        worker_monthly_cost = fixed_workers * np.mean(working_days) * daily_hours * 10
+        worker_monthly_cost = fixed_workers * np.mean(working_days_array) * daily_hours * 10
 
     for t in range(months):
         # Sabit üretim
         production[t] = monthly_capacity[t]
-        inventory[t] = prev_inventory + production[t] - demand[t]
+        inventory[t] = prev_inventory + production[t] - demand_array[t]
         holding = max(inventory[t], 0) * holding_cost
         stockout = abs(min(inventory[t], 0)) * stockout_cost
         unfilled = abs(min(inventory[t], 0))
