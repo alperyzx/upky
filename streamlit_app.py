@@ -700,67 +700,7 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
 if model == "Modelleri Karşılaştır":
     st.header("Modelleri Karşılaştır")
     with st.sidebar:
-        # Demand type selection
-        demand_type_names = {
-            "normal": "Normal Talep",
-            "high": "Yüksek Talep",
-            "veryHigh": "Aşırı Yüksek Talep",
-            "seasonal": "Mevsimsel Talep"
-        }
-        # Get the demand types from params
-        demand_types = list(params['demand'].keys())
-
-        # Create options list with Turkish display names
-        display_options = [demand_type_names[key] for key in demand_types]
-
-        # Show Turkish names in dropdown
-        selected_display = st.selectbox("Talep Tipi Seçiniz", display_options, index=0, key="cmp_demand_type")
-
-        # Convert back to internal key
-        selected_demand_type = next(key for key, value in demand_type_names.items() if value == selected_display)
-
-        default_demand = params['demand'][selected_demand_type]
-        manual_demand = st.text_input("Aylık Talep (virgülle ayrılmış, opsiyonel)", ", ".join(map(str, default_demand)), key="cmp_manual_demand")
-        if manual_demand.strip():
-            try:
-                demand = [int(x.strip()) for x in manual_demand.split(",") if x.strip()]
-            except Exception:
-                st.error("Talep formatı hatalı. Lütfen sayıları virgülle ayırınız.")
-                st.stop()
-        else:
-            demand = default_demand
-
-        working_days = get_param('workforce', 'working_days', [22] * 12)
-        if len(demand) != len(working_days):
-            st.error(
-                f"Talep 12 aylık girilmeli. Şu an talep: {len(demand)} Ay")
-            st.stop()
-
-        # Calculate worker multiplier based on demand type
-        worker_multiplier = 1
-        if selected_demand_type == "high":
-            worker_multiplier = 5
-        elif selected_demand_type == "veryHigh":
-            worker_multiplier = 10
-
-        # Get base worker count from params
-        base_workers = int(get_param('workforce', 'workers', 8))
-
-        # Calculate adjusted worker count
-        adjusted_workers = base_workers * worker_multiplier
-
-        # Display worker count with adjusted default
-        workers = st.number_input(
-            "İşçi Sayısı",
-            min_value=1,
-            max_value=200,
-            value=adjusted_workers,
-            step=1,
-            key="cmp_workers",
-            help=f"Talep tipine göre önerilen işçi sayısı: {base_workers}×{worker_multiplier}={adjusted_workers}"
-        )
-
-        # Common parameters (continue with existing parameters)
+        demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("cmp")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(get_param('costs', 'holding_cost', 5)), step=1, key="cmp_holding")
         stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", min_value=1, max_value=100, value=int(get_param('costs', 'stockout_cost', 80)), step=1, key="cmp_stockout")
         production_cost = st.number_input("Birim Üretim Maliyeti (TL)", min_value=1, max_value=1000, value=int(get_param('costs', 'production_cost', 30)), step=1, key="cmp_production_cost")

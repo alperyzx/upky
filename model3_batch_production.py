@@ -15,7 +15,6 @@ stockout_cost = params['costs']['stockout_cost']
 workers = params['workforce']['workers']
 worker_monthly_cost = params['costs']['monthly_wage']
 production_rate = 1 / params['workforce']['labor_per_unit']  # Bir işçi günde kaç birim üretir
-# (ör: labor_per_unit=4 ise, 1/4=0.25 birim/işçi/gün)
 daily_hours = params['workforce']['daily_hours']
 months = len(demand)
 production_cost = params['costs']['production_cost']
@@ -55,6 +54,7 @@ def solve_model(
 
     production = np.zeros(months)
     inventory = np.zeros(months)
+    real_inventory = np.zeros(months)  # To track actual non-negative inventory levels
     prev_inventory = 0
     results = []
     total_cost = 0
@@ -67,16 +67,20 @@ def solve_model(
         # Sabit üretim
         production[t] = monthly_capacity[t]
         inventory[t] = prev_inventory + production[t] - demand_array[t]
-        holding = max(inventory[t], 0) * holding_cost
-        stockout = abs(min(inventory[t], 0)) * stockout_cost
+
+        # Calculate actual inventory (cannot be negative) and unfilled demand separately
+        real_inventory[t] = max(0, inventory[t])
         unfilled = abs(min(inventory[t], 0))
+
+        holding = real_inventory[t] * holding_cost
+        stockout = unfilled * stockout_cost
         labor_cost = workers * worker_monthly_cost
         prod_cost = production[t] * production_cost
 
         total_cost += holding + stockout + labor_cost + prod_cost
 
         results.append([
-            t+1, production[t], inventory[t], holding, stockout, labor_cost, prod_cost, unfilled
+            t+1, production[t], real_inventory[t], holding, stockout, labor_cost, prod_cost, unfilled
         ])
         prev_inventory = inventory[t]
 
@@ -98,7 +102,8 @@ def solve_model(
     return {
         'df': df,
         'production': production,
-        'inventory': inventory,
+        'inventory': real_inventory,  # Now using real_inventory for visualization
+        'internal_inventory': inventory,  # Keep the internal inventory calculation for reference
         'total_cost': total_cost,
         'total_holding': total_holding,
         'total_stockout': total_stockout,
@@ -140,7 +145,7 @@ def print_results():
 
     # Birim maliyet analizini fonksiyon ile yap
     birim = birim_maliyet_analizi(
-        demand, model_results['production'], model_results['inventory'],
+        demand, model_results['production'], model_results['internal_inventory'],
         cost, df, workers
     )
     print(f"\nBirim Maliyet Analizi:")
