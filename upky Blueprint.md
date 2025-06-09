@@ -9,8 +9,11 @@
 - `stockout_cost`: 20 TL/adet (birim stokta bulundurmama maliyeti).
 - `hiring_cost`: 1800 TL/kişi (işçi başına işe alım maliyeti).
 - `firing_cost`: 1500 TL/kişi (işçi başına işten çıkarma maliyeti).
+- `initial_inventory`: 0 adet (başlangıç stoğu).
+- `safety_stock_ratio`: 0.03 (talep miktarının %3'ü kadar güvenlik stoğu).
 
 > Tüm modellerde işe alım/çıkarma maliyetleri dahil edilmiştir ve toplam maliyetlerin hesaplanmasında dikkate alınır.
+> Ayrıca tüm modellerde güvenlik stoğu uygulanmıştır ve stokların hiçbir zaman güvenlik stok limitinin altına düşmemesi sağlanır.
 
 ## Model 1: Karma Planlama Modeli
 ### Değişkenler
@@ -36,11 +39,13 @@
 - `daily_hours`: Günlük çalışma saati.
 - `overtime_wage_multiplier`: Fazla mesai ücret çarpanı.
 - `max_overtime_per_worker`: İşçi başına maksimum fazla mesai saati/ay.
+- `initial_inventory`: Başlangıç stok miktarı.
+- `safety_stock_ratio`: Talep miktarının belirli bir yüzdesi olarak güvenlik stoğu.
 
 ### Python Yaklaşımı
 - Kütüphane: `PuLP`.
 - Amaç: Toplam maliyeti minimize et.
-- Kısıtlar: İç üretim oranı, işgücü değişim sınırı, stok dengesi, fazla mesai ve fason kapasite limitleri.
+- Kısıtlar: İç üretim oranı, işgücü değişim sınırı, stok dengesi, fazla mesai ve fason kapasite limitleri, güvenlik stoğu limitleri.
 - Sonuçlar: Detaylı maliyet dökümü, birim maliyet analizi, tablo ve grafiksel çıktı.
 - Özellikler: İşçilik, üretim, stok, fason, işe alım/çıkarma ve fazla mesai maliyetlerinin ayrıntılı analizi ve görselleştirilmesi.
 
@@ -67,6 +72,8 @@
 - `holding_cost`: Stok tutma maliyeti (TL/adet/ay).
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
 - `hiring_cost`: İşe alım maliyeti (TL/kişi).
+- `initial_inventory`: Başlangıç stok miktarı.
+- `safety_stock_ratio`: Talep miktarının belirli bir yüzdesi olarak güvenlik stoğu.
 
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
@@ -99,6 +106,8 @@
 - `hiring_cost`: İşe alım maliyeti (TL/kişi).
 - `efficiency_factor`: Yüksek hacimli üretimlerde birim işgücü ihtiyacını azaltan verimlilik faktörü.
 - `scale_threshold`: Verimlilik iyileştirmesinin başladığı üretim hacmi eşiği.
+- `initial_inventory`: Başlangıç stok miktarı.
+- `safety_stock_ratio`: Talep miktarının belirli bir yüzdesi olarak güvenlik stoğu.
 
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
@@ -136,14 +145,16 @@
 - `working_days[t]`: t ayındaki toplam çalışma günü.
 - `max_workers`: Maksimum işçi sayısı.
 - `max_workforce_change`: Maksimum işgücü değişimi (kişi/ay).
+- `initial_inventory`: Başlangıç stok miktarı.
+- `safety_stock_ratio`: Talep miktarının belirli bir yüzdesi olarak güvenlik stoğu.
 
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Dinamik programlama ile toplam maliyeti minimize etmek, işgücü değişimi ve stok yönetimini optimize etmek.
-- Kısıtlar: İşgücü, üretim, stok ve stoksuzluk denge denklemleri, işçi değişim sınırları.
+- Kısıtlar: İşgücü, üretim, stok ve stoksuzluk denge denklemleri, işçi değişim sınırları, güvenlik stoğu limitleri.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksal çıktı (işçi, üretim, stok, maliyetler).
 -  Detay:  İlk dönemde 0 işçiyle başlar ve optimum sayıda işçiyi işe alır, kapasiteye değil, gerçek üretim hacmine göre üretim maliyetlerini hesaplar.
-- Özellikler: Model artık talebe göre optimum işçi sayısını belirler ve ihtiyaç duyulan kadar işçiyi işe alır.
+- Özellikler: Model artık talebe göre optimum işçi sayısını belirler ve ihtiyaç duyulan kadar işçiyi işe alır, güvenlik stok seviyelerini korur.
 
 ## Model 5: Dış Kaynak Kullanımı Modelleri Karşılaştırması
 ### Değişkenler
@@ -164,6 +175,8 @@
 - `capacity_supplier_B`: Tedarikçi B aylık kapasitesi (adet).
 - `holding_cost`: Stok tutma maliyeti (TL/adet/ay).
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
+- `initial_inventory`: Başlangıç stok miktarı.
+- `safety_stock_ratio`: Talep miktarının belirli bir yüzdesi olarak güvenlik stoğu.
 
 ### Python Yaklaşımı
 - Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
@@ -201,13 +214,15 @@
 - `firing_cost`: İşten çıkarma maliyeti (TL/kişi).
 - `max_workers`: Maksimum işçi sayısı.
 - `max_workforce_change`: Maksimum işgücü değişimi (kişi/ay).
+- `initial_inventory`: Başlangıç stok miktarı.
+- `safety_stock_ratio`: Talep miktarının belirli bir yüzdesi olarak güvenlik stoğu.
 
 ### Python Yaklaşımı
 - Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Mevsimsel talep dalgalanmalarında üretim, stok ve stoksuzluk maliyetlerinin toplamını minimize etmek.
-- Kısıtlar: Üretim kapasitesi, stok ve stoksuzluk denge denklemleri, işçi sayısı değişim kısıtları.
+- Kısıtlar: Üretim kapasitesi, stok ve stoksuzluk denge denklemleri, işçi sayısı değişim kısıtları, güvenlik stoğu limitleri.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksal çıktı (üretim, stok, stoksuzluk, maliyetler).
-- Özellikler: Model sıfır işçiyle başlar ve talebe göre işçileri işe alır, işe alım maliyetleri toplam maliyete dahil edilir.
+- Özellikler: Model sıfır işçiyle başlar ve talebe göre işçileri işe alır, işe alım maliyetleri toplam maliyete dahil edilir, güvenlik stok seviyeleri korunur.
 
 ## Toplam Maliyet Hesaplaması ve Maliyet Analizi
 Her model için aşağıdaki toplam maliyet kalemleri hesaplanır:
@@ -234,11 +249,13 @@ Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaşt
 - Hataları kullanıcıya açıkça bildirir.
 - Parametreleri yaml dosyasından yükler ve kullanıcı arayüzünden değiştirilebilir.
 - İşe alım maliyetleri dahil tüm maliyet kalemlerini hesaplar ve gösterir.
+- Güvenlik stok parametreleri kullanıcı tarafından ayarlanabilir.
 
 ### Temel Akış
 1. **Parametre Girişi:**
    - Yan panelde (sidebar) kullanıcıdan talep, işçilik, stok, kapasite gibi parametreler alınır.
    - Varsayılan değerler ve örnek veri yüklenir.
+   - Güvenlik stoğu oranı ayarlanabilir (varsayılan talep miktarının %5'i).
 2. **Model Seçimi ve Çalıştırma:**
    - Kullanıcı tek model veya tüm modelleri seçip çalıştırabilir.
    - Her modelin fonksiyonu çağrılır, sonuçlar toplanır.
@@ -261,3 +278,4 @@ Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaşt
 - Tüm modellerin çıktıları ortak formatta toplanır ve karşılaştırılır.
 - Her model için ayrı bir `maliyet_analizi` fonksiyonu uygulanmıştır ve tüm modelleri aynı standart formatta çıktı üretir.
 - Talep tipine göre (normal, yüksek, aşırı yüksek, mevsimsel) optimum işçi sayısı önerisi uygulanmıştır.
+- Güvenlik stoğu her modelde talep miktarının belirli bir yüzdesi olarak uygulanır, böylece stoksuzluk riski azaltılır.

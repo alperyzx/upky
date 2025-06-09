@@ -73,34 +73,40 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 - Ağırlıklı ortalama üretim maliyeti hesaplaması eklendi (iç üretim ve fason üretim birleşimi)
 - Fazla mesai kısıtları ve maliyet hesaplamaları uygulandı
 - İç üretim ve fason üretim arasındaki optimum denge hesaplanıyor
+- Güvenlik stoğu limiti eklendi - stok seviyesi talep miktarının belirli bir yüzdesinin altına düşmez
 
 ### Model 2: Fazla Mesaili Üretim
 - Talebe göre optimum işçi sayısını otomatik hesaplama özelliği eklendi
 - Fazla mesai saatleri ve maliyetleri kapsamlı şekilde analiz ediliyor
 - Normal işçilik ve fazla mesai maliyetleri ayrı ayrı hesaplanıyor
+- Güvenlik stoğu limiti eklendi - stok seviyesinin talep miktarının belirli bir yüzdesinin altına düşmemesi sağlanıyor
 
 ### Model 3: Toplu Üretim ve Stoklama
 - Verimlilik faktörü uygulandı - üretim hacmi arttıkça verimlilik iyileşir
 - Fiziksel stok seviyeleri artık hiçbir zaman 0'ın altına düşmez
 - İşe alım maliyetleri toplam maliyete dahil edilmiştir
 - Talebe göre optimum işçi sayısını hesaplar ve kullanıcı girdisini bu sınırlar içinde tutar
+- Güvenlik stoğu parametresi eklendi - stok seviyesinin talep miktarının belirli bir yüzdesinin altına düşmediği garanti edilir
 
 ### Model 4: Dinamik Programlama
 - Talebe göre optimum işçi sayısını belirler
 - İlk dönemde sadece ihtiyaç duyulan kadar işçiyi işe alır
 - İşçi değişim kısıtlarını doğru uygular
 - İşçi değişim maliyetlerini ve üretim kapasitesini dengeler
+- Güvenlik stoğu limiti eklendi - stoksuzluk riskini azaltmak için minimum stok seviyesi belirlenir
 
 ### Model 5: Dış Kaynak Karşılaştırma
 - İki farklı tedarikçinin maliyet ve kapasite kısıtları altında optimum dağılımı hesaplar
 - Stok tutma ve stoksuzluk maliyetlerini minimize eder
 - Kapasite kısıtlarını görsel olarak gösterir
+- Güvenlik stoğu kısıtı eklendi - tedarikçi seçimlerinde minimum stok seviyesi korunur
 
 ### Model 6: Mevsimsellik ve Dalga
 - Sıfır işçiyle başlar ve talebi karşılamak için ihtiyaç duyulan işçileri işe alır
 - İşe alım maliyetleri toplam maliyete dahil edilmiştir
 - Mevsimsel talep dalgalanmalarına göre işçi ihtiyacını optimize eder
 - Stok ve stoksuzluk maliyetlerini dengeler
+- Güvenlik stoğu parametresi eklendi - mevsimsel dalgalanmalarda bile minimum hizmet seviyesi sağlanır
 
 ## Karşılaştırma Tablosu (Streamlit)
 
@@ -108,6 +114,15 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 - Her modelin toplam maliyeti, işçilik maliyeti, üretim maliyeti, stok maliyeti, karşılanmayan talep maliyeti ve işe alım/çıkarma maliyetlerini içerir.
 - Grafiksel karşılaştırmalar maliyet bileşenlerinin analizini kolaylaştırır.
 - Tüm modellerin ortak metriklerle birim maliyeti ve stoksuzluk oranı karşılaştırılabilir.
+
+## Güvenlik Stoğu Nedir ve Neden Önemlidir?
+
+Güvenlik stoğu, talep dalgalanmaları, tedarik gecikmeleri veya diğer belirsizliklere karşı bir tampon olarak işlev görür. Tüm modellerde:
+
+- Her ayın sonunda, stok seviyesi o ayki talebin belirli bir yüzdesi (varsayılan %5) kadar minimum seviyenin altına düşmez
+- Güvenlik stoğu oranı kullanıcı tarafından Streamlit arayüzünde ayarlanabilir
+- Bu sayede müşteri hizmet seviyesi artar, stoksuzluk riski ve maliyeti azalır
+- Modeller, güvenlik stoğu limitleri de göz önünde bulundurularak üretim ve stok kararlarını optimize eder
 
 ## Hangi Model Hangi Senaryoda Kullanılır?
 
@@ -140,3 +155,4 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 ---
 
 Herhangi bir hata veya eksiklikte, terminaldeki hata mesajını kontrol ederek eksik paketi yükleyebilir veya parametreleri gözden geçirebilirsiniz.
+
