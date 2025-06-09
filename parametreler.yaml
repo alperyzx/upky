@@ -19,10 +19,10 @@ demand:
 # Maliyet Parametreleri
 costs:
   holding_cost: 5  # Stok tutma birim maliyeti (TL)
-  stockout_cost: 99  # Karşılanmayan talep birim maliyeti (TL)
-  production_cost: 30  # Üretim birim maliyeti (TL)
-  hiring_cost: 1800  # İşçi başına işe alım maliyeti (TL)
-  firing_cost: 1500  # İşçi başına işten çıkarma maliyeti (TL)
+  stockout_cost: 95  # Karşılanmayan talep birim maliyeti (TL)
+  production_cost: 30  # Üretim birim maliyeti (TL) işçilik haricidir
+  hiring_cost: 1600  # İşçi başına işe alım maliyeti (TL)
+  firing_cost: 2000  # İşçi başına işten çıkarma maliyeti (TL)
   hourly_wage: 10  # Normal saatlik ücret (TL)
   monthly_wage: 1680  # İşçi başına aylık maliyet (TL)
   max_overtime_per_worker: 20  # İşçi başına aylık maksimum fazla mesai saati
@@ -30,7 +30,7 @@ costs:
 
   # Tedarikçi Maliyetleri
   cost_supplier_A: 75  # Tedarikçi A'dan birim maliyet (TL)
-  cost_supplier_B: 95  # Tedarikçi B'den birim maliyet (TL)
+  cost_supplier_B: 90  # Tedarikçi B'den birim maliyet (TL)
 
 # İşgücü Parametreleri
 workforce:
@@ -55,7 +55,7 @@ capacity:
   min_internal_ratio : 0.70
   max_outsourcing_ratio : 0.30
   capacity_supplier_A: 300   # Tedarikçi A'nın aylık maksimum kapasitesi
-  capacity_supplier_B: 9999  # Tedarikçi B için pratik olarak sınırsız kapasite
+  capacity_supplier_B: 99999  # Tedarikçi B için pratik olarak sınırsız kapasite
 
 # Çözücü Yapılandırması
 solver:

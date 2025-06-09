@@ -304,7 +304,7 @@ if model == "Karma Planlama (Model 1)":
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m1")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.holding_cost), step=1, key="m1_holding")
         outsourcing_cost = st.number_input("Fason Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.outsourcing_cost), step=1, key="m1_outsourcing")
-        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", min_value=1, max_value=100, value=int(model1.stockout_cost), step=1, key="m1_stockout")
+        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", min_value=1, max_value=500, value=int(model1.stockout_cost), step=1, key="m1_stockout")
         labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model1.labor_per_unit), step=0.1, key="m1_labor")
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(model1.hiring_cost), step=1, key="m1_hire")
         firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", min_value=0, max_value=5000, value=int(model1.firing_cost), step=1, key="m1_fire")
@@ -419,7 +419,7 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model2.daily_hours, key="m2_daily", step=1)
         overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=model2.overtime_wage_multiplier, step=0.1, key="m2_overtime_multiplier")
         max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=model2.max_overtime_per_worker, step=1, key="m2_max_overtime")
-        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", min_value=1, max_value=100, value=model2.stockout_cost, step=1, key="m2_stockout")
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", min_value=1, max_value=500, value=model2.stockout_cost, step=1, key="m2_stockout")
         normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", min_value=1, max_value=1000, value=model2.normal_hourly_wage, step=1, key="m2_normal_wage")
         production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model2.production_cost, key="m2_prod_cost", step=1)
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(model2.hiring_cost), step=1, key="m2_hire")
@@ -493,7 +493,7 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m3")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model3.holding_cost), key="m3_holding", step=1)
-        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL)", min_value=1, max_value=100, value=model3.stockout_cost, key="m3_stockout", step=1)
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL)", min_value=1, max_value=500, value=model3.stockout_cost, key="m3_stockout", step=1)
         labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model3.labor_per_unit), step=0.1, key="m3_labor_per_unit")
         daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=int(model3.daily_hours), key="m3_daily", step=1)
         worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", min_value=1, max_value=100000, value=int(model3.worker_monthly_cost), key="m3_worker_monthly_cost", step=1)
@@ -554,7 +554,7 @@ if model == "Dinamik Programlama (Model 4)":
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m4")
         holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model4.holding_cost), key="m4_holding")
-        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 100, int(model4.stockout_cost), key="m4_stockout")
+        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", 1, 500, int(model4.stockout_cost), key="m4_stockout")
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", 0, 5000, int(model4.hiring_cost), key="m4_hire")
         firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", 0, 5000, int(model4.firing_cost), key="m4_fire")
         daily_hours = st.number_input("Günlük Çalışma Saati", 1, 24, int(model4.daily_hours), key="m4_daily")
@@ -624,11 +624,11 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m5")
         holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model5.holding_cost), key="m5_holding")
-        cost_supplier_A = st.number_input("Tedarikçi A Maliyeti (TL)", 1, 1000, int(model5.cost_supplier_A), key="m5_cost_A")
+        cost_supplier_A = st.number_input("Tedarikçi A Maliyeti (TL)", 1, 500, int(model5.cost_supplier_A), key="m5_cost_A")
         cost_supplier_B = st.number_input("Tedarikçi B Maliyeti (TL)", 1, 1000, int(model5.cost_supplier_B), key="m5_cost_B")
         capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_A), key="m5_cap_A")
-        capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_B), key="m5_cap_B")
-        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 9999, int(model5.stockout_cost), key="m5_stockout")
+        capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 100000, int(model5.capacity_supplier_B), key="m5_cap_B")
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 500, int(model5.stockout_cost), key="m5_stockout")
         initial_inventory = 0
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5,
                                        key="m5_safety_stock_ratio") / 100
@@ -689,7 +689,7 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m6")
         holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model6.holding_cost), key="m6_holding")
-        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 100, int(model6.stockout_cost), key="m6_stockout")
+        stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 500, int(model6.stockout_cost), key="m6_stockout")
         production_cost = st.number_input("Üretim Maliyeti (TL)", 1, 100, int(model6.production_cost), key="m6_prod_cost")
         labor_per_unit = st.number_input("Birim İşgücü (saat)", 0.1, 10.0, float(model6.labor_per_unit), key="m6_labor_per_unit")
         hourly_wage = st.number_input("Saatlik Ücret (TL)", 1, 100, int(model6.hourly_wage), key="m6_hourly_wage")
@@ -775,7 +775,7 @@ if model == "Modelleri Karşılaştır":
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("cmp")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(get_param('costs', 'holding_cost', 5)), step=1, key="cmp_holding")
-        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", min_value=1, max_value=100, value=int(get_param('costs', 'stockout_cost', 80)), step=1, key="cmp_stockout")
+        stockout_cost = st.number_input("Karşılanmayan Talep Maliyeti (TL/adet)", min_value=1, max_value=500, value=int(get_param('costs', 'stockout_cost', 80)), step=1, key="cmp_stockout")
         production_cost = st.number_input("Birim Üretim Maliyeti (TL)", min_value=1, max_value=1000, value=int(get_param('costs', 'production_cost', 30)), step=1, key="cmp_production_cost")
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(get_param('costs', 'hiring_cost', 1800)), step=1, key="cmp_hire")
         firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", min_value=0, max_value=5000, value=int(get_param('costs', 'firing_cost', 1500)), step=1, key="cmp_fire")
