@@ -60,14 +60,22 @@ def solve_model(
     cost_table = np.full((months+1, max_workers+1), np.inf)
     backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
 
-    # Başlangıç: 0. ayda 0 stok ve her işçi sayısı için maliyet 0
-    cost_table[0, workers:max_workers+1] = 0
+    # Başlangıç: 0. ayda 0 işçiyle başla (işçi alımı model içinde değerlendirilecek)
+    cost_table[0, 0] = 0
 
     # DP algoritması
     for t in range(months):
-        for prev_w in range(workers, max_workers+1):
+        for prev_w in range(0, max_workers+1):  # 0 işçiden başlayarak tüm olasılıkları değerlendir
             if cost_table[t, prev_w] < np.inf:
-                for w in range(max(workers, prev_w-max_workforce_change), min(max_workers, prev_w+max_workforce_change)+1):
+                # İlk dönemde işçi sayısı kısıtı yok (min 0), sonraki dönemlerde max_workforce_change kısıtı var
+                if t == 0:
+                    min_w = 0  # İlk dönemde işçi sayısı en az 0 olabilir (talebe göre optimize edilecek)
+                    max_w = max_workers  # İlk dönemde istediğimiz kadar işe alabiliriz
+                else:
+                    min_w = max(0, prev_w - max_workforce_change)  # Minimum 0 işçi olabilir
+                    max_w = min(max_workers, prev_w + max_workforce_change)
+
+                for w in range(min_w, max_w + 1):
                     capacity = prod_capacity(w, t)
                     # Karşılanamayan talep varsa ceza maliyeti uygula
                     unmet = max(0, demand[t] - capacity)
@@ -99,6 +107,9 @@ def solve_model(
         w = backtrack[t, w]
     workers_seq = workers_seq[::-1]
 
+    # İlk dönemdeki işçi sayısı (başlangıç işçisi)
+    initial_workers = w  # Bu, gerçekte sıfırdan başlamışsa, ilk dönemde işe aldığımız işçi sayısıdır
+
     # Üretim, stok, ve diğer hesaplamalar
     production_seq = []
     inventory_seq = []
@@ -109,6 +120,7 @@ def solve_model(
     hiring_seq = []
     firing_seq = []
 
+    prev_w = 0  # Başlangıçta sıfır işçi var
     for t, w in enumerate(workers_seq):
         cap = prod_capacity(w, t)
         prod = min(cap, demand[t])
@@ -117,12 +129,9 @@ def solve_model(
         labor_cost = w * working_days[t] * daily_hours * hourly_wage
         prod_cost = prod * production_cost
 
-        if t > 0:
-            hire = max(0, w - workers_seq[t-1]) * hiring_cost
-            fire = max(0, workers_seq[t-1] - w) * firing_cost
-        else:
-            hire = w * hiring_cost
-            fire = 0
+        # İlk dönemde sıfırdan işçi alımı
+        hire = max(0, w - prev_w) * hiring_cost
+        fire = max(0, prev_w - w) * firing_cost
 
         production_seq.append(prod)
         inventory_seq.append(inventory)
@@ -132,6 +141,8 @@ def solve_model(
         prod_cost_seq.append(prod_cost)
         hiring_seq.append(hire)
         firing_seq.append(fire)
+
+        prev_w = w
 
     # Calculate totals
     total_labor = sum(labor_cost_seq)
@@ -177,7 +188,8 @@ def solve_model(
         'total_firing': total_firing,
         'total_demand': total_demand,
         'total_produced': total_produced,
-        'total_unfilled': total_unfilled
+        'total_unfilled': total_unfilled,
+        'initial_workers': initial_workers
     }
 
 def print_results():
