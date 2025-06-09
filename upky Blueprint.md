@@ -7,8 +7,10 @@
 - `outsourcing_cost`: 15 TL/adet (fason imalat maliyeti).
 - `labor_per_unit`: 0.5 saat/adet (üretim başına işgücü).
 - `stockout_cost`: 20 TL/adet (birim stokta bulundurmama maliyeti).
+- `hiring_cost`: 1800 TL/kişi (işçi başına işe alım maliyeti).
+- `firing_cost`: 1500 TL/kişi (işçi başına işten çıkarma maliyeti).
 
-> Diğer parametreler modellerde sabit olarak tanımlıdır ve karşılaştırma tablosunda kullanıcı tarafından değiştirilebilir.
+> Tüm modellerde işe alım/çıkarma maliyetleri dahil edilmiştir ve toplam maliyetlerin hesaplanmasında dikkate alınır.
 
 ## Model 1: Karma Planlama Modeli
 ### Değişkenler
@@ -64,6 +66,7 @@
 - `production_cost`: Birim üretim maliyeti (TL/adet).
 - `holding_cost`: Stok tutma maliyeti (TL/adet/ay).
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
+- `hiring_cost`: İşe alım maliyeti (TL/kişi).
 
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
@@ -75,11 +78,13 @@
 ## Model 3: Toplu Üretim ve Stoklama Modeli
 ### Değişkenler
 - `production[t]`: t ayındaki üretim.
-- `inventory[t]`: t ayı sonundaki stok.
+- `inventory[t]`: t ayı sonundaki stok (artık hiçbir zaman negatif değil).
+- `real_inventory[t]`: t ayı sonundaki fiziksel stok seviyesi (her zaman 0 veya pozitif).
 - `holding[t]`: t ayındaki stok maliyeti.
 - `stockout[t]`: t ayındaki stoksuzluk maliyeti.
 - `labor_cost[t]`: t ayındaki işçilik maliyeti.
 - `production_cost[t]`: t ayındaki üretim maliyeti.
+- `unfilled[t]`: t ayında karşılanmayan talep.
 
 ### Sabit Parametreler
 - `fixed_workers`: Sabit işçi sayısı (örn. 18 kişi).
@@ -91,13 +96,14 @@
 - `holding_cost`: Stok tutma maliyeti (TL/adet/ay).
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
 - `worker_monthly_cost`: Aylık işçi maliyeti (TL/kişi/ay).
+- `hiring_cost`: İşe alım maliyeti (TL/kişi).
 
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Sabit işçiyle toplu üretim ve stoklama, toplam maliyetin ve birim maliyetlerin ayrıntılı analizi.
 - Kısıtlar: Sabit işçi kapasitesi, stok ve stoksuzluk yönetimi.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok).
-- Özellikler: Tüm maliyet kalemlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme.
+- Özellikler: Fiziksel stok seviyeleri negatif olmaz, karşılanmayan talep ayrı olarak gösterilir, işe alım maliyeti toplam maliyete dahildir.
 
 ## Model 4: Dinamik Programlama Tabanlı Model
 ### Değişkenler
@@ -124,7 +130,6 @@
 - `firing_cost`: İşten çıkarma maliyeti (TL/kişi).
 - `daily_hours`: Günlük çalışma saati.
 - `working_days[t]`: t ayındaki toplam çalışma günü.
-- `min_workers`: Minimum işçi sayısı.
 - `max_workers`: Maksimum işçi sayısı.
 - `max_workforce_change`: Maksimum işgücü değişimi (kişi/ay).
 
@@ -133,7 +138,7 @@
 - Amaç: Dinamik programlama ile toplam maliyeti minimize etmek, işgücü değişimi ve stok yönetimini optimize etmek.
 - Kısıtlar: İşgücü, üretim, stok ve stoksuzluk denge denklemleri, işçi değişim sınırları.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksal çıktı (işçi, üretim, stok, maliyetler).
-- Özellikler: Tüm maliyet kalemlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme.
+- Özellikler: Model artık talebe göre optimum işçi sayısını belirler ve ihtiyaç duyulan kadar işçiyi işe alır.
 
 ## Model 5: Dış Kaynak Kullanımı Modelleri Karşılaştırması
 ### Değişkenler
@@ -175,6 +180,8 @@
 - `workers[t]`: t ayındaki işçi sayısı.
 - `hire[t]`: t ayındaki işe alınan işçi sayısı.
 - `fire[t]`: t ayındaki işten çıkarılan işçi sayısı.
+- `hiring_cost[t]`: t ayındaki işe alım maliyeti.
+- `firing_cost[t]`: t ayındaki işten çıkarma maliyeti.
 
 ### Sabit Parametreler
 - `demand`: Mevsimsel talep desenleri (12 aylık dizi).
@@ -187,7 +194,6 @@
 - `daily_hours`: Günlük çalışma saati.
 - `hiring_cost`: İşe alım maliyeti (TL/kişi).
 - `firing_cost`: İşten çıkarma maliyeti (TL/kişi).
-- `min_workers`: Minimum işçi sayısı.
 - `max_workers`: Maksimum işçi sayısı.
 - `max_workforce_change`: Maksimum işgücü değişimi (kişi/ay).
 
@@ -196,7 +202,7 @@
 - Amaç: Mevsimsel talep dalgalanmalarında üretim, stok ve stoksuzluk maliyetlerinin toplamını minimize etmek.
 - Kısıtlar: Üretim kapasitesi, stok ve stoksuzluk denge denklemleri, işçi sayısı değişim kısıtları.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksal çıktı (üretim, stok, stoksuzluk, maliyetler).
-- Özellikler: İşçilik, üretim, stok, stoksuzluk maliyetlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme, birim maliyet analizi fonksiyonu.
+- Özellikler: Model sıfır işçiyle başlar ve talebe göre işçileri işe alır, işe alım maliyetleri toplam maliyete dahil edilir.
 
 ## Toplam Maliyet Hesaplaması ve Maliyet Analizi
 Her model için aşağıdaki toplam maliyet kalemleri hesaplanır:
@@ -212,6 +218,7 @@ Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaşt
 - Ortalama birim maliyet
 - Maliyet kategorilerine göre birim maliyet dağılımı
 - Stoksuzluk oranı ve maliyeti
+- İşe alım/çıkarma birim maliyeti
 
 ## Streamlit Arayüzü ve Karar Destek Paneli
 ### Genel Özellikler
@@ -221,6 +228,7 @@ Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaşt
 - Model fonksiyonları ayrı dosyalarda, arayüzde fonksiyon olarak çağrılır.
 - Hataları kullanıcıya açıkça bildirir.
 - Parametreleri yaml dosyasından yükler ve kullanıcı arayüzünden değiştirilebilir.
+- İşe alım maliyetleri dahil tüm maliyet kalemlerini hesaplar ve gösterir.
 
 ### Temel Akış
 1. **Parametre Girişi:**

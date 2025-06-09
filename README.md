@@ -58,27 +58,36 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 - Ayrıca, modelin türüne göre otomatik olarak grafiksel çıktı (üretim, stok, işçi sayısı vb.) açılır.
 
 ## Parametre Değişikliği
-- Her modelin başında parametreler Python kodunda tanımlıdır. Kendi senaryonuza göre bu değerleri değiştirebilirsiniz.
+- Her modelin başında parametreler Python kodunda tanımlıdır.
+- Ana parametre dosyası olan `parametreler.yaml` üzerinden temel ayarlar değiştirilebilir.
+- Streamlit arayüzünden de parametreler etkileşimli olarak değiştirilebilir.
 
 ## Notlar
 - Grafiklerin açılması için `matplotlib` yüklü olmalıdır (requirements.txt ile otomatik yüklenir).
 - Tablo çıktısı için `tabulate` kütüphanesi kullanılır.
 - Optimizasyon modelleri için `pulp` kütüphanesi gereklidir.
 
-## Kaynaklar
-- Detaylı model açıklamaları ve parametreler için `upky Blueprint.md` dosyasına bakınız.
+## Model Özellikleri ve Güncellemeler
+
+### Model 3: Toplu Üretim ve Stoklama
+- Fiziksel stok seviyeleri artık hiçbir zaman 0'ın altına düşmez
+- İşe alım maliyetleri toplam maliyete dahil edilmiştir
+- Grafikler stok ve karşılanmayan talebi doğru gösterir
+
+### Model 4: Dinamik Programlama
+- Talebe göre optimum işçi sayısını belirler
+- İlk dönemde sadece ihtiyaç duyulan kadar işçiyi işe alır
+- İşçi değişim kısıtlarını doğru uygular
+
+### Model 6: Mevsimsellik ve Dalga
+- Sıfır işçiyle başlar ve talebi karşılamak için ihtiyaç duyulan işçileri işe alır
+- İşe alım maliyetleri toplam maliyete dahil edilmiştir
 
 ## Karşılaştırma Tablosu (Streamlit)
 
-- Karşılaştırma tablosunda kullanıcıdan **yalnızca 6 parametre** alınır:
-  - `demand` (Aylık talep)
-  - `working_days` (Aylık çalışma günü)
-  - `holding_cost` (Stok maliyeti)
-  - `outsourcing_cost` (Fason maliyeti)
-  - `labor_per_unit` (Birim işgücü)
-  - `stockout_cost` (Karşılanmayan talep maliyeti)
-- Diğer tüm parametreler modellerde sabit olarak tanımlıdır.
-- Karşılaştırma tablosu ve grafikler, bu 6 parametreye göre otomatik güncellenir.
+- Karşılaştırma tablosunda tüm modeller aynı parametreler ile çalıştırılır ve sonuçlar karşılaştırılabilir.
+- Her modelin toplam maliyeti, işçilik maliyeti, üretim maliyeti, stok maliyeti, karşılanmayan talep maliyeti ve işe alım/çıkarma maliyetlerini içerir.
+- Grafiksel karşılaştırmalar maliyet bileşenlerinin analizini kolaylaştırır.
 
 ## Hangi Model Hangi Senaryoda Kullanılır?
 
@@ -93,8 +102,9 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 - **Model 5: Dış Kaynak Kullanımı Karşılaştırması**
   - Farklı tedarikçi seçeneklerinin ve kapasite kısıtlarının olduğu, dış kaynak tercihinde maliyet karşılaştırması yapılacaksa uygundur.
 - **Model 6: Mevsimsellik ve Talep Dalgaları**
-  - Talebin mevsimsel dalgalandığı, stok ve üretim optimizasyonunun önemli olduğu sektörlerde kullanılır.
+  - Talebin mevsimsel dalgalandığı, stok ve üretim optimizasyonunun önemli olduğu, esnek işgücü planlaması gereken sektörlerde kullanılır.
 
 ---
 
 Herhangi bir hata veya eksiklikte, terminaldeki hata mesajını kontrol ederek eksik paketi yükleyebilir veya parametreleri gözden geçirebilirsiniz.
+
