@@ -14,7 +14,7 @@ holding_cost = params['costs']['holding_cost']
 stockout_cost = params['costs']['stockout_cost']
 workers = params['workforce']['workers']
 worker_monthly_cost = params['costs']['monthly_wage']
-production_rate = 1 / params['workforce']['labor_per_unit']  # Bir işçi günde kaç birim üretir
+labor_per_unit = params['workforce']['labor_per_unit']  # Birim başına gerekli işçilik saati
 daily_hours = params['workforce']['daily_hours']
 months = len(demand)
 production_cost = params['costs']['production_cost']
@@ -29,7 +29,7 @@ def solve_model(
     holding_cost,
     stockout_cost,
     workers,
-    production_rate,
+    labor_per_unit,  # Changed from production_rate to labor_per_unit
     daily_hours,
     production_cost,
     worker_monthly_cost=None
@@ -47,10 +47,11 @@ def solve_model(
     # Ensure scalar values are properly handled
     workers = float(workers)
     daily_hours = float(daily_hours)
-    production_rate = float(production_rate)
+    labor_per_unit = float(labor_per_unit)
 
-    # Sabit üretim kapasitesi (işçi * gün * saat * hız)
-    monthly_capacity = workers * daily_hours * working_days_array * production_rate
+    # Sabit üretim kapasitesi (işçi * gün * saat / birim işgücü)
+    # Dividing by labor_per_unit instead of multiplying by production_rate
+    monthly_capacity = workers * daily_hours * working_days_array / labor_per_unit
 
     production = np.zeros(months)
     inventory = np.zeros(months)
@@ -122,7 +123,7 @@ def print_results():
     # Use solve_model to get the model variables
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, workers,
-        production_rate, daily_hours, production_cost, worker_monthly_cost
+        labor_per_unit, daily_hours, production_cost, worker_monthly_cost
     )
 
     df = model_results['df']
@@ -171,7 +172,6 @@ def print_results():
         print(f"- Diğer Maliyetler (Stok, Stoksuzluk, İşe Alım): {birim['other_unit_cost']:.2f} TL/birim")
         print(f"- İşe Alım Maliyeti: {birim['hiring_cost']:,} TL (İşçi başına {hiring_cost:,} TL)")
         print(f"- Sabit İşçi Sayısı: {birim['workers']} kişi")
-        #print(f"- İşçi Başına Aylık Ortalama Üretim: {birim['avg_prod_per_worker']:.2f} birim/ay")
     else:
         print("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
@@ -239,16 +239,16 @@ def maliyet_analizi(
     holding_cost=holding_cost,
     stockout_cost=stockout_cost,
     workers=workers,
-    worker_monthly_cost=worker_monthly_cost,
-    production_rate=production_rate,
+    labor_per_unit=labor_per_unit,  # Changed from worker_monthly_cost
     daily_hours=daily_hours,
     production_cost=production_cost,
+    worker_monthly_cost=worker_monthly_cost,
     hiring_cost=params['costs']['hiring_cost']  # Add hiring_cost parameter with default value
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost,
-        workers, production_rate, daily_hours,
+        workers, labor_per_unit, daily_hours,  # Changed production_rate to labor_per_unit
         production_cost, worker_monthly_cost
     )
 

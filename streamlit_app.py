@@ -111,11 +111,11 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
 
     return df, total_cost
 
-def model3_run(demand, working_days, holding_cost, stockout_cost, workers, production_rate, daily_hours, production_cost, worker_monthly_cost=None):
+def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost=None):
     # Use the shared model solver function
     model_results = model3_solver(
         demand, working_days, holding_cost, stockout_cost,
-        workers, production_rate, daily_hours,
+        workers, labor_per_unit, daily_hours,
         production_cost, worker_monthly_cost
     )
 
@@ -457,14 +457,14 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m3")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model3.holding_cost), key="m3_holding", step=1)
         stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL)", min_value=1, max_value=100, value=model3.stockout_cost, key="m3_stockout", step=1)
-        production_rate = st.number_input("Üretim Hızı (adet/saat)", min_value=0.1, max_value=10.0, value=model3.production_rate, step=0.1, key="m3_prod_rate")
-        daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model3.daily_hours, key="m3_daily", step=1)
-        worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", min_value=1, max_value=100000, value=model3.worker_monthly_cost, key="m3_worker_monthly_cost", step=1)
-        production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model3.production_cost, key="m3_prod_cost", step=1)
-        hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=params['costs']['hiring_cost'], key="m3_hire", step=1)
+        labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model3.labor_per_unit), step=0.1, key="m3_labor_per_unit")
+        daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=int(model3.daily_hours), key="m3_daily", step=1)
+        worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", min_value=1, max_value=100000, value=int(model3.worker_monthly_cost), key="m3_worker_monthly_cost", step=1)
+        production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=int(model3.production_cost), key="m3_prod_cost", step=1)
+        hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(params['costs']['hiring_cost']), key="m3_hire", step=1)
         run_model = st.button("Modeli Çalıştır", key="m3_run")
     if run_model:
-        df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost = model3_run(demand, working_days, holding_cost, stockout_cost, workers, production_rate, daily_hours, production_cost, worker_monthly_cost)
+        df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost = model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost)
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {cost:,.2f} TL")
