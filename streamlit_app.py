@@ -329,7 +329,13 @@ if model == "Karma Planlama (Model 1)":
             initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        # Display the results table with formatted numbers
+        cols = ["Ay"] + [c for c in df.columns if c != "Ay"]
+        number_cols = df[cols].select_dtypes(include=["number"]).columns
+        st.dataframe(
+            df[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
+            use_container_width=True, hide_index=True
+        )
         st.success(f"Toplam Maliyet: {toplam_maliyet:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         fig, ax1 = plt.subplots(figsize=(10,6))
@@ -436,7 +442,12 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         if workers != optimal_workers:
             st.warning(f"Kullanılan işçi sayısı ({workers}) optimal seviyeden ({optimal_workers}) farklı. Model verimliliği etkilenebilir.")
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df_table, use_container_width=True, hide_index=True)
+        cols = ["Ay"] + [c for c in df_table.columns if c != "Ay"]
+        number_cols = df_table[cols].select_dtypes(include=["number"]).columns
+        st.dataframe(
+            df_table[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
+            use_container_width=True, hide_index=True
+        )
         st.success(f"Toplam Maliyet: {total_cost:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         fig, ax1 = plt.subplots(figsize=(10,6))
@@ -512,7 +523,12 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         else:
             st.info(f"Kullandığınız işçi sayısı ({optimized_workers}) optimal aralıkta.")
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        cols = ["Ay"] + [c for c in df.columns if c != "Ay"]
+        number_cols = df[cols].select_dtypes(include=["number"]).columns
+        st.dataframe(
+            df[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
+            use_container_width=True, hide_index=True
+        )
         st.success(f"Toplam Maliyet: {cost:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         months_list = df["Ay"].tolist()
@@ -574,7 +590,12 @@ if model == "Dinamik Programlama (Model 4)":
             workers, max_workers, max_workforce_change, hourly_wage, stockout_cost,production_cost,
             initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio)
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        cols = ["Ay"] + [c for c in df.columns if c != "Ay"]
+        number_cols = df[cols].select_dtypes(include=["number"]).columns
+        st.dataframe(
+            df[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
+            use_container_width=True, hide_index=True
+        )
         st.success(f"Toplam Maliyet: {min_cost:,.2f} TL")
         st.subheader("Grafiksel Sonuçlar")
         months_list = list(range(1, len(demand)+1))
@@ -639,7 +660,12 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
             demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        cols = ["Ay"] + [c for c in df.columns if c != "Ay"]
+        number_cols = df[cols].select_dtypes(include=["number"]).columns
+        st.dataframe(
+            df[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
+            use_container_width=True, hide_index=True
+        )
         st.success(f"Toplam Maliyet: {toplam_maliyet:,.2f} TL")
 
         # Grafiksel Sonuçlar
@@ -710,7 +736,12 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         )
         st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Gerekli Optimum İşçi Sayısı: {needed_workers}")
         st.subheader("Sonuç Tablosu")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        cols = ["Ay"] + [c for c in df.columns if c != "Ay"]
+        number_cols = df[cols].select_dtypes(include=["number"]).columns
+        st.dataframe(
+            df[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
+            use_container_width=True, hide_index=True
+        )
 
         # Display the total cost from the solver, which now includes hiring costs
         st.success(f"Toplam Maliyet: {total_cost:,.2f} TL")
