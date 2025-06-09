@@ -320,7 +320,8 @@ if model == "Karma Planlama (Model 1)":
         initial_inventory = 0  # Kullanıcıdan istemiyoruz, default 0 gönderiyoruz.
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m1_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m1_run")
-    if run_model:
+    if run_model or st.session_state.get("m1_first_run", True):
+        st.session_state["m1_first_run"] = False
         df, toplam_maliyet, model_vars = model1_run(
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
             outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost,
@@ -425,7 +426,8 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         initial_inventory = 0
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m2_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m2_run")
-    if run_model:
+    if run_model or st.session_state.get("m2_first_run", True):
+        st.session_state["m2_first_run"] = False
         df_table, total_cost, optimal_workers = model2_run(
             demand, working_days, holding_cost, labor_per_unit, workers, daily_hours,
             overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost,
@@ -500,7 +502,8 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         initial_inventory = 0
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m3_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m3_run")
-    if run_model:
+    if run_model or st.session_state.get("m3_first_run", True):
+        st.session_state["m3_first_run"] = False
         (df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost, optimized_workers,
          original_workers, optimal_workers) = model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio)
         # Inform user if worker count was optimized
@@ -563,7 +566,8 @@ if model == "Dinamik Programlama (Model 4)":
         initial_inventory = 0
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m4_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m4_run")
-    if run_model:
+    if run_model or st.session_state.get("m4_first_run", True):
+        st.session_state["m4_first_run"] = False
         (df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced,
          total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit) = model4_run(
             demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit,
@@ -629,7 +633,8 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5,
                                        key="m5_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m5_run")
-    if run_model:
+    if run_model or st.session_state.get("m5_first_run", True):
+        st.session_state["m5_first_run"] = False
         df, toplam_maliyet = model5_run(
             demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
@@ -697,7 +702,8 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5,
                                        key="m6_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m6_run")
-    if run_model:
+    if run_model or st.session_state.get("m6_first_run", True):
+        st.session_state["m6_first_run"] = False
         df, total_cost, needed_workers, max_production = model6_run(
             demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours,
             hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
