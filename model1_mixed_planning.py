@@ -24,6 +24,8 @@ hourly_wage = params['costs']['hourly_wage']
 production_cost = params['costs']['production_cost']
 overtime_wage_multiplier = params['costs']['overtime_wage_multiplier']
 max_overtime_per_worker = params['costs']['max_overtime_per_worker']
+initial_inventory = params['capacity']['initial_inventory']
+safety_stock_ratio = params['capacity']['safety_stock_ratio']
 
 T = len(demand)
 
@@ -48,7 +50,9 @@ def solve_model(
     hourly_wage,
     production_cost,
     overtime_wage_multiplier,
-    max_overtime_per_worker
+    max_overtime_per_worker,
+    initial_inventory=0,
+    safety_stock_ratio=0.10
 ):
     T = len(demand)
     # Model
@@ -84,10 +88,12 @@ def solve_model(
     for t in range(T):
         # Talep karşılanmalı (stok + üretim + fason = talep + stok + karşılanmayan talep)
         if t == 0:
-            prev_inventory = 0
+            prev_inventory = initial_inventory
         else:
             prev_inventory = inventory[t-1]
         decision_model += (internal_production[t] + outsourced_production[t] + prev_inventory == demand[t] + inventory[t] + stockout[t])
+        # Safety stock constraint
+        decision_model += (inventory[t] >= safety_stock_ratio * demand[t])
 
         # Toplam üretimin en az %70'i iç üretim olmalı
         decision_model += (internal_production[t] >= min_internal_ratio * (internal_production[t] + outsourced_production[t]))
@@ -202,7 +208,7 @@ def print_results():
         demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
         hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
         max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
-        production_cost, overtime_wage_multiplier, max_overtime_per_worker
+        production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio
     )
 
     # Extract variables from model_vars
@@ -341,7 +347,7 @@ def maliyet_analizi(
         demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
         hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
         max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
-        production_cost, overtime_wage_multiplier, max_overtime_per_worker
+        production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio
     )
 
     # Extract variables from model_vars

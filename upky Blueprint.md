@@ -4,7 +4,7 @@
 - `demand`: Aylık talep tahminleri `[1000, 1200, 1500, ...]` (adet).
 - `working_days`: Aylık çalışma günleri `[22, 20, 23, ...]` (gün).
 - `holding_cost`: 5 TL/ay (birim stok tutma maliyeti).
-- `outsourcing_cost`: 15 TL/adet (fason imalat maliyeti).
+- `outsourcing_cost`: 85 TL/adet (ortalama fason imalat maliyeti).
 - `labor_per_unit`: 0.5 saat/adet (üretim başına işgücü).
 - `stockout_cost`: 20 TL/adet (birim stokta bulundurmama maliyeti).
 - `hiring_cost`: 1800 TL/kişi (işçi başına işe alım maliyeti).

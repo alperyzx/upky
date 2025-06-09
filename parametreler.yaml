@@ -48,8 +48,10 @@ efficiency:
   max_efficiency: 2.0  # Maksimum verimlilik seviyesi
   scale_factor: 0.0001  # Artan hacimlere göre verimlilik iyileştirme hızı
 
-# Tedarikçi Kapasite Parametreleri
+# Kapasite Parametreleri
 capacity:
+  initial_inventory: 0  # Başlangıç envanteri
+  safety_stock_ratio: 0.03 # Güvenlik stoğu oranı
   min_internal_ratio : 0.70
   max_outsourcing_ratio : 0.30
   capacity_supplier_A: 300   # Tedarikçi A'nın aylık maksimum kapasitesi
