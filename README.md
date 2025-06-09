@@ -69,42 +69,74 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 
 ## Model Özellikleri ve Güncellemeler
 
+### Model 1: Karma Planlama
+- Ağırlıklı ortalama üretim maliyeti hesaplaması eklendi (iç üretim ve fason üretim birleşimi)
+- Fazla mesai kısıtları ve maliyet hesaplamaları uygulandı
+- İç üretim ve fason üretim arasındaki optimum denge hesaplanıyor
+
+### Model 2: Fazla Mesaili Üretim
+- Talebe göre optimum işçi sayısını otomatik hesaplama özelliği eklendi
+- Fazla mesai saatleri ve maliyetleri kapsamlı şekilde analiz ediliyor
+- Normal işçilik ve fazla mesai maliyetleri ayrı ayrı hesaplanıyor
+
 ### Model 3: Toplu Üretim ve Stoklama
+- Verimlilik faktörü uygulandı - üretim hacmi arttıkça verimlilik iyileşir
 - Fiziksel stok seviyeleri artık hiçbir zaman 0'ın altına düşmez
 - İşe alım maliyetleri toplam maliyete dahil edilmiştir
-- Grafikler stok ve karşılanmayan talebi doğru gösterir
+- Talebe göre optimum işçi sayısını hesaplar ve kullanıcı girdisini bu sınırlar içinde tutar
 
 ### Model 4: Dinamik Programlama
 - Talebe göre optimum işçi sayısını belirler
 - İlk dönemde sadece ihtiyaç duyulan kadar işçiyi işe alır
 - İşçi değişim kısıtlarını doğru uygular
+- İşçi değişim maliyetlerini ve üretim kapasitesini dengeler
+
+### Model 5: Dış Kaynak Karşılaştırma
+- İki farklı tedarikçinin maliyet ve kapasite kısıtları altında optimum dağılımı hesaplar
+- Stok tutma ve stoksuzluk maliyetlerini minimize eder
+- Kapasite kısıtlarını görsel olarak gösterir
 
 ### Model 6: Mevsimsellik ve Dalga
 - Sıfır işçiyle başlar ve talebi karşılamak için ihtiyaç duyulan işçileri işe alır
 - İşe alım maliyetleri toplam maliyete dahil edilmiştir
+- Mevsimsel talep dalgalanmalarına göre işçi ihtiyacını optimize eder
+- Stok ve stoksuzluk maliyetlerini dengeler
 
 ## Karşılaştırma Tablosu (Streamlit)
 
 - Karşılaştırma tablosunda tüm modeller aynı parametreler ile çalıştırılır ve sonuçlar karşılaştırılabilir.
 - Her modelin toplam maliyeti, işçilik maliyeti, üretim maliyeti, stok maliyeti, karşılanmayan talep maliyeti ve işe alım/çıkarma maliyetlerini içerir.
 - Grafiksel karşılaştırmalar maliyet bileşenlerinin analizini kolaylaştırır.
+- Tüm modellerin ortak metriklerle birim maliyeti ve stoksuzluk oranı karşılaştırılabilir.
 
 ## Hangi Model Hangi Senaryoda Kullanılır?
 
 - **Model 1: Karma Planlama**
   - Talep ve işgücü dalgalanmalarının yüksek olduğu, hem iç üretim hem fason esnekliğinin gerektiği durumlar için uygundur.
+  - İç üretim ve dış kaynak kullanımının optimize edilmesi gereken durumlarda idealdir.
+  - Fazla mesai ve normal mesai dengesini kurar, birim maliyeti optimize eder.
+
 - **Model 2: Fazla Mesaili Üretim**
   - İşgücü sabit, talep dalgalı ve kısa vadeli artışlar fazla mesaiyle karşılanabiliyorsa tercih edilir.
+  - Sabit işçi sayısı ile çalışıp üretim kapasitesini fazla mesaiyle artırabilecek işletmeler için uygundur.
+
 - **Model 3: Toplu Üretim ve Stoklama**
   - Talebin öngörülebilir ve üretim kapasitesinin sabit olduğu, stok tutmanın sorun olmadığı durumlar için uygundur.
+  - Ölçek ekonomisinden yararlanarak verimlilik artışına odaklanan işletmeler için idealdir.
+  - Yüksek üretim hacimlerinde verimlilik artışı sağlayan süreçlere sahip firmalar için verimlilik faktörü avantaj sağlar.
+
 - **Model 4: Dinamik Programlama**
   - İşgücü planlamasının ve işçi değişim maliyetlerinin önemli olduğu, uzun vadeli ve değişken talep yapısında kullanılır.
+  - İşçi alım ve çıkarma maliyetlerini dengeleyen optimum işgücü seviyesini bulmak için idealdir.
+
 - **Model 5: Dış Kaynak Kullanımı Karşılaştırması**
   - Farklı tedarikçi seçeneklerinin ve kapasite kısıtlarının olduğu, dış kaynak tercihinde maliyet karşılaştırması yapılacaksa uygundur.
+  - Kendi üretim tesisi olmayan ve tamamen dış kaynak kullanımına dayalı iş modellerinde kullanılabilir.
+
 - **Model 6: Mevsimsellik ve Talep Dalgaları**
   - Talebin mevsimsel dalgalandığı, stok ve üretim optimizasyonunun önemli olduğu, esnek işgücü planlaması gereken sektörlerde kullanılır.
+  - Sezonluk ürünler, turizm, inşaat gibi mevsimsel etkilere açık sektörlerde değerlidir.
 
 ---
 
 Herhangi bir hata veya eksiklikte, terminaldeki hata mesajını kontrol ederek eksik paketi yükleyebilir veya parametreleri gözden geçirebilirsiniz.
-

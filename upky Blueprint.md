@@ -71,9 +71,9 @@
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Sabit işçi ve fazla mesaiyle talebin karşılanması, toplam maliyetin ve birim maliyetlerin ayrıntılı analizi.
-- Kısıtlar: Normal kapasite ve fazla mesai kapasitesi limitleri, stok ve stoksuzluk yönetimi.
-- Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok, fazla mesai).
-- Özellikler: Tüm maliyet kalemlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme.
+  - Kısıtlar: Normal kapasite ve fazla mesai kapasitesi limitleri, stok ve stoksuzluk yönetimi, Talep ve parametrelere göre optimum işçi sayısını otomatik hesaplama ve önerme.
+  - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok, fazla mesai).
+  - Özellikler: Tüm maliyet kalemlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme.
 
 ## Model 3: Toplu Üretim ve Stoklama Modeli
 ### Değişkenler
@@ -97,6 +97,8 @@
 - `stockout_cost`: Stoksuzluk maliyeti (TL/adet/ay).
 - `worker_monthly_cost`: Aylık işçi maliyeti (TL/kişi/ay).
 - `hiring_cost`: İşe alım maliyeti (TL/kişi).
+- `efficiency_factor`: Yüksek hacimli üretimlerde birim işgücü ihtiyacını azaltan verimlilik faktörü.
+- `scale_threshold`: Verimlilik iyileştirmesinin başladığı üretim hacmi eşiği.
 
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
@@ -104,6 +106,8 @@
 - Kısıtlar: Sabit işçi kapasitesi, stok ve stoksuzluk yönetimi.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok).
 - Özellikler: Fiziksel stok seviyeleri negatif olmaz, karşılanmayan talep ayrı olarak gösterilir, işe alım maliyeti toplam maliyete dahildir.
+- Verimlilik faktörü hesaplaması: Büyük hacimli üretimlerde verimlilik artışı.
+- İşçi sayısı optimizasyonu: optimum işçi sayısının %10 aralığında tutulur.
 
 ## Model 4: Dinamik Programlama Tabanlı Model
 ### Değişkenler
@@ -138,6 +142,7 @@
 - Amaç: Dinamik programlama ile toplam maliyeti minimize etmek, işgücü değişimi ve stok yönetimini optimize etmek.
 - Kısıtlar: İşgücü, üretim, stok ve stoksuzluk denge denklemleri, işçi değişim sınırları.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksal çıktı (işçi, üretim, stok, maliyetler).
+-  Detay:  İlk dönemde 0 işçiyle başlar ve optimum sayıda işçiyi işe alır, kapasiteye değil, gerçek üretim hacmine göre üretim maliyetlerini hesaplar.
 - Özellikler: Model artık talebe göre optimum işçi sayısını belirler ve ihtiyaç duyulan kadar işçiyi işe alır.
 
 ## Model 5: Dış Kaynak Kullanımı Modelleri Karşılaştırması
@@ -254,3 +259,5 @@ Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaşt
 - Kullanılan kütüphaneler: `streamlit`, `pandas`, `numpy`, `matplotlib`, `tabulate`, `PuLP`, `yaml`.
 - Kodda hata yönetimi ve kullanıcıya açıklama ön planda tutulur.
 - Tüm modellerin çıktıları ortak formatta toplanır ve karşılaştırılır.
+- Her model için ayrı bir `maliyet_analizi` fonksiyonu uygulanmıştır ve tüm modelleri aynı standart formatta çıktı üretir.
+- Talep tipine göre (normal, yüksek, aşırı yüksek, mevsimsel) optimum işçi sayısı önerisi uygulanmıştır.
