@@ -798,18 +798,18 @@ if model == "Modelleri Karşılaştır":
         # 'demand' and 'working_days' are already defined in the scope
         current_params = {
             "demand": demand,
-            "holding_cost": st.session_state.cmp_holding,
-            "stockout_cost": st.session_state.cmp_stockout,
-            "production_cost": st.session_state.cmp_production_cost,
-            "hiring_cost": st.session_state.cmp_hire,
-            "firing_cost": st.session_state.cmp_fire,
-            "hourly_wage": st.session_state.cmp_hourly_wage,
-            "daily_hours": st.session_state.cmp_daily_hours,
-            "labor_per_unit": st.session_state.cmp_labor,
-            "max_overtime_per_worker": st.session_state.cmp_max_overtime,
-            "overtime_wage_multiplier": st.session_state.cmp_overtime_multiplier,
+            "holding_cost": st.session_state.get("cmp_holding", holding_cost),
+            "stockout_cost": st.session_state.get("cmp_stockout", stockout_cost),
+            "production_cost": st.session_state.get("cmp_production_cost", production_cost),
+            "hiring_cost": st.session_state.get("cmp_hire", hiring_cost),
+            "firing_cost": st.session_state.get("cmp_fire", firing_cost),
+            "hourly_wage": st.session_state.get("cmp_hourly_wage", hourly_wage),
+            "daily_hours": st.session_state.get("cmp_daily_hours", daily_hours),
+            "labor_per_unit": st.session_state.get("cmp_labor", labor_per_unit),
+            "max_overtime_per_worker": st.session_state.get("cmp_max_overtime", max_overtime_per_worker),
+            "overtime_wage_multiplier": st.session_state.get("cmp_overtime_multiplier", overtime_wage_multiplier),
             "working_days": working_days,
-            "workers": st.session_state.cmp_workers,
+            "workers": st.session_state.get("cmp_workers", workers),
             "initial_inventory": initial_inventory,
             "safety_stock_ratio": safety_stock_ratio
         }
@@ -888,6 +888,7 @@ if model == "Modelleri Karşılaştır":
             ax = axes[i]
             ax.bar(plot_df.index, plot_df[metric], color='steelblue', alpha=0.8)
             ax.set_title(metric)
+            ax.set_xticks(range(len(plot_df.index)))
             ax.set_xticklabels(plot_df.index, rotation=30, ha='right')
             ax.grid(axis='y', linestyle='--', alpha=0.5)
             if metric == "Stoksuzluk Oranı (%)":
