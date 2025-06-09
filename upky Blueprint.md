@@ -78,7 +78,7 @@
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Sabit işçi ve fazla mesaiyle talebin karşılanması, toplam maliyetin ve birim maliyetlerin ayrıntılı analizi.
-  - Kısıtlar: Normal kapasite ve fazla mesai kapasitesi limitleri, stok ve stoksuzluk yönetimi, Talep ve parametrelere göre optimum işçi sayısını otomatik hesaplama ve önerme.
+  - Kısıtlar: Normal kapasite ve fazla mesai kapasitesi limitleri, stok ve stoksuzluk yönetimi, Talep ve parametrelere göre optimum işçi sayısını otomatik hesaplama ve önerme, güvenlik stoğu limitleri.
   - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok, fazla mesai).
   - Özellikler: Tüm maliyet kalemlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme.
 
@@ -86,7 +86,7 @@
 ### Değişkenler
 - `production[t]`: t ayındaki üretim.
 - `inventory[t]`: t ayı sonundaki stok (artık hiçbir zaman negatif değil).
-- `real_inventory[t]`: t ayı sonundaki fiziksel stok seviyesi (her zaman 0 veya pozitif).
+- `real_inventory[t]`: t ayı sonundaki fiziksel stok seviyesi (her zaman güvenlik stoğu seviyesi veya üzeri).
 - `holding[t]`: t ayındaki stok maliyeti.
 - `stockout[t]`: t ayındaki stoksuzluk maliyeti.
 - `labor_cost[t]`: t ayındaki işçilik maliyeti.
@@ -112,9 +112,9 @@
 ### Python Yaklaşımı
 - Kütüphaneler: `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Sabit işçiyle toplu üretim ve stoklama, toplam maliyetin ve birim maliyetlerin ayrıntılı analizi.
-- Kısıtlar: Sabit işçi kapasitesi, stok ve stoksuzluk yönetimi.
+- Kısıtlar: Sabit işçi kapasitesi, stok ve stoksuzluk yönetimi, güvenlik stoğu limitleri.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (üretim, stok).
-- Özellikler: Fiziksel stok seviyeleri negatif olmaz, karşılanmayan talep ayrı olarak gösterilir, işe alım maliyeti toplam maliyete dahildir.
+- Özellikler: Fiziksel stok seviyeleri güvenlik stoğu sınırının altına düşmez, karşılanmayan talep ayrı olarak gösterilir, işe alım maliyeti toplam maliyete dahildir.
 - Verimlilik faktörü hesaplaması: Büyük hacimli üretimlerde verimlilik artışı.
 - İşçi sayısı optimizasyonu: optimum işçi sayısının %10 aralığında tutulur.
 
@@ -181,7 +181,7 @@
 ### Python Yaklaşımı
 - Kütüphaneler: `PuLP`, `NumPy`, `Pandas`, `Matplotlib`, `tabulate`, `yaml`.
 - Amaç: Tedarikçi seçimi ve kapasite kısıtları altında toplam maliyeti minimize etmek, karşılanamayan talebi ve stok seviyesini optimize etmek.
-- Kısıtlar: Tedarikçi kapasite limitleri, stok ve stoksuzluk denge denklemleri.
+- Kısıtlar: Tedarikçi kapasite limitleri, stok ve stoksuzluk denge denklemleri, güvenlik stoğu sınırları.
 - Sonuçlar: Detaylı maliyet tablosu, birim maliyet analizi, karşılanmayan talep, grafiksel çıktı (tedarikçi kullanımı, stok, karşılanmayan talep, kapasite limitleri).
 - Özellikler: Tüm maliyet kalemlerinin ayrıntılı dökümü, tablo ve grafiklerle görselleştirme, tedarikçi bazında analiz.
 
