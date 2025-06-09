@@ -868,7 +868,12 @@ if model == "Modelleri Karşılaştır":
             return val
         st.subheader("Özet Karşılaştırma Tablosu")
         st.dataframe(
-            summary_df,
+            summary_df.style.format({
+                "Toplam Maliyet (₺)": "{:,.0f}".format,
+                "Toplam İşçilik Maliyeti (₺)": "{:,.0f}".format,
+                "Toplam Üretim": "{:,.0f}".format,
+                "Stoksuzluk Oranı (%)": "{:,.2f}".format,
+            }, decimal=",", thousands="."),
             use_container_width=True
         )
         # --- Grafiksel Karşılaştırma ---
@@ -920,7 +925,11 @@ if model == "Modelleri Karşılaştır":
         df_detail = pd.DataFrame(results_detail_list)
 
         cols = ["Model"] + [c for c in df_detail.columns if c != "Model"]
-        st.dataframe(df_detail[cols], use_container_width=True, hide_index=True)
+        number_cols = df_detail[cols].select_dtypes(include=["number"]).columns
+        st.dataframe(
+            df_detail[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
+            use_container_width=True, hide_index=True
+        )
 
         # Add explanation about Model 1's production cost
         if any(name[0] == "Model 1" for name in model_names):
