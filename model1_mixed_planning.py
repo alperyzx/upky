@@ -332,7 +332,9 @@ def maliyet_analizi(
     max_outsourcing_ratio=max_outsourcing_ratio,
     outsourcing_capacity=outsourcing_capacity,
     hourly_wage=hourly_wage,
-    production_cost=production_cost
+    production_cost=production_cost,
+    overtime_wage_multiplier=overtime_wage_multiplier,
+    max_overtime_per_worker=max_overtime_per_worker
 ):
     # Solve model using the shared function
     model_vars = solve_model(

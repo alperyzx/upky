@@ -346,9 +346,14 @@ def maliyet_analizi(
     total_unfilled = model_results['total_unfilled']
     total_demand = sum(demand)
     efficiency_factor = model_results['efficiency_factor']
+    adjusted_labor_per_unit = model_results['adjusted_labor_per_unit']
+    optimized_workers = model_results['optimized_workers']
+    original_workers = model_results['original_workers']
+    optimal_workers = model_results['optimal_workers']
 
     # Calculate the hiring cost for the workers (one-time cost)
-    total_hiring_cost = hiring_cost * workers
+    # Use optimized_workers instead of workers to ensure consistency
+    total_hiring_cost = hiring_cost * optimized_workers
 
     # Update the total cost to include hiring cost
     toplam_maliyet += total_hiring_cost
@@ -376,7 +381,7 @@ def maliyet_analizi(
         "İşçilik Birim Maliyeti": avg_labor_unit,
         "Üretim Birim Maliyeti": avg_prod_unit,
         "Diğer Birim Maliyetler": avg_other_unit,
-        "Verimlilik Faktörü": efficiency_factor,
+        "Verimlilik Faktörü": efficiency_factor
     }
 
 if __name__ == '__main__':

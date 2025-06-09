@@ -350,14 +350,22 @@ def maliyet_analizi(
     total_unfilled = model_results['total_unfilled']
     total_demand = model_results['total_demand']
 
+    # Get average workers across periods
+    avg_workers = sum(int(model_results['y_workers'][t].varValue) for t in range(len(demand))) / len(demand) if demand else 0
+    max_production_per_period = max(int(model_results['y_production'][t].varValue) for t in range(len(demand))) if demand else 0
+
     # Calculate unit costs
     if total_produced > 0:
         avg_unit_cost = total_cost / total_produced
         avg_labor_unit = total_labor_cost / total_produced
         avg_prod_unit = total_production_cost / total_produced
+        avg_hiring_unit = total_hiring_cost / total_produced
+        avg_firing_unit = total_firing_cost / total_produced
+        avg_holding_unit = total_holding / total_produced
+        avg_stockout_unit = total_stockout / total_produced
         avg_other_unit = (total_holding + total_stockout + total_hiring_cost + total_firing_cost) / total_produced
     else:
-        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+        avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_hiring_unit = avg_firing_unit = avg_holding_unit = avg_stockout_unit = avg_other_unit = 0
 
     return {
         "Toplam Maliyet": total_cost,

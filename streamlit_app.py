@@ -588,7 +588,7 @@ if model == "Dinamik Programlama (Model 4)":
         st.markdown(f"- Stoksuzluk Maliyeti Toplamı: {detay['total_stockout']:,.2f} TL")
         st.markdown(f"- İşe Alım Maliyeti Toplamı: {detay['total_hiring']:,.2f} TL")
         st.markdown(f"- İşten Çıkarma Maliyeti Toplamı: {detay['total_firing']:,.2f} TL")
-        birim = m4_birim(total_demand, total_produced, total_unfilled, min_cost, total_labor, total_production, total_holding, total_hiring, total_firing)
+        birim = m4_birim(total_demand, total_produced, total_unfilled, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing)
         st.subheader("Birim Maliyet Analizi")
         st.markdown(f"- Toplam Talep: {birim['total_demand']:,} birim")
         st.markdown(f"- Toplam Üretim: {birim['total_produced']:,} birim ({(birim['total_produced']/birim['total_demand']*100 if birim['total_demand'] else 0):.2f}%)")
@@ -787,7 +787,7 @@ if model == "Modelleri Karşılaştır":
             ("Model 1", "Karma Planlama (Model 1)", model1.maliyet_analizi, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"),
             ("Model 2", "Fazla Mesaili Üretim (Model 2)", model2.maliyet_analizi, "Orta", "Fazla mesai ile esneklik"),
             ("Model 3", "Toplu Üretim ve Stoklama (Model 3)", model3.maliyet_analizi, "Düşük", "Sabit işgücü, toplu üretim"),
-            ("Model 4", "Dinamik Programlama (Model 4)", model4.maliyet_analizi, "Düşük", "Sabit işgücü, belirli üretim"),
+            ("Model 4", "Dinamik Programlama (Model 4)", model4.maliyet_analizi, "Orta", "Dinamik işgücü, sınırlı üretim"),
             ("Model 5", "Dış Kaynak Karşılaştırma (Model 5)", model5.maliyet_analizi, "Yok", "Tam fason kullanımı"),
             ("Model 6", "Mevsimsellik ve Dalga (Model 6)", model6.maliyet_analizi, "Orta", "Mevsimsellik ve stok optimizasyonu"),
         ]
