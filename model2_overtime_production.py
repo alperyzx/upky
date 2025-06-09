@@ -336,6 +336,7 @@ def maliyet_analizi(
     return {
         "Toplam Maliyet": toplam_maliyet,
         "İşçilik Maliyeti": total_normal_labor + total_overtime,
+        "Fazla Mesai Maliyeti": total_overtime,  # Added this line to include overtime cost separately
         "Üretim Maliyeti": model_results['total_production_cost'],
         "Stok Maliyeti": total_holding,
         "Stoksuzluk Maliyeti": total_stockout,

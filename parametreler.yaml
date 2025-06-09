@@ -44,7 +44,7 @@ workforce:
 # Yüksek Hacim Verimlilik Parametreleri
 efficiency:
   base_efficiency: 1.0  # Temel verimlilik seviyesi (1.0 = ayarlama yok)
-  scale_threshold: 2000  # Verimlilik iyileşmeye başlayan üretim hacmi
+  scale_threshold: 15000  # Verimlilik iyileşmeye başlayan üretim hacmi
   max_efficiency: 2.0  # Maksimum verimlilik seviyesi
   scale_factor: 0.0001  # Artan hacimlere göre verimlilik iyileştirme hızı
 

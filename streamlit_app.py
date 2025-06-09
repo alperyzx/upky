@@ -119,6 +119,11 @@ def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor
         production_cost, worker_monthly_cost
     )
 
+    # Use the optimized worker count for all cost calculations
+    optimized_workers = model_results.get('optimized_workers', workers)
+    original_workers = model_results.get('original_workers', workers)
+    optimal_workers = model_results.get('optimal_workers', optimized_workers)
+
     # Get the results from the model
     df = model_results['df']
     cost = model_results['total_cost']
@@ -130,9 +135,9 @@ def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor
     total_produced = model_results['total_produced']
     total_unfilled = model_results['total_unfilled']
 
-    # Add hiring cost to the total cost
+    # Add hiring cost to the total cost (use optimized_workers)
     hiring_cost = params['costs']['hiring_cost']
-    total_hiring_cost = hiring_cost * workers
+    total_hiring_cost = hiring_cost * optimized_workers
     adjusted_cost = cost + total_hiring_cost
 
     # Calculate unit costs
@@ -144,7 +149,7 @@ def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
 
-    return df, adjusted_cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost
+    return df, adjusted_cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost, optimized_workers, original_workers, optimal_workers
 
 def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, workers, max_workers, max_workforce_change, hourly_wage, stockout_cost, production_cost):
     # Use the shared model solver function
@@ -489,7 +494,12 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(params['costs']['hiring_cost']), key="m3_hire", step=1)
         run_model = st.button("Modeli Çalıştır", key="m3_run")
     if run_model:
-        df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost = model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost)
+        df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost, optimized_workers, original_workers, optimal_workers = model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost)
+        # Inform user if worker count was optimized
+        if optimized_workers != original_workers:
+            st.warning(f"Girdiğiniz işçi sayısı ({original_workers}) modele göre optimize edilerek {optimized_workers} olarak ayarlandı. (Optimal: {optimal_workers}, izin verilen aralık: {int(optimal_workers*0.9)} - {int(optimal_workers*1.1)})\nİşe alım maliyeti ve tüm hesaplamalar optimize edilen işçi sayısına göre yapılmıştır.")
+        else:
+            st.info(f"Kullandığınız işçi sayısı ({optimized_workers}) optimal aralıkta.")
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {cost:,.2f} TL")

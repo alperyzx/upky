@@ -323,7 +323,13 @@ def maliyet_analizi(
     production_cost=production_cost,
     labor_per_unit=labor_per_unit,
     hourly_wage=hourly_wage,
-    daily_hours=daily_hours
+    daily_hours=daily_hours,
+    working_days=working_days,
+    hiring_cost=hiring_cost,
+    firing_cost=firing_cost,
+    workers=workers,
+    max_workers=max_workers,
+    max_workforce_change=max_workforce_change
 ):
     # Use the shared model solver function
     model_results = solve_model(

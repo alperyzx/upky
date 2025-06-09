@@ -47,6 +47,31 @@ def calculate_efficiency_factor(total_demand):
         return min(max_efficiency,
                   base_efficiency + (total_demand - scale_threshold) * scale_factor)
 
+def calculate_optimal_workers(demand, working_days, daily_hours, labor_per_unit, efficiency_factor=None):
+    """
+    Calculate the minimum required workers to meet total demand, considering efficiency.
+    Args:
+        demand: list or np.array of monthly demand
+        working_days: list or np.array of monthly working days
+        daily_hours: hours per day
+        labor_per_unit: labor hours per unit
+        efficiency_factor: optional, if None will be calculated from demand
+    Returns:
+        optimal_workers: int, minimum required workers (rounded up)
+    """
+    demand = np.array(demand)
+    working_days = np.array(working_days)
+    total_demand = np.sum(demand)
+    if efficiency_factor is None:
+        efficiency_factor = calculate_efficiency_factor(total_demand)
+    adjusted_labor_per_unit = labor_per_unit / efficiency_factor
+    # Calculate total available labor per worker in the year
+    total_available_labor_per_worker = np.sum(working_days) * daily_hours
+    # Total labor needed
+    total_labor_needed = total_demand * adjusted_labor_per_unit
+    optimal_workers = int(np.ceil(total_labor_needed / total_available_labor_per_worker))
+    return max(1, optimal_workers)
+
 def solve_model(
     demand,
     working_days,
@@ -78,6 +103,16 @@ def solve_model(
 
     # Calculate efficiency factor based on total production volume
     efficiency_factor = calculate_efficiency_factor(total_demand)
+
+    # Optimize workers: restrict to ±10% of optimal
+    optimal_workers = calculate_optimal_workers(demand_array, working_days_array, daily_hours, labor_per_unit, efficiency_factor)
+    min_workers = int(np.floor(optimal_workers * 0.9))
+    max_workers = int(np.ceil(optimal_workers * 1.1))
+    original_workers = workers  # Store user input for reporting
+    if workers < min_workers:
+        workers = min_workers
+    elif workers > max_workers:
+        workers = max_workers
 
     # Adjust labor_per_unit based on efficiency - higher efficiency means less labor needed per unit
     adjusted_labor_per_unit = labor_per_unit / efficiency_factor
@@ -147,6 +182,9 @@ def solve_model(
         'total_unfilled': total_unfilled,
         'efficiency_factor': efficiency_factor,  # Add the efficiency factor to the results
         'adjusted_labor_per_unit': adjusted_labor_per_unit,  # Add the adjusted labor_per_unit
+        'optimized_workers': int(workers),  # Return the actual worker count used
+        'original_workers': int(original_workers),  # Return the user input for reference
+        'optimal_workers': int(optimal_workers),  # Return the calculated optimal worker count
     }
 
 def print_results():
