@@ -109,7 +109,7 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
     df = model_results['df']
     total_cost = model_results['total_cost']
 
-    return df, total_cost
+    return df, total_cost, model_results.get('optimal_workers', workers)
 
 def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost=None):
     # Use the shared model solver function
@@ -382,7 +382,27 @@ if model == "Karma Planlama (Model 1)":
 if model == "Fazla Mesaili Üretim (Model 2)":
     st.header("Fazla Mesaili Üretim (Model 2)")
     with st.sidebar:
-        demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m2")
+        demand, workers_input, working_days, selected_demand_type = select_demand_type_and_workers("m2")
+
+        # Optimal işçi sayısını hesapla
+        from model2_overtime_production import calculate_optimal_workers
+        optimal_workers = calculate_optimal_workers(
+            demand, working_days,
+            st.session_state.get("m2_daily", model2.daily_hours),  # Fixed: Use model2.daily_hours instead of daily_hours
+            st.session_state.get("m2_labor", model2.labor_per_unit),
+            st.session_state.get("m2_max_overtime", model2.max_overtime_per_worker)
+        )
+
+        # İşçi sayısını ekranda gösterirken optimum değeri de belirt
+        st.info(f"Talep ve parametrelere göre optimal işçi sayısı: {optimal_workers}")
+
+        # Kullanıcının girdiği değer mi yoksa optimal değer mi kullanılacak?
+        use_optimal = st.checkbox("Optimal işçi sayısını kullan", value=True)
+        if use_optimal:
+            workers = optimal_workers
+        else:
+            workers = workers_input
+
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model2.holding_cost), key="m2_holding", step=1)
         labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model2.labor_per_unit), key="m2_labor", step=0.1)
         daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model2.daily_hours, key="m2_daily", step=1)
@@ -394,10 +414,15 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(model2.hiring_cost), step=1, key="m2_hire")
         run_model = st.button("Modeli Çalıştır", key="m2_run")
     if run_model:
-        df_table, total_cost = model2_run(
+        df_table, total_cost, optimal_workers = model2_run(
             demand, working_days, holding_cost, labor_per_unit, workers, daily_hours,
             overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost
         )
+
+        # Kullanıcıya optimal işçi sayısını göster
+        if workers != optimal_workers:
+            st.warning(f"Kullanılan işçi sayısı ({workers}) optimal seviyeden ({optimal_workers}) farklı. Model verimliliği etkilenebilir.")
+
         st.subheader("Sonuç Tablosu")
         st.dataframe(df_table, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {total_cost:,.2f} TL")

@@ -19,9 +19,33 @@ daily_hours = params['workforce']['daily_hours']
 months = len(demand)
 production_cost = params['costs']['production_cost']
 
+# Verimlilik parametrelerini oku
+base_efficiency = params['efficiency']['base_efficiency']
+scale_threshold = params['efficiency']['scale_threshold']
+max_efficiency = params['efficiency']['max_efficiency']
+scale_factor = params['efficiency']['scale_factor']
+
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
     raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
+
+def calculate_efficiency_factor(total_demand):
+    """
+    Calculate efficiency factor based on total demand.
+    As total demand increases above threshold, efficiency improves.
+
+    Args:
+        total_demand: Total production demand
+
+    Returns:
+        efficiency_factor: A multiplier that improves (increases) with higher demand
+    """
+    if total_demand <= scale_threshold:
+        return base_efficiency
+    else:
+        # Efficiency improves with scale but is capped at max_efficiency
+        return min(max_efficiency,
+                  base_efficiency + (total_demand - scale_threshold) * scale_factor)
 
 def solve_model(
     demand,
@@ -29,7 +53,7 @@ def solve_model(
     holding_cost,
     stockout_cost,
     workers,
-    labor_per_unit,  # Changed from production_rate to labor_per_unit
+    labor_per_unit,
     daily_hours,
     production_cost,
     worker_monthly_cost=None
@@ -49,9 +73,18 @@ def solve_model(
     daily_hours = float(daily_hours)
     labor_per_unit = float(labor_per_unit)
 
+    # Calculate total demand to determine efficiency factor
+    total_demand = np.sum(demand_array)
+
+    # Calculate efficiency factor based on total production volume
+    efficiency_factor = calculate_efficiency_factor(total_demand)
+
+    # Adjust labor_per_unit based on efficiency - higher efficiency means less labor needed per unit
+    adjusted_labor_per_unit = labor_per_unit / efficiency_factor
+
     # Sabit üretim kapasitesi (işçi * gün * saat / birim işgücü)
-    # Dividing by labor_per_unit instead of multiplying by production_rate
-    monthly_capacity = workers * daily_hours * working_days_array / labor_per_unit
+    # Using adjusted labor_per_unit to account for efficiency improvements
+    monthly_capacity = workers * daily_hours * working_days_array / adjusted_labor_per_unit
 
     production = np.zeros(months)
     inventory = np.zeros(months)
@@ -112,6 +145,8 @@ def solve_model(
         'total_production_cost': total_production_cost,
         'total_produced': total_produced,
         'total_unfilled': total_unfilled,
+        'efficiency_factor': efficiency_factor,  # Add the efficiency factor to the results
+        'adjusted_labor_per_unit': adjusted_labor_per_unit,  # Add the adjusted labor_per_unit
     }
 
 def print_results():
@@ -128,6 +163,10 @@ def print_results():
 
     df = model_results['df']
     cost = model_results['total_cost']
+
+    # Get efficiency factor and adjusted labor from model results
+    efficiency_factor = model_results['efficiency_factor']
+    adjusted_labor_per_unit = model_results['adjusted_labor_per_unit']
 
     # Hücrelerden TL birimini kaldır, sadece sayısal kalsın (virgülsüz, int)
     df['Stok Maliyeti'] = df['Stok Maliyeti'].astype(int)
@@ -154,6 +193,14 @@ def print_results():
     print(f'İşçilik Maliyeti Toplamı: {detay["total_labor"]:,} TL')
     print(f'Üretim Maliyeti Toplamı: {detay["total_production_cost"]:,} TL')
     print(f'İşe Alım Maliyeti Toplamı: {total_hiring_cost:,} TL')
+
+    # Display efficiency information
+    print(f'\nVerimlilik Bilgileri:')
+    print(f'Toplam Talep: {model_results["total_produced"] + model_results["total_unfilled"]:,} birim')
+    print(f'Verimlilik Faktörü: {efficiency_factor:.2f}')
+    print(f'Orijinal Birim İşgücü: {labor_per_unit:.2f} saat/birim')
+    print(f'Ayarlanmış Birim İşgücü: {adjusted_labor_per_unit:.2f} saat/birim')
+    print(f'Verimlilik İyileşmesi: %{(efficiency_factor - 1) * 100:.2f}')
 
     # Birim maliyet analizini fonksiyon ile yap
     birim = birim_maliyet_analizi(
@@ -239,16 +286,16 @@ def maliyet_analizi(
     holding_cost=holding_cost,
     stockout_cost=stockout_cost,
     workers=workers,
-    labor_per_unit=labor_per_unit,  # Changed from worker_monthly_cost
+    labor_per_unit=labor_per_unit,
     daily_hours=daily_hours,
     production_cost=production_cost,
     worker_monthly_cost=worker_monthly_cost,
-    hiring_cost=params['costs']['hiring_cost']  # Add hiring_cost parameter with default value
+    hiring_cost=params['costs']['hiring_cost']
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost,
-        workers, labor_per_unit, daily_hours,  # Changed production_rate to labor_per_unit
+        workers, labor_per_unit, daily_hours,
         production_cost, worker_monthly_cost
     )
 
@@ -260,6 +307,7 @@ def maliyet_analizi(
     total_prod_cost = model_results['total_production_cost']
     total_unfilled = model_results['total_unfilled']
     total_demand = sum(demand)
+    efficiency_factor = model_results['efficiency_factor']
 
     # Calculate the hiring cost for the workers (one-time cost)
     total_hiring_cost = hiring_cost * workers
@@ -281,7 +329,7 @@ def maliyet_analizi(
         "Üretim Maliyeti": total_prod_cost,
         "Stok Maliyeti": total_holding,
         "Stoksuzluk Maliyeti": total_stockout,
-        "İşe Alım Maliyeti": total_hiring_cost,  # Now returning actual hiring cost
+        "İşe Alım Maliyeti": total_hiring_cost,
         "İşten Çıkarma Maliyeti": 0,
         "Toplam Talep": total_demand,
         "Toplam Üretim": total_production,
@@ -289,7 +337,8 @@ def maliyet_analizi(
         "Ortalama Birim Maliyet": avg_unit_cost,
         "İşçilik Birim Maliyeti": avg_labor_unit,
         "Üretim Birim Maliyeti": avg_prod_unit,
-        "Diğer Birim Maliyetler": avg_other_unit
+        "Diğer Birim Maliyetler": avg_other_unit,
+        "Verimlilik Faktörü": efficiency_factor,
     }
 
 if __name__ == '__main__':

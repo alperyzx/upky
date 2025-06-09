@@ -26,6 +26,31 @@ months = len(demand)
 if len(demand) != len(working_days):
     raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
 
+def calculate_optimal_workers(demand, working_days, daily_hours, labor_per_unit, max_overtime_per_worker):
+    """
+    Talebe ve fazla mesai parametrelerine göre optimal işçi sayısını hesaplar
+
+    Returns:
+        int: Hesaplanan optimal işçi sayısı
+    """
+    total_demand = sum(demand)
+    avg_working_days = sum(working_days) / len(working_days)
+
+    # Toplam talep için gereken işçilik saati
+    total_labor_hours_needed = total_demand * labor_per_unit
+
+    # Her ay için bir işçinin çalışabileceği normal + fazla mesai saati
+    monthly_hours_per_worker = (avg_working_days * daily_hours) + max_overtime_per_worker
+
+    # Tüm planlama dönemi için işçi başına toplam çalışma saati
+    total_hours_per_worker = monthly_hours_per_worker * len(demand)
+
+    # Optimal işçi sayısı hesaplaması (yukarı yuvarlama)
+    optimal_workers = int(np.ceil(total_labor_hours_needed / total_hours_per_worker))
+
+    # En az 1 işçi olmalı
+    return max(1, optimal_workers)
+
 def solve_model(
     demand,
     working_days,
@@ -44,6 +69,18 @@ def solve_model(
     Returns calculated values as a dictionary
     """
     months = len(demand)
+
+    # İşçi sayısını optimize et - talebe göre makul bir değer hesapla
+    optimal_workers = calculate_optimal_workers(
+        demand, working_days, daily_hours, labor_per_unit, max_overtime_per_worker
+    )
+
+    # Kullanıcı girdisi çok fazlaysa, optimal değeri kullan
+    if workers > optimal_workers * 2:
+        print(f"UYARI: İşçi sayısı ({workers}) optimal seviyenin ({optimal_workers}) çok üzerinde.")
+        print(f"Model verimliliği için işçi sayısı {optimal_workers} olarak güncellendi.")
+        workers = optimal_workers
+
     overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier
     production = np.zeros(months)
     overtime_hours = np.zeros(months)
@@ -122,7 +159,8 @@ def solve_model(
         'total_production_cost': total_production_cost,
         'total_hiring_cost': total_hiring_cost,
         'total_produced': total_produced,
-        'total_unfilled': total_unfilled
+        'total_unfilled': total_unfilled,
+        'optimal_workers': optimal_workers  # Optimal işçi sayısını sonuçlara ekle
     }
 
 def birim_maliyet_analizi(
