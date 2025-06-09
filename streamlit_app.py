@@ -240,8 +240,15 @@ def select_demand_type_and_workers(model_key):
     # Create options list with Turkish display names
     display_options = [demand_type_names[key] for key in demand_types]
 
-    # Show Turkish names in dropdown
-    selected_display = st.selectbox("Talep Tipi Seçiniz", display_options, index=0, key=f"{model_key}_demand_type")
+    # Set default index for Model 6 to "Mevsimsel Talep"
+    default_index = 0
+    if model_key == "m6":
+        try:
+            default_index = display_options.index("Mevsimsel Talep")
+        except ValueError:
+            default_index = 0
+
+    selected_display = st.selectbox("Talep Tipi Seçiniz", display_options, index=default_index, key=f"{model_key}_demand_type")
 
     # Convert back to internal key
     selected_demand_type = next(key for key, value in demand_type_names.items() if value == selected_display)
