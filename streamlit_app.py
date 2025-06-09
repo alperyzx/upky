@@ -878,29 +878,80 @@ if model == "Modelleri Karşılaştır":
         )
         # --- Grafiksel Karşılaştırma ---
         st.subheader("Ana Metriklerde Grafiksel Karşılaştırma")
-        # Sadece sayısal metrikleri al ve ortalama birim maliyeti hesapla
+
+        # Prepare data for plotting
         metrics = ["Toplam Maliyet (₺)", "Ortalama Birim Maliyet", "Toplam Üretim", "Stoksuzluk Oranı (%)"]
         plot_df = summary_df[["Toplam Maliyet (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)"]].copy()
-        # Ortalama birim maliyet hesapla
         plot_df["Ortalama Birim Maliyet"] = plot_df["Toplam Maliyet (₺)"] / plot_df["Toplam Üretim"]
-        # Sütun sırasını ayarla
-        plot_df = plot_df[["Toplam Maliyet (₺)", "Ortalama Birim Maliyet", "Toplam Üretim", "Stoksuzluk Oranı (%)"]]
+        plot_df = plot_df[metrics]  # Reorder columns
         plot_df = plot_df.apply(pd.to_numeric, errors='coerce')
-        fig, axes = plt.subplots(1, len(metrics), figsize=(4*len(metrics), 5))
-        if len(metrics) == 1:
-            axes = [axes]
+
+        # Create a 2x2 grid for better readability instead of a single row
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        axes = axes.flatten()  # Flatten to make indexing easier
+
+        # Color palette for different models
+        colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+
         for i, metric in enumerate(metrics):
             ax = axes[i]
-            ax.bar(plot_df.index, plot_df[metric], color='steelblue', alpha=0.8)
-            ax.set_title(metric)
+
+            # Create bars with different colors
+            bars = ax.bar(plot_df.index, plot_df[metric],
+                         color=colors[:len(plot_df.index)],
+                         alpha=0.85,
+                         width=0.6)
+
+            # Add value labels on top of bars
+            for bar in bars:
+                height = bar.get_height()
+                if pd.notnull(height):
+                    if metric == "Toplam Maliyet (₺)" or metric == "Toplam Üretim":
+                        value_text = f"{int(height):,}"
+                    else:
+                        value_text = f"{height:.2f}"
+
+                    ax.text(bar.get_x() + bar.get_width()/2., height + (plot_df[metric].max() * 0.02),
+                           value_text, ha='center', va='bottom', rotation=0,
+                           fontsize=9, fontweight='bold')
+
+            # Improve title and styling
+            ax.set_title(metric, fontsize=12, fontweight='bold', pad=10)
+            ax.set_xlabel("")
             ax.set_xticks(range(len(plot_df.index)))
-            ax.set_xticklabels(plot_df.index, rotation=30, ha='right')
-            ax.grid(axis='y', linestyle='--', alpha=0.5)
+            ax.set_xticklabels(plot_df.index, rotation=45, ha='right', fontsize=10)
+
+            # Add gridlines for better readability
+            ax.grid(axis='y', linestyle='--', alpha=0.3)
+
+            # Set y-axis limit for percentage
             if metric == "Stoksuzluk Oranı (%)":
-                ax.set_ylim(0, 100)
-        plt.tight_layout()
+                ax.set_ylim(0, min(105, plot_df[metric].max() * 1.2))
+
+            # Format y-axis labels
+            if metric == "Toplam Maliyet (₺)":
+                ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x):,}'))
+            elif metric == "Toplam Üretim":
+                ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x):,}'))
+
+            # Add a subtle box around the plot
+            for spine in ax.spines.values():
+                spine.set_edgecolor('#dddddd')
+
+        # Add a title for the whole figure
+        fig.suptitle('Model Karşılaştırma Analizi', fontsize=16, y=0.98)
+
+        # Add a legend at the bottom showing model colors
+        legend_elements = [plt.Rectangle((0, 0), 1, 1, color=colors[i], alpha=0.85)
+                           for i in range(len(plot_df.index))]
+        fig.legend(legend_elements, plot_df.index,
+                   loc='lower center', ncol=len(plot_df.index),
+                   bbox_to_anchor=(0.5, 0.01), frameon=False)
+
+        plt.tight_layout(rect=[0, 0.05, 1, 0.95])  # Adjust layout to make room for the title and legend
         st.pyplot(fig)
         st.markdown("---")
+
         # Detaylı tabloyu da göster
         st.subheader("Detaylı Karşılaştırma Tablosu")
         results_detail_list = []
@@ -934,3 +985,8 @@ if model == "Modelleri Karşılaştır":
         # Add explanation about Model 1's production cost
         if any(name[0] == "Model 1" for name in model_names):
             st.info("Model 1'de Üretim Birim Maliyeti, iç üretim ve fason üretimin ağırlıklı ortalamasıdır.")
+
+        st.markdown("---")
+        # Detailed comparison visualizations
+
+
