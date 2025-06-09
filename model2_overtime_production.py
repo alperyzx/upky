@@ -20,6 +20,8 @@ normal_hourly_wage = params['costs']['hourly_wage']
 overtime_cost_per_hour = normal_hourly_wage * overtime_wage_multiplier
 production_cost = params['costs']['production_cost']
 hiring_cost = params['costs']['hiring_cost']
+initial_inventory = params['capacity']['initial_inventory']
+safety_stock_ratio = params['capacity']['safety_stock_ratio']
 months = len(demand)
 
 # Check that demand and working_days have the same length
@@ -62,7 +64,9 @@ def solve_model(
     max_overtime_per_worker,
     stockout_cost,
     normal_hourly_wage,
-    production_cost
+    production_cost,
+    initial_inventory,
+    safety_stock_ratio
 ):
     """
     Core model logic for Model 2 (Fazla Mesaili Üretim)
@@ -85,7 +89,8 @@ def solve_model(
     production = np.zeros(months)
     overtime_hours = np.zeros(months)
     inventory = np.zeros(months)
-    prev_inventory = 0
+    stockout = np.zeros(months)
+    prev_inventory = initial_inventory
     results = []
     total_cost = 0
     total_holding = 0
@@ -117,22 +122,30 @@ def solve_model(
 
         production[t] = prod
         overtime_hours[t] = ot_hours
-        inventory[t] = prev_inventory + prod - demand[t]
+        # Stok hesabı ve güvenlik stoğu kontrolü
+        ending_inventory = prev_inventory + prod - demand[t]
+        min_safety_stock = safety_stock_ratio * demand[t]
+        # Stok ve karşılanmayan talep tam sayı olmalı
+        if ending_inventory >= min_safety_stock:
+            inventory[t] = int(round(ending_inventory))
+            stockout[t] = 0
+        else:
+            inventory[t] = int(round(min_safety_stock))
+            stockout[t] = int(round(min_safety_stock - ending_inventory))
         holding = max(inventory[t], 0) * holding_cost
-        stockout = abs(min(inventory[t], 0)) * stockout_cost
+        stockout_cost_val = stockout[t] * stockout_cost
         overtime = max(ot_hours, 0) * overtime_cost_per_hour
         normal_labor_cost = workers * working_days[t] * daily_hours * normal_hourly_wage
         prod_cost = prod * production_cost
 
-        total_cost += holding + stockout + overtime + normal_labor_cost + prod_cost
+        total_cost += holding + stockout_cost_val + overtime + normal_labor_cost + prod_cost
         total_holding += holding
-        total_stockout += stockout
+        total_stockout += stockout_cost_val
         total_overtime += overtime
         total_normal_labor += normal_labor_cost
         total_production_cost += prod_cost
-
         results.append([
-            t+1, workers, prod, ot_hours, inventory[t], holding, stockout, overtime, normal_labor_cost, prod_cost
+            t+1, workers, prod, ot_hours, inventory[t], holding, stockout[t], overtime, normal_labor_cost, prod_cost
         ])
         prev_inventory = inventory[t]
 
@@ -151,6 +164,7 @@ def solve_model(
         'production': production,
         'overtime_hours': overtime_hours,
         'inventory': inventory,
+        'stockout': stockout,
         'total_cost': total_cost,
         'total_holding': total_holding,
         'total_stockout': total_stockout,
@@ -159,8 +173,8 @@ def solve_model(
         'total_production_cost': total_production_cost,
         'total_hiring_cost': total_hiring_cost,
         'total_produced': total_produced,
-        'total_unfilled': total_unfilled,
-        'optimal_workers': optimal_workers  # Optimal işçi sayısını sonuçlara ekle
+        'total_unfilled': np.sum(stockout),
+        'optimal_workers': optimal_workers
     }
 
 def birim_maliyet_analizi(
@@ -190,7 +204,8 @@ def print_results():
     model_results = solve_model(
         demand, working_days, holding_cost, labor_per_unit, workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
-        stockout_cost, normal_hourly_wage, production_cost
+        stockout_cost, normal_hourly_wage, production_cost,
+        initial_inventory, safety_stock_ratio
     )
 
     # Extract variables from model_results
@@ -306,13 +321,16 @@ def maliyet_analizi(
     overtime_wage_multiplier=overtime_wage_multiplier,
     max_overtime_per_worker=max_overtime_per_worker,
     normal_hourly_wage=normal_hourly_wage,
-    production_cost=production_cost
+    production_cost=production_cost,
+    initial_inventory=initial_inventory,
+    safety_stock_ratio=safety_stock_ratio
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, working_days, holding_cost, labor_per_unit, workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
-        stockout_cost, normal_hourly_wage, production_cost
+        stockout_cost, normal_hourly_wage, production_cost,
+        initial_inventory, safety_stock_ratio
     )
 
     total_production = model_results['total_produced']

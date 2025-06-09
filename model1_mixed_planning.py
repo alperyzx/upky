@@ -51,8 +51,8 @@ def solve_model(
     production_cost,
     overtime_wage_multiplier,
     max_overtime_per_worker,
-    initial_inventory=0,
-    safety_stock_ratio=0.10
+    initial_inventory,
+    safety_stock_ratio
 ):
     T = len(demand)
     # Model
@@ -340,14 +340,17 @@ def maliyet_analizi(
     hourly_wage=hourly_wage,
     production_cost=production_cost,
     overtime_wage_multiplier=overtime_wage_multiplier,
-    max_overtime_per_worker=max_overtime_per_worker
+    max_overtime_per_worker=max_overtime_per_worker,
+    initial_inventory=initial_inventory,
+    safety_stock_ratio=safety_stock_ratio
 ):
     # Solve model using the shared function
     model_vars = solve_model(
         demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
         hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
         max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
-        production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio
+        production_cost, overtime_wage_multiplier, max_overtime_per_worker,
+        initial_inventory, safety_stock_ratio
     )
 
     # Extract variables from model_vars

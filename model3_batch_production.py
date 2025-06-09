@@ -25,6 +25,10 @@ scale_threshold = params['efficiency']['scale_threshold']
 max_efficiency = params['efficiency']['max_efficiency']
 scale_factor = params['efficiency']['scale_factor']
 
+# Kapasite parametrelerini oku
+initial_inventory = params['capacity']['initial_inventory']
+safety_stock_ratio = params['capacity']['safety_stock_ratio']
+
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
     raise ValueError(f"Length of demand ({len(demand)}) and working_days ({len(working_days)}) must be equal.")
@@ -81,7 +85,9 @@ def solve_model(
     labor_per_unit,
     daily_hours,
     production_cost,
-    worker_monthly_cost=None
+    worker_monthly_cost,
+    initial_inventory,
+    safety_stock_ratio
 ):
     """
     Core model logic for Model 3 (Toplu Üretim ve Stoklama)
@@ -124,7 +130,7 @@ def solve_model(
     production = np.zeros(months)
     inventory = np.zeros(months)
     real_inventory = np.zeros(months)  # To track actual non-negative inventory levels
-    prev_inventory = 0
+    prev_inventory = initial_inventory
     results = []
     total_cost = 0
 
@@ -137,11 +143,16 @@ def solve_model(
         production[t] = monthly_capacity[t]
         inventory[t] = prev_inventory + production[t] - demand_array[t]
 
-        # Calculate actual inventory (cannot be negative) and unfilled demand separately
-        real_inventory[t] = max(0, inventory[t])
-        unfilled = abs(min(inventory[t], 0))
+        # Güvenlik stoğu ve karşılanmayan talep kontrolü, tam sayı olarak
+        min_safety_stock = safety_stock_ratio * demand_array[t]
+        if inventory[t] >= min_safety_stock:
+            real_inventory[t] = int(round(inventory[t]))
+            unfilled = 0
+        else:
+            real_inventory[t] = int(round(min_safety_stock))
+            unfilled = int(round(min_safety_stock - inventory[t]))
 
-        holding = real_inventory[t] * holding_cost
+        holding = max(real_inventory[t], 0) * holding_cost
         stockout = unfilled * stockout_cost
         labor_cost = workers * worker_monthly_cost
         prod_cost = production[t] * production_cost
@@ -151,7 +162,7 @@ def solve_model(
         results.append([
             t+1, production[t], real_inventory[t], holding, stockout, labor_cost, prod_cost, unfilled
         ])
-        prev_inventory = inventory[t]
+        prev_inventory = real_inventory[t]
 
     headers = [
         'Ay', 'Üretim', 'Stok', 'Stok Maliyeti', 'Stoksuzluk Maliyeti',
@@ -196,7 +207,8 @@ def print_results():
     # Use solve_model to get the model variables
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, workers,
-        labor_per_unit, daily_hours, production_cost, worker_monthly_cost
+        labor_per_unit, daily_hours, production_cost, worker_monthly_cost,
+        initial_inventory, safety_stock_ratio
     )
 
     df = model_results['df']
@@ -328,13 +340,16 @@ def maliyet_analizi(
     daily_hours=daily_hours,
     production_cost=production_cost,
     worker_monthly_cost=worker_monthly_cost,
-    hiring_cost=params['costs']['hiring_cost']
+    hiring_cost=params['costs']['hiring_cost'],
+    initial_inventory=initial_inventory,
+    safety_stock_ratio=safety_stock_ratio
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost,
         workers, labor_per_unit, daily_hours,
-        production_cost, worker_monthly_cost
+        production_cost, worker_monthly_cost,
+        initial_inventory, safety_stock_ratio
     )
 
     total_production = model_results['total_produced']

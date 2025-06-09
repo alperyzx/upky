@@ -18,6 +18,8 @@ cost_supplier_A = params['costs']['cost_supplier_A']
 cost_supplier_B = params['costs']['cost_supplier_B']
 capacity_supplier_A = params['capacity']['capacity_supplier_A']
 capacity_supplier_B = params['capacity']['capacity_supplier_B']
+initial_inventory = params['capacity']['initial_inventory']
+safety_stock_ratio = params['capacity']['safety_stock_ratio']
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -31,7 +33,9 @@ def solve_model(
     cost_supplier_A,
     cost_supplier_B,
     capacity_supplier_A,
-    capacity_supplier_B
+    capacity_supplier_B,
+    initial_inventory,
+    safety_stock_ratio
 ):
     """
     Core model logic for the outsourcing comparison model (Model 5)
@@ -61,10 +65,13 @@ def solve_model(
     for t in range(months):
         # Talep karşılanmalı (tedarik + önceki stok + karşılanmayan talep = talep + yeni stok)
         if t == 0:
-            prev_inventory = 0
+            prev_inventory = initial_inventory
         else:
             prev_inventory = inventory[t-1]
         decision_model += (out_A[t] + out_B[t] + prev_inventory + stockout[t] == demand[t] + inventory[t])
+
+        # Güvenlik stoğu kısıtı
+        decision_model += (inventory[t] >= int(round(safety_stock_ratio * demand[t])))
 
         # Tedarikçi kapasiteleri
         decision_model += (out_A[t] <= capacity_supplier_A)  # A tedarikçisi sınırlı kapasite
@@ -153,7 +160,8 @@ def print_results():
     # Get model results by running the model
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, cost_supplier_A,
-        cost_supplier_B, capacity_supplier_A, capacity_supplier_B
+        cost_supplier_B, capacity_supplier_A, capacity_supplier_B,
+        initial_inventory, safety_stock_ratio
     )
 
     # Use the model results from the shared solver
@@ -261,13 +269,16 @@ def maliyet_analizi(
     cost_supplier_A=cost_supplier_A,
     cost_supplier_B=cost_supplier_B,
     capacity_supplier_A=capacity_supplier_A,
-    capacity_supplier_B=capacity_supplier_B
+    capacity_supplier_B=capacity_supplier_B,
+    initial_inventory=initial_inventory,
+    safety_stock_ratio=safety_stock_ratio
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost,
         cost_supplier_A, cost_supplier_B,
-        capacity_supplier_A, capacity_supplier_B
+        capacity_supplier_A, capacity_supplier_B,
+        initial_inventory, safety_stock_ratio
     )
 
     toplam_maliyet = model_results['toplam_maliyet']

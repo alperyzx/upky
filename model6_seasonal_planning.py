@@ -23,6 +23,8 @@ labor_per_unit = params['workforce']['labor_per_unit']
 workers = params['workforce']['workers']
 max_workers = params['workforce']['max_workers']
 max_workforce_change = params['workforce']['max_workforce_change']
+initial_inventory = params['capacity']['initial_inventory']
+safety_stock_ratio = params['capacity']['safety_stock_ratio']
 
 
 def solve_model(
@@ -38,7 +40,9 @@ def solve_model(
     firing_cost,
     workers,
     max_workers,
-    max_workforce_change
+    max_workforce_change,
+    initial_inventory,
+    safety_stock_ratio
 ):
     """
     Core model logic for seasonal planning model (Model 6)
@@ -75,17 +79,17 @@ def solve_model(
         model += y_production[t] <= y_workers[t] * working_days[t] * daily_hours / labor_per_unit
         # Stok ve stoksuzluk denklemi
         if t == 0:
-            prev_inventory = 0
+            prev_inventory = initial_inventory
         else:
             prev_inventory = y_inventory[t-1]
         model += prev_inventory + y_production[t] + y_stockout[t] == demand[t] + y_inventory[t]
+        # Güvenlik stoğu kısıtı
+        model += y_inventory[t] >= int(round(safety_stock_ratio * demand[t]))
         model += y_inventory[t] >= 0
         model += y_stockout[t] >= 0
         # İşgücü değişim denklemi
         if t == 0:
-            # Start with 0 workers and hire the initial workers in the first period
             model += y_workers[t] == y_hire[t] - y_fire[t]
-            # Force hiring the minimum number of workers in the first period
             model += y_hire[t] >= workers
         else:
             model += y_workers[t] == y_workers[t-1] + y_hire[t] - y_fire[t]
@@ -186,7 +190,8 @@ def print_results():
     model_results = solve_model(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
-        hiring_cost, firing_cost, workers, max_workers, max_workforce_change
+        hiring_cost, firing_cost, workers, max_workers, max_workforce_change,
+        initial_inventory, safety_stock_ratio
     )
 
     df = model_results['df']
@@ -294,8 +299,8 @@ def birim_maliyet_analizi(total_demand, total_produced, total_unfilled, total_co
         avg_unit_cost = total_cost / total_produced
         avg_labor_unit = total_labor_cost / total_produced
         avg_prod_unit = total_production_cost / total_produced
-        avg_hiring_unit = total_hiring_cost / total_produced if total_hiring_cost else 0
-        avg_firing_unit = total_firing_cost / total_produced if total_firing_cost else 0
+        avg_hiring_unit = total_hiring_cost / total_produced
+        avg_firing_unit = total_firing_cost / total_produced
         avg_holding_unit = total_holding / total_produced
         avg_stockout_unit = total_stockout / total_produced
         other_costs = total_holding + total_stockout + total_hiring_cost + total_firing_cost
@@ -329,13 +334,16 @@ def maliyet_analizi(
     firing_cost=firing_cost,
     workers=workers,
     max_workers=max_workers,
-    max_workforce_change=max_workforce_change
+    max_workforce_change=max_workforce_change,
+    initial_inventory=initial_inventory,
+    safety_stock_ratio=safety_stock_ratio
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
-        hiring_cost, firing_cost, workers, max_workers, max_workforce_change
+        hiring_cost, firing_cost, workers, max_workers, max_workforce_change,
+        initial_inventory, safety_stock_ratio
     )
 
     # Extract results

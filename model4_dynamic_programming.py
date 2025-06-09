@@ -22,6 +22,8 @@ max_workforce_change = params['workforce']['max_workforce_change']
 months = len(demand)
 hourly_wage = params['costs']['hourly_wage']
 production_cost = params['costs']['production_cost']
+initial_inventory = params['capacity']['initial_inventory']
+safety_stock_ratio = params['capacity']['safety_stock_ratio']
 
 # Check that demand and working_days have the same length
 if len(demand) != len(working_days):
@@ -44,7 +46,9 @@ def solve_model(
     max_workers,
     max_workforce_change,
     hourly_wage,
-    production_cost
+    production_cost,
+    initial_inventory,
+    safety_stock_ratio
 ):
     """
     Core model logic for Dynamic Programming model (Model 4)
@@ -120,19 +124,25 @@ def solve_model(
     hiring_seq = []
     firing_seq = []
 
+    # Başlangıç envanteri
+    prev_inventory = initial_inventory
     prev_w = 0  # Başlangıçta sıfır işçi var
     for t, w in enumerate(workers_seq):
         cap = prod_capacity(w, t)
         prod = min(cap, demand[t])
-        unmet = max(0, demand[t] - cap)
-        inventory = max(0, cap - demand[t])
+        # Stok ve güvenlik stoğu kontrolü
+        ending_inventory = prev_inventory + prod - demand[t]
+        min_safety_stock = safety_stock_ratio * demand[t]
+        if ending_inventory >= min_safety_stock:
+            inventory = int(round(ending_inventory))
+            unmet = 0
+        else:
+            inventory = int(round(min_safety_stock))
+            unmet = int(round(min_safety_stock - ending_inventory))
         labor_cost = w * working_days[t] * daily_hours * hourly_wage
         prod_cost = prod * production_cost
-
-        # İlk dönemde sıfırdan işçi alımı
         hire = max(0, w - prev_w) * hiring_cost
         fire = max(0, prev_w - w) * firing_cost
-
         production_seq.append(prod)
         inventory_seq.append(inventory)
         labor_cost_seq.append(labor_cost)
@@ -141,7 +151,7 @@ def solve_model(
         prod_cost_seq.append(prod_cost)
         hiring_seq.append(hire)
         firing_seq.append(fire)
-
+        prev_inventory = inventory
         prev_w = w
 
     # Calculate totals
@@ -205,13 +215,15 @@ def maliyet_analizi(
     max_workers=max_workers,
     max_workforce_change=max_workforce_change,
     hourly_wage=hourly_wage,
-    production_cost=production_cost
+    production_cost=production_cost,
+    initial_inventory=initial_inventory,
+    safety_stock_ratio=safety_stock_ratio
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
         daily_hours, labor_per_unit, workers, max_workers, max_workforce_change,
-        hourly_wage, production_cost
+        hourly_wage, production_cost, initial_inventory, safety_stock_ratio
     )
 
     toplam_maliyet = model_results['min_cost']
@@ -288,7 +300,7 @@ def print_results():
     model_results = solve_model(
         demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
         daily_hours, labor_per_unit, workers, max_workers, max_workforce_change,
-        hourly_wage, production_cost
+        hourly_wage, production_cost,initial_inventory, safety_stock_ratio
     )
 
     df = model_results['df']

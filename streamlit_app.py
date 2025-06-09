@@ -40,13 +40,13 @@ def get_param(key, subkey=None, default=None):
     except Exception:
         return default
 
-def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage, production_cost, overtime_wage_multiplier, max_overtime_per_worker):
+def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage, production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function from model1_mixed_planning
     model_vars = model1_solver(
         demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
         hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
         max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
-        production_cost, overtime_wage_multiplier, max_overtime_per_worker
+        production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio
     )
 
     # Extract variables from model_vars
@@ -97,12 +97,13 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
 
     return df, toplam_maliyet, model_results
 
-def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost):
+def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = model2_solver(
         demand, working_days, holding_cost, labor_per_unit, workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
-        stockout_cost, normal_hourly_wage, production_cost
+        stockout_cost, normal_hourly_wage, production_cost,
+        initial_inventory, safety_stock_ratio
     )
 
     # Get the dataframe and total_cost from model_results
@@ -111,12 +112,12 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
 
     return df, total_cost, model_results.get('optimal_workers', workers)
 
-def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost=None):
+def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = model3_solver(
         demand, working_days, holding_cost, stockout_cost,
         workers, labor_per_unit, daily_hours,
-        production_cost, worker_monthly_cost
+        production_cost, worker_monthly_cost, initial_inventory, safety_stock_ratio
     )
 
     # Use the optimized worker count for all cost calculations
@@ -151,12 +152,12 @@ def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor
 
     return df, adjusted_cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost, optimized_workers, original_workers, optimal_workers
 
-def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, workers, max_workers, max_workforce_change, hourly_wage, stockout_cost, production_cost):
+def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, workers, max_workers, max_workforce_change, hourly_wage, stockout_cost, production_cost,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = model4_solver(
         demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
         daily_hours, labor_per_unit, workers, max_workers, max_workforce_change,
-        hourly_wage, production_cost
+        hourly_wage, production_cost,initial_inventory, safety_stock_ratio
     )
 
     # Extract results from model_results
@@ -183,12 +184,12 @@ def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, dai
 
     return df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit
 
-def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost):
+def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = model5_solver(
         demand, working_days, holding_cost, stockout_cost,
         cost_supplier_A, cost_supplier_B,
-        capacity_supplier_A, capacity_supplier_B
+        capacity_supplier_A, capacity_supplier_B,initial_inventory, safety_stock_ratio
     )
 
     # Extract the dataframe and total cost from the results
@@ -197,12 +198,12 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
 
     return df, toplam_maliyet
 
-def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change):
+def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = model6_solver(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
-        hiring_cost, firing_cost, workers, max_workers, max_workforce_change
+        hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio
     )
 
     # Extract the results from the model
@@ -316,12 +317,15 @@ if model == "Karma Planlama (Model 1)":
         production_cost = st.number_input("Birim Üretim Maliyeti (TL)", min_value=1, max_value=1000, value=int(model1.production_cost), step=1, key="m1_production_cost")
         overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=float(model1.overtime_wage_multiplier), step=0.1, key="m1_overtime_multiplier")
         max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=int(model1.max_overtime_per_worker), step=1, key="m1_max_overtime")
+        initial_inventory = 0  # Kullanıcıdan istemiyoruz, default 0 gönderiyoruz.
+        safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m1_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m1_run")
     if run_model:
         df, toplam_maliyet, model_vars = model1_run(
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
             outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost,
-            hourly_wage, production_cost, overtime_wage_multiplier=overtime_wage_multiplier, max_overtime_per_worker=max_overtime_per_worker
+            hourly_wage, production_cost, overtime_wage_multiplier=overtime_wage_multiplier, max_overtime_per_worker=max_overtime_per_worker,
+            initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -395,26 +399,20 @@ if model == "Fazla Mesaili Üretim (Model 2)":
     st.header("Fazla Mesaili Üretim (Model 2)")
     with st.sidebar:
         demand, workers_input, working_days, selected_demand_type = select_demand_type_and_workers("m2")
-
         # Optimal işçi sayısını hesapla
         from model2_overtime_production import calculate_optimal_workers
         optimal_workers = calculate_optimal_workers(
             demand, working_days,
-            st.session_state.get("m2_daily", model2.daily_hours),  # Fixed: Use model2.daily_hours instead of daily_hours
+            st.session_state.get("m2_daily", model2.daily_hours),
             st.session_state.get("m2_labor", model2.labor_per_unit),
             st.session_state.get("m2_max_overtime", model2.max_overtime_per_worker)
         )
-
-        # İşçi sayısını ekranda gösterirken optimum değeri de belirt
         st.info(f"Talep ve parametrelere göre optimal işçi sayısı: {optimal_workers}")
-
-        # Kullanıcının girdiği değer mi yoksa optimal değer mi kullanılacak?
         use_optimal = st.checkbox("Optimal işçi sayısını kullan", value=True)
         if use_optimal:
             workers = optimal_workers
         else:
             workers = workers_input
-
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model2.holding_cost), key="m2_holding", step=1)
         labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(model2.labor_per_unit), key="m2_labor", step=0.1)
         daily_hours = st.number_input("Günlük Çalışma Saati", min_value=1, max_value=24, value=model2.daily_hours, key="m2_daily", step=1)
@@ -424,17 +422,17 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         normal_hourly_wage = st.number_input("Normal Saatlik İşçilik Maliyeti (TL)", min_value=1, max_value=1000, value=model2.normal_hourly_wage, step=1, key="m2_normal_wage")
         production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=model2.production_cost, key="m2_prod_cost", step=1)
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(model2.hiring_cost), step=1, key="m2_hire")
+        initial_inventory = 0
+        safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m2_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m2_run")
     if run_model:
         df_table, total_cost, optimal_workers = model2_run(
             demand, working_days, holding_cost, labor_per_unit, workers, daily_hours,
-            overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost
+            overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost,
+            initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
-
-        # Kullanıcıya optimal işçi sayısını göster
         if workers != optimal_workers:
             st.warning(f"Kullanılan işçi sayısı ({workers}) optimal seviyeden ({optimal_workers}) farklı. Model verimliliği etkilenebilir.")
-
         st.subheader("Sonuç Tablosu")
         st.dataframe(df_table, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {total_cost:,.2f} TL")
@@ -499,9 +497,12 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         worker_monthly_cost = st.number_input("Aylık İşçi Ücreti (TL)", min_value=1, max_value=100000, value=int(model3.worker_monthly_cost), key="m3_worker_monthly_cost", step=1)
         production_cost = st.number_input("Üretim Maliyeti (TL)", min_value=1, max_value=100, value=int(model3.production_cost), key="m3_prod_cost", step=1)
         hiring_cost = st.number_input("İşçi Alım Maliyeti (TL)", min_value=0, max_value=5000, value=int(params['costs']['hiring_cost']), key="m3_hire", step=1)
+        initial_inventory = 0
+        safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m3_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m3_run")
     if run_model:
-        df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost, optimized_workers, original_workers, optimal_workers = model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost)
+        (df, cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost, optimized_workers,
+         original_workers, optimal_workers) = model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio)
         # Inform user if worker count was optimized
         if optimized_workers != original_workers:
             st.warning(f"Girdiğiniz işçi sayısı ({original_workers}) modele göre optimize edilerek {optimized_workers} olarak ayarlandı. (Optimal: {optimal_workers}, izin verilen aralık: {int(optimal_workers*0.9)} - {int(optimal_workers*1.1)})\nİşe alım maliyeti ve tüm hesaplamalar optimize edilen işçi sayısına göre yapılmıştır.")
@@ -559,9 +560,15 @@ if model == "Dinamik Programlama (Model 4)":
         max_workers = st.number_input("Maksimum İşçi", 1, 100, int(model4.max_workers), key="m4_max_workers")
         max_workforce_change = st.number_input("Aylık İşgücü Değişim Sınırı", 1, 100, int(model4.max_workforce_change), key="m4_max_workforce")
         hourly_wage = st.number_input("Saatlik Ücret (TL)", min_value=1, max_value=1000, value=int(get_param('costs', 'hourly_wage', 10)), step=1, key="m4_hourly_wage")
+        initial_inventory = 0
+        safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="m4_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m4_run")
     if run_model:
-        df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit = model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, workers, max_workers, max_workforce_change, hourly_wage, stockout_cost,production_cost)
+        (df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced,
+         total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit) = model4_run(
+            demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit,
+            workers, max_workers, max_workforce_change, hourly_wage, stockout_cost,production_cost,
+            initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio)
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
         st.success(f"Toplam Maliyet: {min_cost:,.2f} TL")
@@ -618,10 +625,13 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         capacity_supplier_A = st.number_input("Tedarikçi A Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_A), key="m5_cap_A")
         capacity_supplier_B = st.number_input("Tedarikçi B Kapasitesi (adet)", 1, 10000, int(model5.capacity_supplier_B), key="m5_cap_B")
         stockout_cost = st.number_input("Stoksuzluk Maliyeti (TL/adet)", 1, 9999, int(model5.stockout_cost), key="m5_stockout")
+        initial_inventory = 0
+        safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5,
+                                       key="m5_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m5_run")
     if run_model:
         df, toplam_maliyet = model5_run(
-            demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost
+            demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
         st.subheader("Sonuç Tablosu")
         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -683,10 +693,14 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         firing_cost = st.number_input("İşçi Çıkarma Maliyeti (TL)", 0, 5000, int(model6.firing_cost), key="m6_fire")
         max_workers = st.number_input("Maksimum İşçi", 1, 100, int(model6.max_workers), key="m6_max_workers")
         max_workforce_change = st.number_input("Aylık İşgücü Değişim Sınırı", 1, 100, int(model6.max_workforce_change), key="m6_max_workforce")
+        initial_inventory = 0
+        safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5,
+                                       key="m6_safety_stock_ratio") / 100
         run_model = st.button("Modeli Çalıştır", key="m6_run")
     if run_model:
         df, total_cost, needed_workers, max_production = model6_run(
-            demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change
+            demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours,
+            hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
         st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Gerekli Optimum İşçi Sayısı: {needed_workers}")
         st.subheader("Sonuç Tablosu")
@@ -764,6 +778,8 @@ if model == "Modelleri Karşılaştır":
         labor_per_unit = st.number_input("Birim İşgücü (saat)", min_value=0.1, max_value=10.0, value=float(get_param('workforce', 'labor_per_unit', 4)), step=0.1, key="cmp_labor")
         max_overtime_per_worker = st.number_input("Maks. Fazla Mesai (saat/işçi)", min_value=0, max_value=100, value=int(get_param('costs', 'max_overtime_per_worker', 20)), step=1, key="cmp_max_overtime")
         overtime_wage_multiplier = st.number_input("Fazla Mesai Ücret Çarpanı", min_value=1.0, max_value=5.0, value=float(get_param('costs', 'overtime_wage_multiplier', 1.5)), step=0.1, key="cmp_overtime_multiplier")
+        initial_inventory = 0
+        safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="cmp_safety_stock_ratio") / 100
 
         # Add more fields as needed for other models
         compare_btn = st.button("Modelleri Karşılaştır", key="cmp_compare_btn")
@@ -787,7 +803,9 @@ if model == "Modelleri Karşılaştır":
             "max_overtime_per_worker": st.session_state.cmp_max_overtime,
             "overtime_wage_multiplier": st.session_state.cmp_overtime_multiplier,
             "working_days": working_days,
-            "workers": st.session_state.cmp_workers
+            "workers": st.session_state.cmp_workers,
+            "initial_inventory": initial_inventory,
+            "safety_stock_ratio": safety_stock_ratio
         }
 
         model_names = [
