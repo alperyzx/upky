@@ -233,7 +233,8 @@ def select_demand_type_and_workers(model_key):
         "normal": "Normal Talep",
         "high": "Yüksek Talep",
         "veryHigh": "Aşırı Yüksek Talep",
-        "seasonal": "Mevsimsel Talep"
+        "seasonal": "Mevsimsel Talep",
+        "highSeasonal": "Mevsimsel Yüksek Talep"
     }
     # Get the demand types from params
     demand_types = list(params['demand'].keys())
@@ -274,7 +275,7 @@ def select_demand_type_and_workers(model_key):
 
     # Calculate worker multiplier based on demand type
     worker_multiplier = 1
-    if selected_demand_type == "high":
+    if selected_demand_type == "high" or selected_demand_type == "highSeasonal":
         worker_multiplier = 5
     elif selected_demand_type == "veryHigh":
         worker_multiplier = 10
