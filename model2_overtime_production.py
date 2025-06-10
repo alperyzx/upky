@@ -278,18 +278,19 @@ def print_results():
         print('matplotlib kütüphanesi eksik. Kurmak için: pip install matplotlib')
         return
 
-    # Grafik: Fazla Mesai saatlerini bar olarak göster
+    # Grafik: Üretim bar (skyblue), Fazla Mesai çizgi (orange), Stok çizgi (red, opsiyonel)
     months_list = df['Ay'].tolist()
     fig, ax1 = plt.subplots(figsize=(10,6))
-    ax1.bar(months_list, overtime_hours, color='orange', label='Fazla Mesai (saat)', alpha=0.7)
+    ax1.bar(months_list, production, color='skyblue', label='Üretim', alpha=0.7)
     ax1.set_xlabel('Ay')
-    ax1.set_ylabel('Fazla Mesai (saat)', color='orange')
-    ax1.tick_params(axis='y', labelcolor='orange')
+    ax1.set_ylabel('Üretim (adet)', color='skyblue')
+    ax1.tick_params(axis='y', labelcolor='skyblue')
     ax2 = ax1.twinx()
-    ax2.plot(months_list, production, marker='s', label='Üretim', color='green')
-    ax2.plot(months_list, inventory, marker='d', label='Stok', color='red')
-    ax2.set_ylabel('Adet', color='gray')
-    ax2.tick_params(axis='y', labelcolor='gray')
+    ax2.plot(months_list, overtime_hours, marker='o', label='Fazla Mesai (saat)', color='orange', linewidth=2)
+    # Stok çizgisi de eklenebilir, istenirse aşağıdaki satırı açabilirsiniz:
+    # ax2.plot(months_list, inventory, marker='d', label='Stok', color='red', linestyle='--')
+    ax2.set_ylabel('Fazla Mesai (saat)', color='orange')
+    ax2.tick_params(axis='y', labelcolor='orange')
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
