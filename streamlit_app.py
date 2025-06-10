@@ -21,12 +21,41 @@ from model4_dynamic_programming import ayrintili_toplam_maliyetler as m4_ayrinti
 from model5_outsourcing_comparison import ayrintili_toplam_maliyetler as m5_ayrintili, birim_maliyet_analizi as m5_birim, solve_model as model5_solver
 from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili, birim_maliyet_analizi as m6_birim, solve_model as model6_solver
 
+@st.cache_data
+def run_model1_solver(*args, **kwargs):
+    return model1_solver(*args, **kwargs)
+
+@st.cache_data
+def run_model2_solver(*args, **kwargs):
+    return model2_solver(*args, **kwargs)
+
+@st.cache_data
+def run_model3_solver(*args, **kwargs):
+    return model3_solver(*args, **kwargs)
+
+@st.cache_data
+def run_model4_solver(*args, **kwargs):
+    return model4_solver(*args, **kwargs)
+
+@st.cache_data
+def run_model5_solver(*args, **kwargs):
+    return model5_solver(*args, **kwargs)
+
+@st.cache_data
+def run_model6_solver(*args, **kwargs):
+    return model6_solver(*args, **kwargs)
+
+
 st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initial_sidebar_state="expanded")
 st.title("Üretim Planlama Modelleri Karar Destek Arayüzü")
 
 # Load parameters from YAML
-with open("parametreler.yaml", "r") as f:
-    params = yaml.safe_load(f)
+@st.cache_data
+def load_params():
+    with open("parametreler.yaml", "r") as f:
+        return yaml.safe_load(f)
+
+params = load_params()
 
 model = st.sidebar.selectbox("Model Seçiniz", params['models'])
 
@@ -42,7 +71,7 @@ def get_param(key, subkey=None, default=None):
 
 def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage, production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function from model1_mixed_planning
-    model_vars = model1_solver(
+    model_vars = run_model1_solver(
         demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
         hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
         max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
@@ -99,7 +128,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
-    model_results = model2_solver(
+    model_results = run_model2_solver(
         demand, working_days, holding_cost, labor_per_unit, workers,
         daily_hours, overtime_wage_multiplier, max_overtime_per_worker,
         stockout_cost, normal_hourly_wage, production_cost,
@@ -114,7 +143,7 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
 
 def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
-    model_results = model3_solver(
+    model_results = run_model3_solver(
         demand, working_days, holding_cost, stockout_cost,
         workers, labor_per_unit, daily_hours,
         production_cost, worker_monthly_cost, initial_inventory, safety_stock_ratio
@@ -154,7 +183,7 @@ def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor
 
 def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, workers, max_workers, max_workforce_change, hourly_wage, stockout_cost, production_cost,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
-    model_results = model4_solver(
+    model_results = run_model4_solver(
         demand, working_days, holding_cost, stockout_cost, hiring_cost, firing_cost,
         daily_hours, labor_per_unit, workers, max_workers, max_workforce_change,
         hourly_wage, production_cost,initial_inventory, safety_stock_ratio
@@ -186,7 +215,7 @@ def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, dai
 
 def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
-    model_results = model5_solver(
+    model_results = run_model5_solver(
         demand, working_days, holding_cost, stockout_cost,
         cost_supplier_A, cost_supplier_B,
         capacity_supplier_A, capacity_supplier_B,initial_inventory, safety_stock_ratio
@@ -200,7 +229,7 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
 
 def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
-    model_results = model6_solver(
+    model_results = run_model6_solver(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
         hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio
