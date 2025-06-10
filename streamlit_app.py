@@ -359,6 +359,7 @@ if model == "Karma Planlama (Model 1)":
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close(fig)
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
         detay = m1_ayrintili(
@@ -470,6 +471,7 @@ if model == "Fazla Mesaili Üretim (Model 2)":
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close(fig)
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
         detay = m2_ayrintili(
@@ -543,6 +545,7 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close(fig)
 
         # Ayrıntılı toplam maliyetler ve Birim Maliyet Analizi
         detay = m3_ayrintili(df)
@@ -618,6 +621,7 @@ if model == "Dinamik Programlama (Model 4)":
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close(fig)
 
         # Ayrıntılı Toplam Maliyetler ve Birim Maliyet Analizi
         detay = m4_ayrintili(total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing)
@@ -686,6 +690,8 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close(fig)
+
         # Ayrıntılı Toplam Maliyetler
         total_cost_A = df['Tedarikçi A'].sum() * cost_supplier_A
         total_cost_B = df['Tedarikçi B'].sum() * cost_supplier_B
@@ -763,6 +769,7 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         plt.grid(True, linestyle='--', alpha=0.5)
         plt.tight_layout()
         st.pyplot(fig)
+        plt.close(fig)
 
         # Ayrıntılı Toplam Maliyetler
         # Convert string formatted costs to float for calculations
@@ -982,6 +989,8 @@ if model == "Modelleri Karşılaştır":
 
         plt.tight_layout(rect=[0, 0.05, 1, 0.95])  # Adjust layout to make room for the title and legend
         st.pyplot(fig)
+        plt.close(fig)
+
         st.markdown("---")
 
         # Detaylı tabloyu da göster
