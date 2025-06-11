@@ -167,6 +167,15 @@ Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaşt
 - İşe alım maliyetleri dahil tüm maliyet kalemlerini hesaplar ve gösterir
 - Güvenlik stok parametreleri kullanıcı tarafından ayarlanabilir
 
+### Bellek Yönetimi ve Performans Optimizasyonu
+- **Cache Yönetimi**: Model solver fonksiyonları `@st.cache_data` ile cache'lenir (TTL: 5 dakika, max 3 entry)
+- **Bellek Temizliği**: Her model çalıştıktan sonra otomatik garbage collection ve bellek temizliği
+- **Memory Monitoring**: Opsiyonel bellek kullanım izleme (psutil ile)
+- **Progress Tracking**: Uzun işlemler için progress bar ve durum göstergesi
+- **Cache Control**: Kullanıcı manuel cache temizleme özelliği
+- **Lifecycle Management**: Büyük veri yapılarının yaşam döngüsü yönetimi
+- **Error Recovery**: Hata durumlarında da bellek temizliği yapılır
+
 ### Temel Akış
 1. **Parametre Girişi:**
    - Yan panelde (sidebar) kullanıcıdan talep, işçilik, stok, kapasite gibi parametreler alınır
@@ -189,8 +198,9 @@ Birim maliyet analizi, tüm modeller için standartlaştırılmış karşılaşt
 - Ana dosya: `streamlit_app.py`
 - Model fonksiyonları: `modelX_*.py` dosyalarında
 - Parametre yönetimi: `parametreler.yaml` dosyasında
-- Kullanılan kütüphaneler: `streamlit`, `pandas`, `numpy`, `matplotlib`, `tabulate`, `PuLP`, `yaml`
+- Kullanılan kütüphaneler: `streamlit`, `pandas`, `numpy`, `matplotlib`, `tabulate`, `PuLP`, `yaml`, `gc`, `psutil`
 - Kodda hata yönetimi ve kullanıcıya açıklama ön planda tutulur
+- Bellek optimizasyonu için cache yönetimi ve garbage collection uygulanır
 - Tüm modellerin çıktıları ortak formatta toplanır ve karşılaştırılır
 - Her model için ayrı bir `maliyet_analizi` fonksiyonu uygulanmıştır ve tüm modelleri aynı standart formatta çıktı üretir
 - Talep tipine göre (normal, yüksek, aşırı yüksek, mevsimsel) optimum işçi sayısı önerisi uygulanmıştır

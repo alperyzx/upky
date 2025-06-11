@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import yaml
 import inspect
+import gc  # Garbage collection için
+import psutil  # Memory monitoring için (opsiyonel)
+import time
 
 # Import default parameters from model files
 import model1_mixed_planning as model1
@@ -21,29 +24,56 @@ from model4_dynamic_programming import ayrintili_toplam_maliyetler as m4_ayrinti
 from model5_outsourcing_comparison import ayrintili_toplam_maliyetler as m5_ayrintili, birim_maliyet_analizi as m5_birim, solve_model as model5_solver
 from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili, birim_maliyet_analizi as m6_birim, solve_model as model6_solver
 
-@st.cache_data
+# Memory management utilities
+def clear_memory():
+    """Bellek temizliği için kullanılacak fonksiyon"""
+    gc.collect()
+    if hasattr(st, 'cache_data'):
+        # Clear specific caches if needed
+        try:
+            st.cache_data.clear()
+        except:
+            pass
+
+def monitor_memory():
+    """Bellek kullanımını izlemek için (opsiyonel, debug amaçlı)"""
+    try:
+        process = psutil.Process()
+        memory_mb = process.memory_info().rss / 1024 / 1024
+        return memory_mb
+    except:
+        return None
+
+# Cache'li solver fonksiyonları - hash fonksiyonu ekleyelim
+@st.cache_data(ttl=300, max_entries=3)  # 5 dakika TTL, max 3 entry
 def run_model1_solver(*args, **kwargs):
-    return model1_solver(*args, **kwargs)
+    result = model1_solver(*args, **kwargs)
+    return result
 
-@st.cache_data
+@st.cache_data(ttl=300, max_entries=3)
 def run_model2_solver(*args, **kwargs):
-    return model2_solver(*args, **kwargs)
+    result = model2_solver(*args, **kwargs)
+    return result
 
-@st.cache_data
+@st.cache_data(ttl=300, max_entries=3) 
 def run_model3_solver(*args, **kwargs):
-    return model3_solver(*args, **kwargs)
+    result = model3_solver(*args, **kwargs)
+    return result
 
-@st.cache_data
+@st.cache_data(ttl=300, max_entries=3)
 def run_model4_solver(*args, **kwargs):
-    return model4_solver(*args, **kwargs)
+    result = model4_solver(*args, **kwargs)
+    return result
 
-@st.cache_data
+@st.cache_data(ttl=300, max_entries=3)
 def run_model5_solver(*args, **kwargs):
-    return model5_solver(*args, **kwargs)
+    result = model5_solver(*args, **kwargs)
+    return result
 
-@st.cache_data
+@st.cache_data(ttl=300, max_entries=3)
 def run_model6_solver(*args, **kwargs):
-    return model6_solver(*args, **kwargs)
+    result = model6_solver(*args, **kwargs)
+    return result
 
 
 st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initial_sidebar_state="expanded")
@@ -124,6 +154,10 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
         'overtime_hours': overtime_hours
     }
 
+    # Bellek temizliği
+    del model_vars
+    gc.collect()
+
     return df, toplam_maliyet, model_results
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost, initial_inventory, safety_stock_ratio):
@@ -138,8 +172,13 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
     # Get the dataframe and total_cost from model_results
     df = model_results['df']
     total_cost = model_results['total_cost']
+    optimal_workers = model_results.get('optimal_workers', workers)
 
-    return df, total_cost, model_results.get('optimal_workers', workers)
+    # Bellek temizliği
+    del model_results
+    gc.collect()
+
+    return df, total_cost, optimal_workers
 
 def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
@@ -225,6 +264,10 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
     df = model_results['df'][['Ay', 'Tedarikçi A', 'Tedarikçi B', 'Stok', 'Karşılanmayan Talep']]
     toplam_maliyet = model_results['toplam_maliyet']
 
+    # Bellek temizliği
+    del model_results
+    gc.collect()
+
     return df, toplam_maliyet
 
 def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio):
@@ -244,6 +287,10 @@ def model6_run(demand, working_days, holding_cost, stockout_cost, production_cos
 
     # Get the maximum production capacity
     max_production = int(df['Üretim'].max())
+
+    # Bellek temizliği
+    del model_results
+    gc.collect()
 
     return df, total_cost, needed_workers, max_production
 
@@ -567,6 +614,7 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
         fig, ax = plt.subplots(figsize=(10,6))
         ax.bar(months_list, df["Üretim"], color='skyblue', label='Üretim', alpha=0.7)
         ax.plot(months_list, df["Stok"], marker='d', label='Stok', color='red')
+        ax.plot(months_list, df["Karşılanmayan Talep"], marker='x', label='Karşılanmayan Talep', color='black')
         ax.set_xlabel('Ay')
         ax.set_ylabel('Adet')
         ax.legend()
@@ -594,7 +642,6 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
             st.markdown(f"- İşçilik Birim Maliyeti: {birim['labor_unit_cost']:.2f} TL/birim")
             st.markdown(f"- Üretim Birim Maliyeti: {birim['prod_unit_cost']:.2f} TL/birim")
             st.markdown(f"- Diğer Maliyetler (Stok, Stoksuzluk, İşe Alım): {birim['other_unit_cost']:.2f} TL/birim")
-            st.markdown(f"- İşe Alım Maliyeti: {birim['hiring_cost']:,} TL (İşçi başına {hiring_cost:,} TL)")
         else:
             st.markdown("- Ortalama Birim Maliyet: Hesaplanamadı (0 birim üretildi)")
 
@@ -840,6 +887,10 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
 
 if model == "Modelleri Karşılaştır":
     st.header("Modelleri Karşılaştır")
+    
+    # Memory monitoring widget (opsiyonel)
+    memory_placeholder = st.empty()
+    
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("cmp")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(get_param('costs', 'holding_cost', 5)), step=1, key="cmp_holding")
@@ -855,32 +906,24 @@ if model == "Modelleri Karşılaştır":
         initial_inventory = 0
         safety_stock_ratio = st.slider("Güvenlik Stoku Oranı (%)", min_value=0, max_value=100, value=5, key="cmp_safety_stock_ratio") / 100
 
-        # Add more fields as needed for other models
+        # Add clear cache button
+        if st.button("Cache Temizle", key="clear_cache_btn"):
+            clear_memory()
+            st.success("Cache temizlendi!")
+
         compare_btn = st.button("Modelleri Karşılaştır", key="cmp_compare_btn")
 
     # Run comparison on first load or when button pressed
     if compare_btn or st.session_state.get("cmp_first_run", True):
         st.session_state["cmp_first_run"] = False
 
-        # Collect current parameters from sidebar inputs and session state
-        # 'demand' and 'working_days' are already defined in the scope
-        current_params = {
-            "demand": demand,
-            "holding_cost": st.session_state.get("cmp_holding", holding_cost),
-            "stockout_cost": st.session_state.get("cmp_stockout", stockout_cost),
-            "production_cost": st.session_state.get("cmp_production_cost", production_cost),
-            "hiring_cost": st.session_state.get("cmp_hire", hiring_cost),
-            "firing_cost": st.session_state.get("cmp_fire", firing_cost),
-            "hourly_wage": st.session_state.get("cmp_hourly_wage", hourly_wage),
-            "daily_hours": st.session_state.get("cmp_daily_hours", daily_hours),
-            "labor_per_unit": st.session_state.get("cmp_labor", labor_per_unit),
-            "max_overtime_per_worker": st.session_state.get("cmp_max_overtime", max_overtime_per_worker),
-            "overtime_wage_multiplier": st.session_state.get("cmp_overtime_multiplier", overtime_wage_multiplier),
-            "working_days": working_days,
-            "workers": st.session_state.get("cmp_workers", workers),
-            "initial_inventory": initial_inventory,
-            "safety_stock_ratio": safety_stock_ratio
-        }
+        # Clear memory before starting
+        clear_memory()
+        
+        # Monitor memory if available
+        initial_memory = monitor_memory()
+        if initial_memory:
+            memory_placeholder.info(f"Başlangıç bellek kullanımı: {initial_memory:.1f} MB")
 
         model_names = [
             ("Model 1", "Karma Planlama (Model 1)", model1.maliyet_analizi, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"),
@@ -890,9 +933,20 @@ if model == "Modelleri Karşılaştır":
             ("Model 5", "Dış Kaynak Karşılaştırma (Model 5)", model5.maliyet_analizi, "Yok", "Tam fason kullanımı"),
             ("Model 6", "Mevsimsellik ve Dalga (Model 6)", model6.maliyet_analizi, "Orta", "Mevsimsellik ve stok optimizasyonu"),
         ]
+        
         summary_rows = []
+        progress_bar = st.progress(0)
+        
         for idx, (short_name, display_name, func, flex, scenario) in enumerate(model_names, 1):
+            # Update progress
+            progress_bar.progress(idx / len(model_names))
+            
             try:
+                # Monitor memory before each model
+                current_memory = monitor_memory()
+                if current_memory:
+                    st.write(f"🔄 {short_name} çalıştırılıyor... (Bellek: {current_memory:.1f} MB)")
+                
                 sig_params = inspect.signature(func).parameters
                 params_to_pass = {}
 
@@ -918,15 +972,39 @@ if model == "Modelleri Karşılaştır":
                 summary_rows.append([
                     cost, labor_cost, total_prod, stockout_rate, flex, scenario
                 ])
+                
+                # Clear variables after each model
+                del res, cost, labor_cost, total_prod, total_demand, stockout, stockout_rate
+                
+                # Force garbage collection after each model
+                gc.collect()
+                
+                # Small delay to allow memory cleanup
+                time.sleep(0.1)
+                
             except Exception as e:
                 summary_rows.append([None, None, None, None, flex, f"Hata: {str(e)}"])
                 st.error(f"{short_name} hata: {str(e)}")
+                # Clear memory even on error
+                gc.collect()
+
+        # Clear progress bar
+        progress_bar.empty()
+        
+        # Final memory cleanup
+        clear_memory()
+        
+        # Show final memory usage
+        final_memory = monitor_memory()
+        if initial_memory and final_memory:
+            memory_placeholder.success(f"İşlem tamamlandı! Bellek kullanımı: {final_memory:.1f} MB (Başlangıç: {initial_memory:.1f} MB)")
 
         summary_df = pd.DataFrame(
             summary_rows,
             columns=["Toplam Maliyet (₺)", "Toplam İşçilik Maliyeti (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)", "İşgücü Esnekliği", "Uygun Senaryo"],
             index=[m[0] for m in model_names]
         )
+        
         # Sayısal sütunları okunaklı formatla (sıralama bozulmasın diye display_format ile)
         def format_number(val):
             if pd.isnull(val):
@@ -1025,7 +1103,11 @@ if model == "Modelleri Karşılaştır":
         # Detaylı tabloyu da göster
         st.subheader("Detaylı Karşılaştırma Tablosu")
         results_detail_list = []
-        for short_name, display_name, func, _, _ in model_names:
+        detail_progress = st.progress(0)
+        
+        for idx, (short_name, display_name, func, _, _) in enumerate(model_names, 1):
+            detail_progress.progress(idx / len(model_names))
+            
             try:
                 sig_params = inspect.signature(func).parameters
                 params_to_pass_detail = {}
@@ -1039,10 +1121,17 @@ if model == "Modelleri Karşılaştır":
                 res_detail = func(**params_to_pass_detail)
                 res_detail["Model"] = display_name
                 results_detail_list.append(res_detail)
+                
+                # Clear after each model
+                del res_detail
+                gc.collect()
+                
             except Exception as e:
                 results_detail_list.append({"Model": display_name, "Hata": str(e)})
-                # Optionally, display this error in the detailed section as well
-                # st.error(f"{display_name} için detaylı tablo hatası: {str(e)}")
+                gc.collect()
+        
+        detail_progress.empty()
+        
         df_detail = pd.DataFrame(results_detail_list)
 
         cols = ["Model"] + [c for c in df_detail.columns if c != "Model"]
@@ -1051,6 +1140,10 @@ if model == "Modelleri Karşılaştır":
             df_detail[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
             use_container_width=True, hide_index=True
         )
+
+        # Final cleanup
+        del summary_rows, results_detail_list, df_detail
+        clear_memory()
 
         # Add explanation about Model 1's production cost
         if any(name[0] == "Model 1" for name in model_names):
