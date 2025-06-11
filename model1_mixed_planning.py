@@ -406,7 +406,8 @@ def maliyet_analizi(
         avg_other_unit = (total_holding + total_stockout + total_hiring + total_firing) / total_produced
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
-    return {
+    
+    result = {
         "Toplam Maliyet": toplam_maliyet,
         "İşçilik Maliyeti": total_internal_labor,
         "Üretim Maliyeti": total_internal_prod + total_outsource,
@@ -424,6 +425,13 @@ def maliyet_analizi(
         "Diğer Birim Maliyetler": avg_other_unit
     }
 
+    # Bellek temizliği
+    del model_vars
+    import gc
+    gc.collect()
+
+    return result
+
 if __name__ == '__main__':
     try:
         import tabulate
@@ -431,7 +439,3 @@ if __name__ == '__main__':
         print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
         exit(1)
     print_results()
-    # Bellek temizliği
-    del model_vars
-    import gc
-    gc.collect()

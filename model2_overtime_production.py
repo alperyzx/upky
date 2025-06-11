@@ -343,6 +343,7 @@ def maliyet_analizi(
     total_unfilled = model_results['total_unfilled']
     total_demand = sum(demand)
     total_hiring_cost = model_results['total_hiring_cost']
+    total_production_cost = model_results['total_production_cost']
 
     if total_production > 0:
         avg_unit_cost = toplam_maliyet / total_production
@@ -361,7 +362,7 @@ def maliyet_analizi(
         "Toplam Maliyet": toplam_maliyet,
         "İşçilik Maliyeti": total_normal_labor + total_overtime,
         "Fazla Mesai Maliyeti": total_overtime,  # Added this line to include overtime cost separately
-        "Üretim Maliyeti": model_results['total_production_cost'],
+        "Üretim Maliyeti": total_production_cost,
         "Stok Maliyeti": total_holding,
         "Stoksuzluk Maliyeti": total_stockout,
         "İşe Alım Maliyeti": total_hiring_cost,
