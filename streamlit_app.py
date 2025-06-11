@@ -925,6 +925,25 @@ if model == "Modelleri Karşılaştır":
         if initial_memory:
             memory_placeholder.info(f"Başlangıç bellek kullanımı: {initial_memory:.1f} MB")
 
+        # Collect current parameters from sidebar inputs and session state
+        current_params = {
+            "demand": demand,
+            "holding_cost": holding_cost,
+            "stockout_cost": stockout_cost,
+            "production_cost": production_cost,
+            "hiring_cost": hiring_cost,
+            "firing_cost": firing_cost,
+            "hourly_wage": hourly_wage,
+            "daily_hours": daily_hours,
+            "labor_per_unit": labor_per_unit,
+            "max_overtime_per_worker": max_overtime_per_worker,
+            "overtime_wage_multiplier": overtime_wage_multiplier,
+            "working_days": working_days,
+            "workers": workers,
+            "initial_inventory": initial_inventory,
+            "safety_stock_ratio": safety_stock_ratio
+        }
+
         model_names = [
             ("Model 1", "Karma Planlama (Model 1)", model1.maliyet_analizi, "Yüksek", "Karma planlama, işgücü ve fason esnekliği"),
             ("Model 2", "Fazla Mesaili Üretim (Model 2)", model2.maliyet_analizi, "Orta", "Fazla mesai ile esneklik"),
@@ -962,10 +981,10 @@ if model == "Modelleri Karşılaştır":
                     params_to_pass["hiring_cost"] = current_params.get("hiring_cost")
 
                 res = func(**params_to_pass)
-                cost = res.get("Toplam Maliyet", None)
-                labor_cost = res.get("İşçilik Maliyeti", None)
-                total_prod = res.get("Toplam Üretim", None)
-                total_demand = res.get("Toplam Talep", None)
+                cost = res.get("Toplam Maliyet", 0)
+                labor_cost = res.get("İşçilik Maliyeti", 0)
+                total_prod = res.get("Toplam Üretim", 0)
+                total_demand = res.get("Toplam Talep", 1)  # Prevent division by zero
                 stockout = res.get("Karşılanmayan Talep", 0)
                 stockout_rate = (stockout / total_demand * 100) if (total_demand and total_demand > 0) else 0
 
@@ -983,7 +1002,7 @@ if model == "Modelleri Karşılaştır":
                 time.sleep(0.1)
                 
             except Exception as e:
-                summary_rows.append([None, None, None, None, flex, f"Hata: {str(e)}"])
+                summary_rows.append([0, 0, 0, 0, flex, f"Hata: {str(e)}"])
                 st.error(f"{short_name} hata: {str(e)}")
                 # Clear memory even on error
                 gc.collect()
@@ -1005,32 +1024,59 @@ if model == "Modelleri Karşılaştır":
             index=[m[0] for m in model_names]
         )
         
-        # Sayısal sütunları okunaklı formatla (sıralama bozulmasın diye display_format ile)
-        def format_number(val):
-            if pd.isnull(val):
-                return ""
-            if isinstance(val, (int, float)):
-                return f"{val:,.0f}".replace(",", ".")
-            return val
+        # Replace NaN values with 0 before formatting
+        summary_df = summary_df.fillna(0)
+        
         st.subheader("Özet Karşılaştırma Tablosu")
-        st.dataframe(
-            summary_df.style.format({
-                "Toplam Maliyet (₺)": "{:,.0f}".format,
-                "Toplam İşçilik Maliyeti (₺)": "{:,.0f}".format,
-                "Toplam Üretim": "{:,.0f}".format,
-                "Stoksuzluk Oranı (%)": "{:,.2f}".format,
-            }, decimal=",", thousands="."),
-            use_container_width=True
-        )
+        
+        # Custom formatting function to handle None and 0 values
+        def safe_format(val):
+            if pd.isna(val) or val is None:
+                return "0"
+            return f"{val:,.0f}" if isinstance(val, (int, float)) else str(val)
+        
+        def safe_format_percent(val):
+            if pd.isna(val) or val is None:
+                return "0.00"
+            return f"{val:.2f}" if isinstance(val, (int, float)) else str(val)
+        
+        # Apply formatting safely
+        formatted_df = summary_df.copy()
+        
+        # Format numeric columns with custom functions
+        try:
+            st.dataframe(
+                formatted_df.style.format({
+                    "Toplam Maliyet (₺)": safe_format,
+                    "Toplam İşçilik Maliyeti (₺)": safe_format,
+                    "Toplam Üretim": safe_format,
+                    "Stoksuzluk Oranı (%)": safe_format_percent,
+                }),
+                use_container_width=True
+            )
+        except Exception as e:
+            # Fallback: display without formatting if styling fails
+            st.dataframe(summary_df, use_container_width=True)
+            st.warning("Tablo formatlamasında sorun oluştu, ham veriler gösteriliyor.")
+
         # --- Grafiksel Karşılaştırma ---
         st.subheader("Ana Metriklerde Grafiksel Karşılaştırma")
 
-        # Prepare data for plotting
+        # Prepare data for plotting - handle None values
         metrics = ["Toplam Maliyet (₺)", "Ortalama Birim Maliyet", "Toplam Üretim", "Stoksuzluk Oranı (%)"]
         plot_df = summary_df[["Toplam Maliyet (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)"]].copy()
-        plot_df["Ortalama Birim Maliyet"] = plot_df["Toplam Maliyet (₺)"] / plot_df["Toplam Üretim"]
+        
+        # Fill NaN values with 0 before calculation
+        plot_df = plot_df.fillna(0)
+        
+        # Calculate average unit cost safely
+        plot_df["Ortalama Birim Maliyet"] = plot_df.apply(
+            lambda row: row["Toplam Maliyet (₺)"] / row["Toplam Üretim"] if row["Toplam Üretim"] > 0 else 0,
+            axis=1
+        )
+        
         plot_df = plot_df[metrics]  # Reorder columns
-        plot_df = plot_df.apply(pd.to_numeric, errors='coerce')
+        plot_df = plot_df.apply(pd.to_numeric, errors='coerce').fillna(0)
 
         # Create a 2x2 grid for better readability instead of a single row
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
@@ -1051,13 +1097,13 @@ if model == "Modelleri Karşılaştır":
             # Add value labels on top of bars
             for bar in bars:
                 height = bar.get_height()
-                if pd.notnull(height):
+                if pd.notnull(height) and height > 0:
                     if metric == "Toplam Maliyet (₺)" or metric == "Toplam Üretim":
                         value_text = f"{int(height):,}"
                     else:
                         value_text = f"{height:.2f}"
 
-                    ax.text(bar.get_x() + bar.get_width()/2., height + (plot_df[metric].max() * 0.02),
+                    ax.text(bar.get_x() + bar.get_width()/2., height + (max(plot_df[metric].max(), 1) * 0.02),
                            value_text, ha='center', va='bottom', rotation=0,
                            fontsize=9, fontweight='bold')
 
@@ -1072,7 +1118,8 @@ if model == "Modelleri Karşılaştır":
 
             # Set y-axis limit for percentage
             if metric == "Stoksuzluk Oranı (%)":
-                ax.set_ylim(0, min(105, plot_df[metric].max() * 1.2))
+                max_val = plot_df[metric].max()
+                ax.set_ylim(0, min(105, max_val * 1.2) if max_val > 0 else 10)
 
             # Format y-axis labels
             if metric == "Toplam Maliyet (₺)":
@@ -1133,13 +1180,22 @@ if model == "Modelleri Karşılaştır":
         detail_progress.empty()
         
         df_detail = pd.DataFrame(results_detail_list)
+        
+        # Fill NaN values with 0 before formatting
+        df_detail = df_detail.fillna(0)
 
         cols = ["Model"] + [c for c in df_detail.columns if c != "Model"]
         number_cols = df_detail[cols].select_dtypes(include=["number"]).columns
-        st.dataframe(
-            df_detail[cols].style.format({col: "{:,.0f}".format for col in number_cols}, thousands=".", decimal=","),
-            use_container_width=True, hide_index=True
-        )
+        
+        try:
+            st.dataframe(
+                df_detail[cols].style.format({col: safe_format for col in number_cols}),
+                use_container_width=True, hide_index=True
+            )
+        except Exception as e:
+            # Fallback: display without formatting if styling fails
+            st.dataframe(df_detail[cols], use_container_width=True, hide_index=True)
+            st.warning("Detay tablosu formatlamasında sorun oluştu, ham veriler gösteriliyor.")
 
         # Final cleanup
         del summary_rows, results_detail_list, df_detail
