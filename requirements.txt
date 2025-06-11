@@ -5,3 +5,4 @@ matplotlib
 tabulate
 streamlit
 PyYAML
+psutil
