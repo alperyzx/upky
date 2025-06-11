@@ -961,10 +961,8 @@ if model == "Modelleri Karşılaştır":
             progress_bar.progress(idx / len(model_names))
             
             try:
-                # Monitor memory before each model
+                # Monitor memory before each model (silent monitoring)
                 current_memory = monitor_memory()
-                if current_memory:
-                    st.write(f"🔄 {short_name} çalıştırılıyor... (Bellek: {current_memory:.1f} MB)")
                 
                 sig_params = inspect.signature(func).parameters
                 params_to_pass = {}
