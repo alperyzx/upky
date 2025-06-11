@@ -375,6 +375,11 @@ def maliyet_analizi(
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_hiring_unit = avg_firing_unit = avg_holding_unit = avg_stockout_unit = avg_other_unit = 0
 
+    # Bellek temizliği
+    del model_results
+    import gc
+    gc.collect()
+
     return {
         "Toplam Maliyet": total_cost,
         "İşçilik Maliyeti": total_labor_cost,

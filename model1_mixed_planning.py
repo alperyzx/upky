@@ -431,3 +431,7 @@ if __name__ == '__main__':
         print('tabulate kütüphanesi eksik. Kurmak için: pip install tabulate')
         exit(1)
     print_results()
+    # Bellek temizliği
+    del model_vars
+    import gc
+    gc.collect()
