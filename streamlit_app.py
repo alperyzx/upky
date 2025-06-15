@@ -228,6 +228,10 @@ def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
 
+    # Bellek temizliği
+    del model_results
+    safe_memory_cleanup()
+
     return df, adjusted_cost, total_holding, total_stockout, total_labor, total_production_cost, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit, total_hiring_cost, optimized_workers, original_workers, optimal_workers
 
 def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, daily_hours, labor_per_unit, workers, max_workers, max_workforce_change, hourly_wage, stockout_cost, production_cost,initial_inventory, safety_stock_ratio):
@@ -259,6 +263,10 @@ def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, dai
         avg_other_unit = (total_holding + total_hiring + total_firing) / total_produced
     else:
         avg_unit_cost = avg_labor_unit = avg_prod_unit = avg_other_unit = 0
+
+    # Bellek temizliği
+    del model_results
+    safe_memory_cleanup()
 
     return df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit
 
@@ -300,7 +308,7 @@ def model6_run(demand, working_days, holding_cost, stockout_cost, production_cos
 
     # Bellek temizliği
     del model_results
-    gc.collect()
+    safe_memory_cleanup()
 
     return df, total_cost, needed_workers, max_production
 
@@ -943,7 +951,7 @@ if model == "Modelleri Karşılaştır":
             "production_cost": production_cost,
             "hiring_cost": hiring_cost,
             "firing_cost": firing_cost,
-            "hourly_wage": hourly_wage,
+ "hourly_wage": hourly_wage,
             "daily_hours": daily_hours,
             "labor_per_unit": labor_per_unit,
             "max_overtime_per_worker": max_overtime_per_worker,
