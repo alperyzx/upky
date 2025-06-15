@@ -1028,7 +1028,7 @@ if model == "Modelleri Karşılaştır":
         
         # Final comprehensive memory cleanup
         clear_memory()
-        del current_params  # Clear large data structures (but keep model_names for DataFrame creation)
+        # Note: Keep current_params and model_names for later use in detailed comparison
         
         # Show final memory usage
         final_memory = monitor_memory()
@@ -1042,8 +1042,8 @@ if model == "Modelleri Karşılaştır":
             index=[m[0] for m in model_names]
         )
         
-        # Clean up summary_rows and model_names to free memory
-        del summary_rows, model_names
+        # Clean up summary_rows to free memory (but keep model_names for later)
+        del summary_rows
         
         # Replace NaN values with 0 before formatting - more efficient method
         summary_df = summary_df.fillna(0)
@@ -1214,6 +1214,9 @@ if model == "Modelleri Karşılaştır":
         # Add explanation about Model 1's production cost
         if any(name[0] == "Model 1" for name in model_names):
             st.info("Model 1'de Üretim Birim Maliyeti, iç üretim ve fason üretimin ağırlıklı ortalamasıdır.")
+
+        # Final cleanup of remaining variables
+        del current_params, model_names
 
         st.markdown("---")
         # Detailed comparison visualizations
