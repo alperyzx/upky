@@ -55,32 +55,32 @@ def safe_memory_cleanup():
         pass
 
 # Cache'li solver fonksiyonları - TTL ve max_entries azaltıldı
-@st.cache_data(ttl=180, max_entries=2)  # 3 dakika TTL, max 2 entry
+#@st.cache_data(ttl=180, max_entries=2)  # 3 dakika TTL, max 2 entry
 def run_model1_solver(*args, **kwargs):
     result = model1_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=180, max_entries=2)
+#@st.cache_data(ttl=180, max_entries=2)
 def run_model2_solver(*args, **kwargs):
     result = model2_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=180, max_entries=2) 
+#@st.cache_data(ttl=180, max_entries=2) 
 def run_model3_solver(*args, **kwargs):
     result = model3_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=180, max_entries=2)
+#@st.cache_data(ttl=180, max_entries=2)
 def run_model4_solver(*args, **kwargs):
     result = model4_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=180, max_entries=2)
+#@st.cache_data(ttl=180, max_entries=2)
 def run_model5_solver(*args, **kwargs):
     result = model5_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=180, max_entries=2)
+#@st.cache_data(ttl=180, max_entries=2)
 def run_model6_solver(*args, **kwargs):
     result = model6_solver(*args, **kwargs)
     return result
@@ -90,7 +90,7 @@ st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initi
 st.title("Üretim Planlama Modelleri Karar Destek Arayüzü")
 
 # Load parameters from YAML
-@st.cache_data(ttl=600, max_entries=1)  # 10 dakika TTL, sadece 1 entry
+#@st.cache_data(ttl=600, max_entries=1)  # 10 dakika TTL, sadece 1 entry
 def load_params():
     with open("parametreler.yaml", "r") as f:
         return yaml.safe_load(f)
