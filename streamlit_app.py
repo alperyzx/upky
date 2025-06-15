@@ -1028,7 +1028,7 @@ if model == "Modelleri Karşılaştır":
         
         # Final comprehensive memory cleanup
         clear_memory()
-        del current_params, model_names  # Clear large data structures
+        del current_params  # Clear large data structures (but keep model_names for DataFrame creation)
         
         # Show final memory usage
         final_memory = monitor_memory()
@@ -1042,8 +1042,8 @@ if model == "Modelleri Karşılaştır":
             index=[m[0] for m in model_names]
         )
         
-        # Clean up summary_rows to free memory
-        del summary_rows
+        # Clean up summary_rows and model_names to free memory
+        del summary_rows, model_names
         
         # Replace NaN values with 0 before formatting - more efficient method
         summary_df = summary_df.fillna(0)
