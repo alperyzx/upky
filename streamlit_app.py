@@ -26,14 +26,20 @@ from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili
 
 # Memory management utilities
 def clear_memory():
-    """Bellek temizliği için kullanılacak fonksiyon"""
+    """Bellek ve cache temizliği için kullanılacak fonksiyon"""
     gc.collect()
-    if hasattr(st, 'cache_data'):
-        # Clear specific caches if needed
-        try:
-            st.cache_data.clear()
-        except:
-            pass
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+    try:
+        st.cache_resource.clear()
+    except Exception:
+        pass
+    # Session state temizliği (isteğe bağlı)
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    gc.collect()
 
 def monitor_memory():
     """Bellek kullanımını izlemek için (opsiyonel, debug amaçlı)"""
@@ -155,10 +161,10 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
     }
 
     # Bellek temizliği
-    del model_vars
+    del model_vars, workers, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours, toplam_maliyet, results, df
     gc.collect()
 
-    return df, toplam_maliyet, model_results
+    return model_results
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
@@ -175,10 +181,10 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
     optimal_workers = model_results.get('optimal_workers', workers)
 
     # Bellek temizliği
-    del model_results
+    del model_results, df, total_cost, optimal_workers
     gc.collect()
 
-    return df, total_cost, optimal_workers
+    return None
 
 def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
@@ -265,7 +271,7 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
     toplam_maliyet = model_results['toplam_maliyet']
 
     # Bellek temizliği
-    del model_results
+    del model_results, df, toplam_maliyet
     gc.collect()
 
     return df, toplam_maliyet
@@ -289,7 +295,7 @@ def model6_run(demand, working_days, holding_cost, stockout_cost, production_cos
     max_production = int(df['Üretim'].max())
 
     # Bellek temizliği
-    del model_results
+    del model_results, df, total_cost, needed_workers, max_production
     gc.collect()
 
     return df, total_cost, needed_workers, max_production
@@ -938,7 +944,7 @@ if model == "Modelleri Karşılaştır":
             "labor_per_unit": labor_per_unit,
             "max_overtime_per_worker": max_overtime_per_worker,
             "overtime_wage_multiplier": overtime_wage_multiplier,
-            "working_days": working_days,
+ "working_days": working_days,
             "workers": workers,
             "initial_inventory": initial_inventory,
             "safety_stock_ratio": safety_stock_ratio
