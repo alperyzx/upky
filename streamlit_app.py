@@ -26,20 +26,16 @@ from model6_seasonal_planning import ayrintili_toplam_maliyetler as m6_ayrintili
 
 # Memory management utilities
 def clear_memory():
-    """Bellek ve cache temizliği için kullanılacak fonksiyon"""
+    """Bellek temizliği için kullanılacak fonksiyon"""
     gc.collect()
-    try:
-        st.cache_data.clear()
-    except Exception:
-        pass
-    try:
-        st.cache_resource.clear()
-    except Exception:
-        pass
-    # Session state temizliği (isteğe bağlı)
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    gc.collect()
+    if hasattr(st, 'cache_data'):
+        # Clear specific caches if needed
+        try:
+            st.cache_data.clear()
+        except:
+            pass
+    # Close any open matplotlib figures
+    plt.close('all')
 
 def monitor_memory():
     """Bellek kullanımını izlemek için (opsiyonel, debug amaçlı)"""
@@ -50,33 +46,41 @@ def monitor_memory():
     except:
         return None
 
-# Cache'li solver fonksiyonları - hash fonksiyonu ekleyelim
-@st.cache_data(ttl=300, max_entries=3)  # 5 dakika TTL, max 3 entry
+def safe_memory_cleanup():
+    """Güvenli bellek temizliği - hata olmasa da çalışır"""
+    try:
+        plt.close('all')
+        gc.collect()
+    except:
+        pass
+
+# Cache'li solver fonksiyonları - TTL ve max_entries azaltıldı
+@st.cache_data(ttl=180, max_entries=2)  # 3 dakika TTL, max 2 entry
 def run_model1_solver(*args, **kwargs):
     result = model1_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=300, max_entries=3)
+@st.cache_data(ttl=180, max_entries=2)
 def run_model2_solver(*args, **kwargs):
     result = model2_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=300, max_entries=3) 
+@st.cache_data(ttl=180, max_entries=2) 
 def run_model3_solver(*args, **kwargs):
     result = model3_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=300, max_entries=3)
+@st.cache_data(ttl=180, max_entries=2)
 def run_model4_solver(*args, **kwargs):
     result = model4_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=300, max_entries=3)
+@st.cache_data(ttl=180, max_entries=2)
 def run_model5_solver(*args, **kwargs):
     result = model5_solver(*args, **kwargs)
     return result
 
-@st.cache_data(ttl=300, max_entries=3)
+@st.cache_data(ttl=180, max_entries=2)
 def run_model6_solver(*args, **kwargs):
     result = model6_solver(*args, **kwargs)
     return result
@@ -86,7 +90,7 @@ st.set_page_config(page_title="Üretim Planlama Modelleri", layout="wide", initi
 st.title("Üretim Planlama Modelleri Karar Destek Arayüzü")
 
 # Load parameters from YAML
-@st.cache_data
+@st.cache_data(ttl=600, max_entries=1)  # 10 dakika TTL, sadece 1 entry
 def load_params():
     with open("parametreler.yaml", "r") as f:
         return yaml.safe_load(f)
@@ -161,8 +165,8 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
     }
 
     # Bellek temizliği
-    del model_vars, workers, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours, toplam_maliyet, results, df
-    gc.collect()
+    del model_vars
+    safe_memory_cleanup()
 
     return df, toplam_maliyet, model_results
 
@@ -181,8 +185,8 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
     optimal_workers = model_results.get('optimal_workers', workers)
 
     # Bellek temizliği
-    del model_results, df, total_cost, optimal_workers
-    gc.collect()
+    del model_results
+    safe_memory_cleanup()
 
     return df, total_cost, optimal_workers
 
@@ -258,7 +262,7 @@ def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, dai
 
     return df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit
 
-def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost, initial_inventory, safety_stock_ratio):
+def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = run_model5_solver(
         demand, working_days, holding_cost, stockout_cost,
@@ -271,12 +275,12 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
     toplam_maliyet = model_results['toplam_maliyet']
 
     # Bellek temizliği
-    del model_results, df, toplam_maliyet
-    gc.collect()
+    del model_results
+    safe_memory_cleanup()
 
     return df, toplam_maliyet
 
-def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change, initial_inventory, safety_stock_ratio):
+def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = run_model6_solver(
         demand, holding_cost, stockout_cost, production_cost,
@@ -287,11 +291,15 @@ def model6_run(demand, working_days, holding_cost, stockout_cost, production_cos
     # Extract the results from the model
     df = model_results['df']
     total_cost = model_results['total_cost']
-    needed_workers = model_results.get('needed_workers', None)
-    max_production = model_results.get('max_production', None)
+
+    # Get the average number of workers from the results
+    needed_workers = int(df['İşçi'].mean())
+
+    # Get the maximum production capacity
+    max_production = int(df['Üretim'].max())
 
     # Bellek temizliği
-    del model_results, df, total_cost, needed_workers, max_production
+    del model_results
     gc.collect()
 
     return df, total_cost, needed_workers, max_production
@@ -817,7 +825,7 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         st.session_state["m6_first_run"] = False
         df, total_cost, needed_workers, max_production = model6_run(
             demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours,
-            hiring_cost, firing_cost, workers, max_workers, max_workforce_change, initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
+            hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
         st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Gerekli Optimum İşçi Sayısı: {needed_workers}")
         st.subheader("Sonuç Tablosu")
@@ -940,7 +948,7 @@ if model == "Modelleri Karşılaştır":
             "labor_per_unit": labor_per_unit,
             "max_overtime_per_worker": max_overtime_per_worker,
             "overtime_wage_multiplier": overtime_wage_multiplier,
- "working_days": working_days,
+            "working_days": working_days,
             "workers": workers,
             "initial_inventory": initial_inventory,
             "safety_stock_ratio": safety_stock_ratio
@@ -963,6 +971,9 @@ if model == "Modelleri Karşılaştır":
             progress_bar.progress(idx / len(model_names))
             
             try:
+                # Clear memory before each model to prevent accumulation
+                safe_memory_cleanup()
+                
                 # Monitor memory before each model (silent monitoring)
                 current_memory = monitor_memory()
                 
@@ -980,7 +991,10 @@ if model == "Modelleri Karşılaştır":
                 if short_name == "Model 3" and "hiring_cost" in sig_params:
                     params_to_pass["hiring_cost"] = current_params.get("hiring_cost")
 
+                # Run the model function
                 res = func(**params_to_pass)
+                
+                # Extract only necessary values to minimize memory usage
                 cost = res.get("Toplam Maliyet", 0)
                 labor_cost = res.get("İşçilik Maliyeti", 0)
                 total_prod = res.get("Toplam Üretim", 0)
@@ -988,72 +1002,65 @@ if model == "Modelleri Karşılaştır":
                 stockout = res.get("Karşılanmayan Talep", 0)
                 stockout_rate = (stockout / total_demand * 100) if (total_demand and total_demand > 0) else 0
 
+                # Append results immediately
                 summary_rows.append([
                     cost, labor_cost, total_prod, stockout_rate, flex, scenario
                 ])
                 
-                # Clear variables after each model
-                del res, cost, labor_cost, total_prod, total_demand, stockout, stockout_rate
+                # Immediately clear all variables to free memory
+                del res, cost, labor_cost, total_prod, total_demand, stockout, stockout_rate, params_to_pass, sig_params
                 
-                # Force garbage collection after each model
+                # Force immediate garbage collection after each model
                 gc.collect()
                 
-                # Small delay to allow memory cleanup
-                time.sleep(0.1)
+                # Small delay to allow memory cleanup and prevent overwhelming
+                time.sleep(0.05)  # Reduced from 0.1 to 0.05
                 
             except Exception as e:
+                # Log error and add placeholder row
                 summary_rows.append([0, 0, 0, 0, flex, f"Hata: {str(e)}"])
                 st.error(f"{short_name} hata: {str(e)}")
-                # Clear memory even on error
-                gc.collect()
+                # Clear memory even on error - this is critical
+                safe_memory_cleanup()
 
-        # Clear progress bar
+        # Clear progress bar and do final cleanup
         progress_bar.empty()
         
-        # Final memory cleanup
+        # Final comprehensive memory cleanup
         clear_memory()
+        del current_params, model_names  # Clear large data structures
         
         # Show final memory usage
         final_memory = monitor_memory()
         if initial_memory and final_memory:
             memory_placeholder.success(f"İşlem tamamlandı! Bellek kullanımı: {final_memory:.1f} MB (Başlangıç: {initial_memory:.1f} MB)")
 
+        # Create summary dataframe efficiently
         summary_df = pd.DataFrame(
             summary_rows,
             columns=["Toplam Maliyet (₺)", "Toplam İşçilik Maliyeti (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)", "İşgücü Esnekliği", "Uygun Senaryo"],
             index=[m[0] for m in model_names]
         )
         
-        # Replace NaN values with 0 before formatting
+        # Clean up summary_rows to free memory
+        del summary_rows
+        
+        # Replace NaN values with 0 before formatting - more efficient method
         summary_df = summary_df.fillna(0)
         
         st.subheader("Özet Karşılaştırma Tablosu")
         
-        # Custom formatting function to handle None and 0 values
-        def safe_format(val):
-            if pd.isna(val) or val is None:
-                return "0"
-            return f"{val:,.0f}" if isinstance(val, (int, float)) else str(val)
-        
-        def safe_format_percent(val):
-            if pd.isna(val) or val is None:
-                return "0.00"
-            return f"{val:.2f}" if isinstance(val, (int, float)) else str(val)
-        
-        # Apply formatting safely
-        formatted_df = summary_df.copy()
-        
-        # Format numeric columns with custom functions
+        # Simplified formatting - avoid creating copies
         try:
-            st.dataframe(
-                formatted_df.style.format({
-                    "Toplam Maliyet (₺)": safe_format,
-                    "Toplam İşçilik Maliyeti (₺)": safe_format,
-                    "Toplam Üretim": safe_format,
-                    "Stoksuzluk Oranı (%)": safe_format_percent,
-                }),
-                use_container_width=True
-            )
+            # Apply direct formatting without creating intermediate copies
+            formatted_df = summary_df.style.format({
+                "Toplam Maliyet (₺)": "{:,.0f}",
+                "Toplam İşçilik Maliyeti (₺)": "{:,.0f}",
+                "Toplam Üretim": "{:,.0f}",
+                "Stoksuzluk Oranı (%)": "{:.2f}",
+            }, na_rep="0")
+            
+            st.dataframe(formatted_df, use_container_width=True)
         except Exception as e:
             # Fallback: display without formatting if styling fails
             st.dataframe(summary_df, use_container_width=True)
@@ -1062,88 +1069,88 @@ if model == "Modelleri Karşılaştır":
         # --- Grafiksel Karşılaştırma ---
         st.subheader("Ana Metriklerde Grafiksel Karşılaştırma")
 
-        # Prepare data for plotting - handle None values
-        metrics = ["Toplam Maliyet (₺)", "Ortalama Birim Maliyet", "Toplam Üretim", "Stoksuzluk Oranı (%)"]
-        plot_df = summary_df[["Toplam Maliyet (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)"]].copy()
-        
-        # Fill NaN values with 0 before calculation
-        plot_df = plot_df.fillna(0)
-        
-        # Calculate average unit cost safely
-        plot_df["Ortalama Birim Maliyet"] = plot_df.apply(
-            lambda row: row["Toplam Maliyet (₺)"] / row["Toplam Üretim"] if row["Toplam Üretim"] > 0 else 0,
-            axis=1
-        )
-        
-        plot_df = plot_df[metrics]  # Reorder columns
-        plot_df = plot_df.apply(pd.to_numeric, errors='coerce').fillna(0)
+        try:
+            # Prepare data for plotting efficiently - avoid unnecessary copies
+            plot_columns = ["Toplam Maliyet (₺)", "Toplam Üretim", "Stoksuzluk Oranı (%)"]
+            plot_df = summary_df[plot_columns].copy()
+            
+            # Calculate average unit cost efficiently
+            plot_df["Ortalama Birim Maliyet"] = np.where(
+                plot_df["Toplam Üretim"] > 0,
+                plot_df["Toplam Maliyet (₺)"] / plot_df["Toplam Üretim"],
+                0
+            )
+            
+            # Reorder columns for plotting
+            metrics = ["Toplam Maliyet (₺)", "Ortalama Birim Maliyet", "Toplam Üretim", "Stoksuzluk Oranı (%)"]
+            plot_df = plot_df[metrics]
+            
+            # Convert to numeric once
+            plot_df = plot_df.apply(pd.to_numeric, errors='coerce').fillna(0)
 
-        # Create a 2x2 grid for better readability instead of a single row
-        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-        axes = axes.flatten()  # Flatten to make indexing easier
+            # Create a 2x2 grid for better readability - smaller figure size to save memory
+            fig, axes = plt.subplots(2, 2, figsize=(10, 8))  # Reduced from (12, 10)
+            axes = axes.flatten()
 
-        # Color palette for different models
-        colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+            # Color palette for different models
+            colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
 
-        for i, metric in enumerate(metrics):
-            ax = axes[i]
+            for i, metric in enumerate(metrics):
+                ax = axes[i]
 
-            # Create bars with different colors
-            bars = ax.bar(plot_df.index, plot_df[metric],
-                         color=colors[:len(plot_df.index)],
-                         alpha=0.85,
-                         width=0.6)
+                # Create bars with different colors
+                bars = ax.bar(plot_df.index, plot_df[metric],
+                             color=colors[:len(plot_df.index)],
+                             alpha=0.85,
+                             width=0.6)
 
-            # Add value labels on top of bars
-            for bar in bars:
-                height = bar.get_height()
-                if pd.notnull(height) and height > 0:
-                    if metric == "Toplam Maliyet (₺)" or metric == "Toplam Üretim":
-                        value_text = f"{int(height):,}"
-                    else:
-                        value_text = f"{height:.2f}"
+                # Add value labels on top of bars (simplified)
+                for bar in bars:
+                    height = bar.get_height()
+                    if pd.notnull(height) and height > 0:
+                        if metric in ["Toplam Maliyet (₺)", "Toplam Üretim"]:
+                            value_text = f"{int(height):,}"
+                        else:
+                            value_text = f"{height:.1f}"  # Reduced precision
 
-                    ax.text(bar.get_x() + bar.get_width()/2., height + (max(plot_df[metric].max(), 1) * 0.02),
-                           value_text, ha='center', va='bottom', rotation=0,
-                           fontsize=9, fontweight='bold')
+                        ax.text(bar.get_x() + bar.get_width()/2., height * 1.02,
+                               value_text, ha='center', va='bottom',
+                               fontsize=8, fontweight='bold')  # Reduced font size
 
-            # Improve title and styling
-            ax.set_title(metric, fontsize=12, fontweight='bold', pad=10)
-            ax.set_xlabel("")
-            ax.set_xticks(range(len(plot_df.index)))
-            ax.set_xticklabels(plot_df.index, rotation=45, ha='right', fontsize=10)
+                # Streamlined styling
+                ax.set_title(metric, fontsize=11, fontweight='bold', pad=8)
+                ax.set_xlabel("")
+                ax.set_xticks(range(len(plot_df.index)))
+                ax.set_xticklabels(plot_df.index, rotation=45, ha='right', fontsize=9)
 
-            # Add gridlines for better readability
-            ax.grid(axis='y', linestyle='--', alpha=0.3)
+                # Simplified gridlines
+                ax.grid(axis='y', linestyle='--', alpha=0.3)
 
-            # Set y-axis limit for percentage
-            if metric == "Stoksuzluk Oranı (%)":
-                max_val = plot_df[metric].max()
-                ax.set_ylim(0, min(105, max_val * 1.2) if max_val > 0 else 10)
+                # Set y-axis limit for percentage
+                if metric == "Stoksuzluk Oranı (%)":
+                    max_val = plot_df[metric].max()
+                    ax.set_ylim(0, min(105, max_val * 1.2) if max_val > 0 else 10)
 
-            # Format y-axis labels
-            if metric == "Toplam Maliyet (₺)":
-                ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x):,}'))
-            elif metric == "Toplam Üretim":
-                ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x):,}'))
+                # Format y-axis labels efficiently
+                if metric in ["Toplam Maliyet (₺)", "Toplam Üretim"]:
+                    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{int(x):,}'))
 
-            # Add a subtle box around the plot
-            for spine in ax.spines.values():
-                spine.set_edgecolor('#dddddd')
+            # Simplified title and layout
+            fig.suptitle('Model Karşılaştırma Analizi', fontsize=14, y=0.98)
 
-        # Add a title for the whole figure
-        fig.suptitle('Model Karşılaştırma Analizi', fontsize=16, y=0.98)
-
-        # Add a legend at the bottom showing model colors
-        legend_elements = [plt.Rectangle((0, 0), 1, 1, color=colors[i], alpha=0.85)
-                           for i in range(len(plot_df.index))]
-        fig.legend(legend_elements, plot_df.index,
-                   loc='lower center', ncol=len(plot_df.index),
-                   bbox_to_anchor=(0.5, 0.01), frameon=False)
-
-        plt.tight_layout(rect=[0, 0.05, 1, 0.95])  # Adjust layout to make room for the title and legend
-        st.pyplot(fig)
-        plt.close(fig)
+            plt.tight_layout(rect=[0, 0.02, 1, 0.95])
+            st.pyplot(fig)
+            plt.close(fig)
+            
+            # Clean up plot data
+            del plot_df, bars
+            
+        except Exception as e:
+            st.error(f"Grafik oluşturulurken hata: {str(e)}")
+            
+        # Final cleanup
+        del summary_df
+        safe_memory_cleanup()
 
         st.markdown("---")
 
@@ -1188,8 +1195,9 @@ if model == "Modelleri Karşılaştır":
         number_cols = df_detail[cols].select_dtypes(include=["number"]).columns
         
         try:
+            # Simple formatting without custom functions to avoid memory issues
             st.dataframe(
-                df_detail[cols].style.format({col: safe_format for col in number_cols}),
+                df_detail[cols].style.format({col: "{:,.2f}" for col in number_cols}),
                 use_container_width=True, hide_index=True
             )
         except Exception as e:
@@ -1197,8 +1205,10 @@ if model == "Modelleri Karşılaştır":
             st.dataframe(df_detail[cols], use_container_width=True, hide_index=True)
             st.warning("Detay tablosu formatlamasında sorun oluştu, ham veriler gösteriliyor.")
 
-        # Final cleanup
-        del summary_rows, results_detail_list, df_detail
+        # Cleanup variables to free memory
+        del df_detail, cols, number_cols
+        
+        # Final comprehensive memory cleanup
         clear_memory()
 
         # Add explanation about Model 1's production cost
