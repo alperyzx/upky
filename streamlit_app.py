@@ -164,7 +164,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
     del model_vars, workers, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours, toplam_maliyet, results, df
     gc.collect()
 
-    return model_results
+    return df, toplam_maliyet, model_results
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
@@ -184,7 +184,7 @@ def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, dail
     del model_results, df, total_cost, optimal_workers
     gc.collect()
 
-    return None
+    return df, total_cost, optimal_workers
 
 def model3_run(demand, working_days, holding_cost, stockout_cost, workers, labor_per_unit, daily_hours, production_cost, worker_monthly_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
@@ -258,7 +258,7 @@ def model4_run(demand, working_days, holding_cost, hiring_cost, firing_cost, dai
 
     return df, min_cost, total_labor, total_production, total_holding, total_stockout, total_hiring, total_firing, total_demand, total_produced, total_unfilled, avg_unit_cost, avg_labor_unit, avg_prod_unit, avg_other_unit
 
-def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost,initial_inventory, safety_stock_ratio):
+def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_supplier_A, capacity_supplier_B, working_days, stockout_cost, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = run_model5_solver(
         demand, working_days, holding_cost, stockout_cost,
@@ -276,7 +276,7 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
 
     return df, toplam_maliyet
 
-def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio):
+def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change, initial_inventory, safety_stock_ratio):
     # Use the shared model solver function
     model_results = run_model6_solver(
         demand, holding_cost, stockout_cost, production_cost,
@@ -287,12 +287,8 @@ def model6_run(demand, working_days, holding_cost, stockout_cost, production_cos
     # Extract the results from the model
     df = model_results['df']
     total_cost = model_results['total_cost']
-
-    # Get the average number of workers from the results
-    needed_workers = int(df['İşçi'].mean())
-
-    # Get the maximum production capacity
-    max_production = int(df['Üretim'].max())
+    needed_workers = model_results.get('needed_workers', None)
+    max_production = model_results.get('max_production', None)
 
     # Bellek temizliği
     del model_results, df, total_cost, needed_workers, max_production
@@ -821,7 +817,7 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         st.session_state["m6_first_run"] = False
         df, total_cost, needed_workers, max_production = model6_run(
             demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours,
-            hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
+            hiring_cost, firing_cost, workers, max_workers, max_workforce_change, initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
         )
         st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Gerekli Optimum İşçi Sayısı: {needed_workers}")
         st.subheader("Sonuç Tablosu")
