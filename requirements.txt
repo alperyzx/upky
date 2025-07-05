@@ -1,8 +1,13 @@
-pulp
-numpy
-pandas
-matplotlib
-tabulate
-streamlit
-PyYAML
-psutil
+# Core dependencies with memory optimization
+streamlit>=1.28.0,<2.0.0
+pandas>=1.5.0,<2.0.0
+numpy>=1.24.0,<2.0.0
+matplotlib>=3.6.0,<4.0.0
+PyYAML>=6.0,<7.0
+PuLP>=2.7.0,<3.0.0
+psutil>=5.9.0,<6.0.0
+tabulate>=0.9.0,<1.0.0
+
+# Optional performance enhancers
+# numba>=0.57.0,<1.0.0  # Uncomment if needed for numerical optimization
+# cython>=0.29.0,<1.0.0  # Uncomment if needed for compilation
