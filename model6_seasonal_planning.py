@@ -42,7 +42,8 @@ def solve_model(
     max_workers,
     max_workforce_change,
     initial_inventory,
-    safety_stock_ratio
+    safety_stock_ratio,
+    fixed_workers=None
 ):
     """
     Core model logic for seasonal planning model (Model 6)
@@ -56,8 +57,17 @@ def solve_model(
     y_inventory = [pulp.LpVariable(f'inventory_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_stockout = [pulp.LpVariable(f'stockout_{t}', lowBound=0, cat='Integer') for t in range(months)]
 
-    # Start with 0 workers and allow up to max_workers
-    y_workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, upBound=max_workers, cat='Integer') for t in range(months)]
+    # İşçi sayısı: sabit veya optimize edilebilir
+    if fixed_workers is not None:
+        # Sabit işçi sayısı kullan
+        if isinstance(fixed_workers, (int, float)):
+            y_workers = [int(fixed_workers)] * months
+        else:
+            y_workers = [int(w) for w in fixed_workers]
+    else:
+        # İşçi sayısını optimize et
+        y_workers = [pulp.LpVariable(f'workers_{t}', lowBound=0, upBound=max_workers, cat='Integer') for t in range(months)]
+    
     y_hire = [pulp.LpVariable(f'hire_{t}', lowBound=0, cat='Integer') for t in range(months)]
     y_fire = [pulp.LpVariable(f'fire_{t}', lowBound=0, cat='Integer') for t in range(months)]
 
@@ -83,23 +93,38 @@ def solve_model(
         else:
             prev_inventory = y_inventory[t-1]
         model += prev_inventory + y_production[t] + y_stockout[t] == demand[t] + y_inventory[t]
-        # Güvenlik stoğu kısıtı
-        model += y_inventory[t] >= int(round(safety_stock_ratio * demand[t]))
+        # Güvenlik stoğu kısıtı - integer değişkenler için ceil kullan
+        min_safety_stock = int(np.ceil(safety_stock_ratio * demand[t]))
+        model += y_inventory[t] >= min_safety_stock
         model += y_inventory[t] >= 0
         model += y_stockout[t] >= 0
-        # İşgücü değişim denklemi
-        if t == 0:
-            model += y_workers[t] == y_hire[t] - y_fire[t]
-            model += y_hire[t] >= workers
+        
+        # İşgücü kısıtları - sabit işçi sayısı kullanılıyorsa farklı yaklaşım
+        if fixed_workers is not None:
+            # Sabit işçi sayısı için işe alım/çıkarma hesaplama
+            if t == 0:
+                model += y_hire[t] - y_fire[t] == y_workers[t]
+            else:
+                model += y_hire[t] - y_fire[t] == y_workers[t] - y_workers[t-1]
         else:
-            model += y_workers[t] == y_workers[t-1] + y_hire[t] - y_fire[t]
-        # Maksimum işgücü değişimi kısıtı
-        if t > 0:
-            model += y_hire[t] + y_fire[t] <= max_workforce_change
+            # Optimize edilen işçi sayısı için normal kısıtlar
+            if t == 0:
+                model += y_workers[t] == y_hire[t] - y_fire[t]
+                model += y_hire[t] >= workers
+            else:
+                model += y_workers[t] == y_workers[t-1] + y_hire[t] - y_fire[t]
+            # Maksimum işgücü değişimi kısıtı
+            if t > 0:
+                model += y_hire[t] + y_fire[t] <= max_workforce_change
 
     # Modeli çöz
     solver = pulp.PULP_CBC_CMD(msg=0)
-    model.solve(solver)
+    result = model.solve(solver)
+    
+    # Check solution status
+    if result != pulp.LpStatusOptimal:
+        print(f"ERROR: Model could not find optimal solution! Status: {pulp.LpStatus[result]}")
+        return None
 
     # Sonuçları topla
     results = []
@@ -117,7 +142,13 @@ def solve_model(
         production = int(y_production[t].varValue)
         inventory = int(y_inventory[t].varValue)
         stockout = int(y_stockout[t].varValue)
-        workers = int(y_workers[t].varValue)
+        
+        # İşçi sayısını al - sabit veya optimize edilmiş
+        if fixed_workers is not None:
+            workers = y_workers[t]  # Sabit işçi sayısı (integer)
+        else:
+            workers = int(y_workers[t].varValue)  # Optimize edilmiş işçi sayısı
+        
         hire = int(y_hire[t].varValue)
         fire = int(y_fire[t].varValue)
         labor_cost = workers * working_days[t] * daily_hours * hourly_wage
@@ -161,6 +192,15 @@ def solve_model(
 
     total_cost = pulp.value(model.objective)
     total_demand = sum(demand)
+
+    # Sabit işçi sayısı için mock değişkenler oluştur
+    if fixed_workers is not None:
+        y_workers_vars = []
+        for t in range(months):
+            mock_var = pulp.LpVariable(f'workers_{t}', lowBound=0, cat='Integer')
+            mock_var.varValue = y_workers[t]
+            y_workers_vars.append(mock_var)
+        y_workers = y_workers_vars
 
     return {
         'df': df,
@@ -336,14 +376,15 @@ def maliyet_analizi(
     max_workers=max_workers,
     max_workforce_change=max_workforce_change,
     initial_inventory=initial_inventory,
-    safety_stock_ratio=safety_stock_ratio
+    safety_stock_ratio=safety_stock_ratio,
+    fixed_workers=None
 ):
     # Use the shared model solver function
     model_results = solve_model(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
         hiring_cost, firing_cost, workers, max_workers, max_workforce_change,
-        initial_inventory, safety_stock_ratio
+        initial_inventory, safety_stock_ratio, fixed_workers
     )
 
     # Extract results

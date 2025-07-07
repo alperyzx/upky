@@ -63,43 +63,66 @@ def solve_model(
     # DP tabloları
     cost_table = np.full((months+1, max_workers+1), np.inf)
     backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
+    # Stok seviyelerini takip etmek için ayrı bir tablo
+    inventory_table = np.full((months+1, max_workers+1), 0.0)
 
-    # Başlangıç: 0. ayda 0 işçiyle başla (işçi alımı model içinde değerlendirilecek)
+    # Başlangıç: 0. ayda 0 işçiyle başla
     cost_table[0, 0] = 0
+    inventory_table[0, 0] = initial_inventory
 
     # DP algoritması
     for t in range(months):
-        for prev_w in range(0, max_workers+1):  # 0 işçiden başlayarak tüm olasılıkları değerlendir
+        for prev_w in range(0, max_workers+1):
             if cost_table[t, prev_w] < np.inf:
-                # İlk dönemde işçi sayısı kısıtı yok (min 0), sonraki dönemlerde max_workforce_change kısıtı var
+                current_prev_inventory = inventory_table[t, prev_w]
+                
+                # İşçi sayısı kısıtları
                 if t == 0:
-                    min_w = 0  # İlk dönemde işçi sayısı en az 0 olabilir (talebe göre optimize edilecek)
-                    max_w = max_workers  # İlk dönemde istediğimiz kadar işe alabiliriz
+                    min_w = 0
+                    max_w = max_workers
                 else:
-                    min_w = max(0, prev_w - max_workforce_change)  # Minimum 0 işçi olabilir
+                    min_w = max(0, prev_w - max_workforce_change)
                     max_w = min(max_workers, prev_w + max_workforce_change)
 
                 for w in range(min_w, max_w + 1):
                     capacity = prod_capacity(w, t)
-                    # Karşılanamayan talep varsa ceza maliyeti uygula
-                    unmet = max(0, demand[t] - capacity)
-                    inventory = max(0, capacity - demand[t])
+                    min_safety_stock = safety_stock_ratio * demand[t]
+                    
+                    # Gerekli üretim: talep + güvenlik stoğu - mevcut stok
+                    required_production = demand[t] + min_safety_stock - current_prev_inventory
+                    required_production = max(0, required_production)
+                    
+                    # Gerçek üretim kapasiteyle sınırlandırılır
+                    actual_prod = min(capacity, required_production)
+                    
+                    # Dönem sonu stok hesaplama
+                    ending_inventory = current_prev_inventory + actual_prod - demand[t]
+                    
+                    # Stok ve stockout hesaplama
+                    if ending_inventory >= min_safety_stock:
+                        inventory = ending_inventory
+                        unmet = 0
+                    elif ending_inventory >= 0:
+                        inventory = ending_inventory
+                        unmet = min_safety_stock - ending_inventory
+                    else:
+                        inventory = 0
+                        unmet = abs(ending_inventory) + min_safety_stock
+                    
                     hire = max(0, w - prev_w) * hiring_cost
                     fire = max(0, prev_w - w) * firing_cost
-                    holding = inventory * holding_cost
+                    holding = max(inventory, 0) * holding_cost
                     stockout = unmet * stockout_cost
                     labor = w * working_days[t] * daily_hours * hourly_wage
-
-                    # Kapasiteye değil, gerçek üretim miktarına göre maliyet hesaplanmalı
-                    actual_prod = min(capacity, demand[t])
-                    prod_cost = actual_prod * production_cost  # Kapasite değil, gerçek üretim miktarı
+                    prod_cost = actual_prod * production_cost
 
                     total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor + prod_cost
                     if total_cost < cost_table[t+1, w]:
                         cost_table[t+1, w] = total_cost
                         backtrack[t+1, w] = prev_w
+                        inventory_table[t+1, w] = inventory
 
-    # En düşük maliyetli yolun sonundaki işçi sayısı
+    # En düşük maliyetli yolun bulunması
     final_workers = np.argmin(cost_table[months])
     min_cost = cost_table[months, final_workers]
 
@@ -111,8 +134,8 @@ def solve_model(
         w = backtrack[t, w]
     workers_seq = workers_seq[::-1]
 
-    # İlk dönemdeki işçi sayısı (başlangıç işçisi)
-    initial_workers = w  # Bu, gerçekte sıfırdan başlamışsa, ilk dönemde işe aldığımız işçi sayısıdır
+    # İlk dönemdeki işçi sayısı
+    initial_workers = w
 
     # Üretim, stok, ve diğer hesaplamalar
     production_seq = []
@@ -124,26 +147,43 @@ def solve_model(
     hiring_seq = []
     firing_seq = []
 
-    # Başlangıç envanteri
+    # Başlangıç değerleri
     prev_inventory = initial_inventory
-    prev_w = 0  # Başlangıçta sıfır işçi var
+    prev_w = 0
+    
     for t, w in enumerate(workers_seq):
         cap = prod_capacity(w, t)
-        prod = min(cap, demand[t])
-        # Stok ve güvenlik stoğu kontrolü
-        ending_inventory = prev_inventory + prod - demand[t]
         min_safety_stock = safety_stock_ratio * demand[t]
+        
+        # Gerekli üretim: talep + güvenlik stoğu - mevcut stok
+        required_production = demand[t] + min_safety_stock - prev_inventory
+        required_production = max(0, required_production)
+        
+        # Gerçek üretim kapasiteyle sınırlandırılır
+        prod = min(cap, required_production)
+        
+        # Dönem sonu stok hesaplama
+        ending_inventory = prev_inventory + prod - demand[t]
+        
+        # Stok ve stockout hesaplama - tutarlı mantık
         if ending_inventory >= min_safety_stock:
             inventory = int(round(ending_inventory))
             unmet = 0
-        else:
-            inventory = int(round(min_safety_stock))
+        elif ending_inventory >= 0:
+            # Stok pozitif ama güvenlik stoğu altında
+            inventory = int(round(ending_inventory))
             unmet = int(round(min_safety_stock - ending_inventory))
+        else:
+            # Stok negatif - talep karşılanamadı
+            inventory = 0
+            unmet = int(round(abs(ending_inventory) + min_safety_stock))
+            
         labor_cost = w * working_days[t] * daily_hours * hourly_wage
         prod_cost = prod * production_cost
         hire = max(0, w - prev_w) * hiring_cost
         fire = max(0, prev_w - w) * firing_cost
-        production_seq.append(prod)
+        
+        production_seq.append(int(prod))
         inventory_seq.append(inventory)
         labor_cost_seq.append(labor_cost)
         unmet_seq.append(unmet)
@@ -151,19 +191,20 @@ def solve_model(
         prod_cost_seq.append(prod_cost)
         hiring_seq.append(hire)
         firing_seq.append(fire)
+        
         prev_inventory = inventory
         prev_w = w
 
-    # Calculate totals
+    # Calculate totals - tam sayıya çevir
     total_labor = sum(labor_cost_seq)
     total_production = sum(prod_cost_seq)
     total_holding = sum(inventory * holding_cost for inventory in inventory_seq)
     total_stockout = sum(unmet * stockout_cost for unmet in unmet_seq)
     total_hiring = sum(hiring_seq)
     total_firing = sum(firing_seq)
-    total_demand = sum(demand)
-    total_produced = sum(production_seq)
-    total_unfilled = sum(unmet_seq)
+    total_demand = int(sum(demand))  # Tam sayıya çevir
+    total_produced = int(sum(production_seq))  # Tam sayıya çevir
+    total_unfilled = int(sum(unmet_seq))  # Tam sayıya çevir
 
     # Create results dataframe
     results = []
