@@ -106,32 +106,45 @@ def solve_model(
         # Fazla mesaiyle üretilebilecek maksimum miktar
         max_overtime_total_hours = workers * max_overtime_per_worker
         max_overtime_units = max_overtime_total_hours / labor_per_unit
-        remaining_demand = demand[t] - prev_inventory
-        if remaining_demand <= 0:
+        
+        # Güvenlik stoğu hesaplama
+        min_safety_stock = safety_stock_ratio * demand[t]
+        
+        # Gereken üretim = Talep + Güvenlik stoğu - Önceki stok
+        required_production = demand[t] + min_safety_stock - prev_inventory
+        
+        if required_production <= 0:
             prod = 0
             ot_hours = 0
-        elif remaining_demand <= normal_prod:
-            prod = remaining_demand
+        elif required_production <= normal_prod:
+            prod = required_production
             ot_hours = 0
         else:
             prod = normal_prod
-            extra_needed = remaining_demand - normal_prod
+            extra_needed = required_production - normal_prod
             overtime_units = min(extra_needed, max_overtime_units)
             ot_hours = overtime_units * labor_per_unit
             prod += overtime_units
 
         production[t] = prod
         overtime_hours[t] = ot_hours
-        # Stok hesabı ve güvenlik stoğu kontrolü
+        
+        # Stok hesabı - güvenlik stoğu dahil
         ending_inventory = prev_inventory + prod - demand[t]
-        min_safety_stock = safety_stock_ratio * demand[t]
-        # Stok ve karşılanmayan talep tam sayı olmalı
+        
+        # Stok ve stockout hesaplama
         if ending_inventory >= min_safety_stock:
             inventory[t] = int(round(ending_inventory))
             stockout[t] = 0
-        else:
-            inventory[t] = int(round(min_safety_stock))
+        elif ending_inventory >= 0:
+            # Stok pozitif ama güvenlik stoğu altında
+            inventory[t] = int(round(ending_inventory))
             stockout[t] = int(round(min_safety_stock - ending_inventory))
+        else:
+            # Stok negatif - talep karşılanamadı
+            inventory[t] = 0
+            stockout[t] = int(round(abs(ending_inventory) + min_safety_stock))
+            
         holding = max(inventory[t], 0) * holding_cost
         stockout_cost_val = stockout[t] * stockout_cost
         overtime = max(ot_hours, 0) * overtime_cost_per_hour
@@ -155,9 +168,9 @@ def solve_model(
     ]
     df = pd.DataFrame(results, columns=headers)
 
-    # Calculate total produced and unfilled demand
+    # Calculate total produced and unfilled demand - düzeltildi
     total_produced = np.sum(production)
-    total_unfilled = np.sum([abs(min(inv, 0)) for inv in inventory])
+    total_unfilled = np.sum(stockout)  # Stockout değişkenini kullan
 
     return {
         'df': df,
@@ -173,7 +186,7 @@ def solve_model(
         'total_production_cost': total_production_cost,
         'total_hiring_cost': total_hiring_cost,
         'total_produced': total_produced,
-        'total_unfilled': np.sum(stockout),
+        'total_unfilled': total_unfilled,  # Tutarlılık için düzeltildi
         'optimal_workers': optimal_workers
     }
 
@@ -182,7 +195,9 @@ def birim_maliyet_analizi(
 ):
     total_demand = sum(demand)
     total_produced = sum(production)
-    total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(len(demand))])
+    # Stockout'u doğru hesapla - inventory negatif olamaz
+    total_unfilled = total_stockout / stockout_cost if stockout_cost > 0 else 0
+    
     result = {
         'total_demand': total_demand,
         'total_produced': total_produced,

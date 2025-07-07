@@ -189,7 +189,7 @@ def get_param(key, subkey=None, default=None):
     except Exception:
         return default
 
-def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage, production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio):
+def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage, production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio, fixed_workers=None):
     """Optimized Model 1 runner with memory management"""
     with memory_context():
         # Use the shared model solver function from model1_mixed_planning
@@ -197,7 +197,7 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
             hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
             max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
-            production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio
+            production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio, fixed_workers
         )
 
         # Extract variables from model_vars
@@ -247,10 +247,28 @@ def model1_run(demand, working_days, holding_cost, outsourcing_cost, labor_per_u
             'overtime_hours': overtime_hours
         }
 
+        # Calculate optimal workers if using fixed workers
+        if fixed_workers is not None:
+            # Run optimization mode to get the true optimal worker count
+            optimal_model_vars = run_model1_solver(
+                demand, working_days, holding_cost, outsourcing_cost, labor_per_unit,
+                hiring_cost, firing_cost, daily_hours, outsourcing_capacity, min_internal_ratio,
+                max_workforce_change, max_outsourcing_ratio, stockout_cost, hourly_wage,
+                production_cost, overtime_wage_multiplier, max_overtime_per_worker, initial_inventory, safety_stock_ratio, None  # No fixed workers
+            )
+            optimal_workers = [int(optimal_model_vars['workers'][t].varValue) for t in range(len(demand))]
+            optimal_avg_workers = sum(optimal_workers) / len(optimal_workers)
+            # Clean up optimal results
+            del optimal_model_vars
+            safe_memory_cleanup()
+        else:
+            # If not using fixed workers, the result is already optimal
+            optimal_avg_workers = sum([int(workers[t].varValue) for t in range(len(demand))]) / len(demand)
+
         # Clear intermediate variables
         del model_vars, results, workers, internal_production, outsourced_production, inventory, hired, fired, stockout, overtime_hours
 
-        return df, toplam_maliyet, model_results
+        return df, toplam_maliyet, model_results, optimal_avg_workers
 
 def model2_run(demand, working_days, holding_cost, labor_per_unit, workers, daily_hours, overtime_wage_multiplier, max_overtime_per_worker, stockout_cost, normal_hourly_wage, production_cost, initial_inventory, safety_stock_ratio):
     """Optimized Model 2 runner with memory management"""
@@ -371,23 +389,36 @@ def model5_run(demand, holding_cost, cost_supplier_A, cost_supplier_B, capacity_
 
     return df, toplam_maliyet
 
-def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio):
-    # Use the shared model solver function
+def model6_run(demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours, hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio, fixed_workers=None):
+    # Use the shared model solver function with fixed workers
     model_results = run_model6_solver(
         demand, holding_cost, stockout_cost, production_cost,
         labor_per_unit, hourly_wage, daily_hours, working_days,
-        hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio
+        hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio, fixed_workers
     )
 
     # Extract the results from the model
     df = model_results['df']
     total_cost = model_results['total_cost']
 
-    # Get the average number of workers from the results
-    needed_workers = int(df['İşçi'].mean())
-
     # Get the maximum production capacity
     max_production = int(df['Üretim'].max())
+    
+    # If using fixed workers, also run optimization to get the true optimal worker count
+    if fixed_workers is not None:
+        # Run optimization mode to get the true optimal worker count
+        optimal_results = run_model6_solver(
+            demand, holding_cost, stockout_cost, production_cost,
+            labor_per_unit, hourly_wage, daily_hours, working_days,
+            hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory, safety_stock_ratio, None  # No fixed workers for optimization
+        )
+        needed_workers = int(optimal_results['df']['İşçi'].mean())
+        # Clean up optimal results
+        del optimal_results
+        safe_memory_cleanup()
+    else:
+        # If not using fixed workers, the result is already optimal
+        needed_workers = int(df['İşçi'].mean())
 
     # Bellek temizliği
     del model_results
@@ -478,6 +509,7 @@ def select_demand_type_and_workers(model_key):
 
 if model == "Karma Planlama (Model 1)":
     st.header("Karma Planlama (Model 1)")
+    st.info("💡 **Yeni Özellik**: Bu modelde işçi sayısını sabitleyebilirsiniz. Belirlediğiniz işçi sayısı kullanılacak ve model bu kısıt altında en optimal çözümü bulacaktır.")
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m1")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.holding_cost), step=1, key="m1_holding")
@@ -500,12 +532,24 @@ if model == "Karma Planlama (Model 1)":
         run_model = st.button("Modeli Çalıştır", key="m1_run")
     if run_model or st.session_state.get("m1_first_run", True):
         st.session_state["m1_first_run"] = False
-        df, toplam_maliyet, model_vars = model1_run(
+        df, toplam_maliyet, model_vars, optimal_avg_workers = model1_run(
             demand, working_days, holding_cost, outsourcing_cost, labor_per_unit, hiring_cost, firing_cost, daily_hours,
             outsourcing_capacity, min_internal_ratio, max_workforce_change, max_outsourcing_ratio, stockout_cost,
             hourly_wage, production_cost, overtime_wage_multiplier=overtime_wage_multiplier, max_overtime_per_worker=max_overtime_per_worker,
-            initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
+            initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio, fixed_workers=workers
         )
+        
+        # Show worker info
+        current_avg_workers = df['İşçi'].mean()
+        if abs(current_avg_workers - optimal_avg_workers) > 0.5:  # Allow small rounding differences
+            st.info(f"Kullanılan Ortalama İşçi Sayısı: {current_avg_workers:.1f} | Gerçek Optimum Ortalama İşçi Sayısı: {optimal_avg_workers:.1f}")
+            if current_avg_workers > optimal_avg_workers:
+                st.warning(f"⚠️ Ortalama {current_avg_workers - optimal_avg_workers:.1f} fazla işçi kullanıyorsunuz.")
+            else:
+                st.warning(f"⚠️ Optimum için ortalama {optimal_avg_workers - current_avg_workers:.1f} daha fazla işçi gerekli.")
+        else:
+            st.success(f"✅ Optimum Ortalama İşçi Sayısı Kullanılıyor: {current_avg_workers:.1f}")
+        
         st.subheader("Sonuç Tablosu")
         # Display the results table with formatted numbers
         cols = ["Ay"] + [c for c in df.columns if c != "Ay"]
@@ -898,6 +942,7 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
 
 if model == "Mevsimsellik ve Dalga (Model 6)":
     st.header("Mevsimsel Talep Dalgaları ve Stok Optimizasyonu (Model 6)")
+    st.info("💡 **Yeni Özellik**: Bu modelde işçi sayısını sabitleyebilirsiniz. Belirlediğiniz işçi sayısı kullanılacak ve model bu kısıt altında en optimal çözümü bulacaktır.")
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m6")
         holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model6.holding_cost), key="m6_holding")
@@ -918,9 +963,18 @@ if model == "Mevsimsellik ve Dalga (Model 6)":
         st.session_state["m6_first_run"] = False
         df, total_cost, needed_workers, max_production = model6_run(
             demand, working_days, holding_cost, stockout_cost, production_cost, labor_per_unit, hourly_wage, daily_hours,
-            hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio
+            hiring_cost, firing_cost, workers, max_workers, max_workforce_change,initial_inventory=initial_inventory, safety_stock_ratio=safety_stock_ratio, fixed_workers=workers
         )
-        st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Gerekli Optimum İşçi Sayısı: {needed_workers}")
+        # Show different info based on whether fixed workers are used
+        current_workers = int(df['İşçi'].mean())
+        if workers != needed_workers:
+            st.info(f"Maksimum Üretim Kapasitesi: {max_production} adet/ay | Kullanılan İşçi Sayısı: {current_workers} | Gerçek Optimum İşçi Sayısı: {needed_workers}")
+            if current_workers > needed_workers:
+                st.warning(f"⚠️ Şu anda {current_workers - needed_workers} fazla işçi kullanıyorsunuz.")
+            else:
+                st.warning(f"⚠️ Optimum için {needed_workers - current_workers} daha fazla işçi gerekli.")
+        else:
+            st.success(f"✅ Maksimum Üretim Kapasitesi: {max_production} adet/ay | Optimum İşçi Sayısı Kullanılıyor: {current_workers}")
         st.subheader("Sonuç Tablosu")
         cols = ["Ay"] + [c for c in df.columns if c != "Ay"]
         number_cols = df[cols].select_dtypes(include=["number"]).columns

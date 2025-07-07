@@ -68,7 +68,7 @@ def solve_model(
             prev_inventory = initial_inventory
         else:
             prev_inventory = inventory[t-1]
-        decision_model += (out_A[t] + out_B[t] + prev_inventory + stockout[t] == demand[t] + inventory[t])
+        decision_model += (out_A[t] + out_B[t] + prev_inventory == demand[t] + inventory[t] + stockout[t])
 
         # Güvenlik stoğu kısıtı
         decision_model += (inventory[t] >= int(round(safety_stock_ratio * demand[t])))
@@ -79,7 +79,13 @@ def solve_model(
 
     # Modeli çöz
     solver = pulp.PULP_CBC_CMD(msg=0)
-    decision_model.solve(solver)
+    result = decision_model.solve(solver)
+    
+    # Check solution status
+    if result != pulp.LpStatusOptimal:
+        print("ERROR: Model could not find optimal solution!")
+        print(f"Status: {pulp.LpStatus[result]}")
+        return None
 
     # Results as variables, total calculations, etc.
     total_A = 0
@@ -113,7 +119,9 @@ def solve_model(
             t+1, a, b, inv, so, cost_A, cost_B, holding, stockout_val
         ])
 
-    toplam_maliyet = total_A * cost_supplier_A + total_B * cost_supplier_B + total_holding + total_stockout
+    toplam_maliyet = total_holding + total_stockout
+    for t in range(months):
+        toplam_maliyet += int(out_A[t].varValue) * cost_supplier_A + int(out_B[t].varValue) * cost_supplier_B
 
     df = pd.DataFrame(results, columns=[
         'Ay', 'Tedarikçi A', 'Tedarikçi B', 'Stok', 'Karşılanmayan Talep',
@@ -127,8 +135,8 @@ def solve_model(
         'stockout': stockout,
         'objective_value': pulp.value(decision_model.objective),
         'df': df,
-        'total_cost_A': total_A * cost_supplier_A,
-        'total_cost_B': total_B * cost_supplier_B,
+        'total_cost_A': sum(int(out_A[t].varValue) * cost_supplier_A for t in range(months)),
+        'total_cost_B': sum(int(out_B[t].varValue) * cost_supplier_B for t in range(months)),
         'total_holding': total_holding,
         'total_stockout': total_stockout,
         'total_produced': total_produced,

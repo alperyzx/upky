@@ -139,18 +139,30 @@ def solve_model(
         worker_monthly_cost = workers * np.mean(working_days_array) * daily_hours * 10
 
     for t in range(months):
-        # Sabit üretim
-        production[t] = monthly_capacity[t]
+        # Güvenlik stoğu dahil gereken üretim hesaplama
+        min_safety_stock = safety_stock_ratio * demand_array[t]
+        target_inventory = demand_array[t] + min_safety_stock
+        required_production = target_inventory - prev_inventory
+        
+        # Üretim kapasitesi ile sınırla ama gereksiz üretim yapma
+        production_value = min(max(required_production, 0), monthly_capacity[t])
+        production[t] = int(round(production_value))  # Tam sayıya çevir
+        
+        # Gerçek stok hesabı
         inventory[t] = prev_inventory + production[t] - demand_array[t]
 
-        # Güvenlik stoğu ve karşılanmayan talep kontrolü, tam sayı olarak
-        min_safety_stock = safety_stock_ratio * demand_array[t]
+        # Stok ve stockout hesaplama - düzeltildi
         if inventory[t] >= min_safety_stock:
             real_inventory[t] = int(round(inventory[t]))
             unfilled = 0
-        else:
-            real_inventory[t] = int(round(min_safety_stock))
+        elif inventory[t] >= 0:
+            # Stok pozitif ama güvenlik stoğu altında
+            real_inventory[t] = int(round(inventory[t]))
             unfilled = int(round(min_safety_stock - inventory[t]))
+        else:
+            # Stok negatif - talep karşılanamadı
+            real_inventory[t] = 0
+            unfilled = int(round(abs(inventory[t]) + min_safety_stock))
 
         holding = max(real_inventory[t], 0) * holding_cost
         stockout = unfilled * stockout_cost
@@ -160,7 +172,7 @@ def solve_model(
         total_cost += holding + stockout + labor_cost + prod_cost
 
         results.append([
-            t+1, production[t], real_inventory[t], holding, stockout, labor_cost, prod_cost, unfilled
+            t+1, int(production[t]), real_inventory[t], holding, stockout, labor_cost, prod_cost, unfilled
         ])
         prev_inventory = real_inventory[t]
 
@@ -171,9 +183,9 @@ def solve_model(
 
     df = pd.DataFrame(results, columns=headers)
 
-    # Calculate summary statistics
-    total_produced = np.sum(production)
-    total_unfilled = np.sum([abs(min(inv, 0)) for inv in inventory])
+    # Calculate summary statistics - düzeltildi
+    total_produced = int(np.sum(production))  # Tam sayıya çevir
+    total_unfilled = int(np.sum([row[7] for row in results]))  # Tam sayıya çevir
     total_holding = df["Stok Maliyeti"].sum()
     total_stockout = df["Stoksuzluk Maliyeti"].sum()
     total_labor = df["İşçilik Maliyeti"].sum()
@@ -246,7 +258,8 @@ def print_results():
 
     # Display efficiency information
     print(f'\nVerimlilik Bilgileri:')
-    print(f'Toplam Talep: {model_results["total_produced"] + model_results["total_unfilled"]:,} birim')
+    total_demand_int = int(model_results["total_produced"] + model_results["total_unfilled"])
+    print(f'Toplam Talep: {total_demand_int:,} birim')
     print(f'Verimlilik Faktörü: {efficiency_factor:.2f}')
     print(f'Orijinal Birim İşgücü: {labor_per_unit:.2f} saat/birim')
     print(f'Ayarlanmış Birim İşgücü: {adjusted_labor_per_unit:.2f} saat/birim')
@@ -303,9 +316,10 @@ def ayrintili_toplam_maliyetler(df):
 
 def birim_maliyet_analizi(demand, production, inventory, cost, df, workers, hiring_cost=params['costs']['hiring_cost']):
     # Convert demand to a sum if it's a list
-    total_demand = sum(demand) if isinstance(demand, list) else demand.sum()
-    total_produced = production.sum()
-    total_unfilled = sum([abs(min(inventory[t], 0)) for t in range(months)])
+    total_demand = sum(demand) if isinstance(demand, list) else int(demand.sum())
+    total_produced = int(production.sum())  # Tam sayıya çevir
+    # Unfilled'ı df'den al - doğru hesaplama
+    total_unfilled = int(df["Karşılanmayan Talep"].sum())  # Tam sayıya çevir
     total_holding = df["Stok Maliyeti"].sum()
     total_stockout = df["Stoksuzluk Maliyeti"].sum()
     total_labor = df["İşçilik Maliyeti"].sum()
