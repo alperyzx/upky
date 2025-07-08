@@ -52,6 +52,7 @@ def solve_model(
 ):
     """
     Core model logic for Dynamic Programming model (Model 4)
+    Uses a myopic/greedy approach making decisions one month at a time
     Returns calculated values as a dictionary
     """
     months = len(demand)
@@ -60,84 +61,8 @@ def solve_model(
     def prod_capacity(workers, t):
         return workers * working_days[t] * daily_hours / labor_per_unit
 
-    # DP tabloları
-    cost_table = np.full((months+1, max_workers+1), np.inf)
-    backtrack = np.full((months+1, max_workers+1), -1, dtype=int)
-    # Stok seviyelerini takip etmek için ayrı bir tablo
-    inventory_table = np.full((months+1, max_workers+1), 0.0)
-
-    # Başlangıç: 0. ayda 0 işçiyle başla
-    cost_table[0, 0] = 0
-    inventory_table[0, 0] = initial_inventory
-
-    # DP algoritması
-    for t in range(months):
-        for prev_w in range(0, max_workers+1):
-            if cost_table[t, prev_w] < np.inf:
-                current_prev_inventory = inventory_table[t, prev_w]
-                
-                # İşçi sayısı kısıtları
-                if t == 0:
-                    min_w = 0
-                    max_w = max_workers
-                else:
-                    min_w = max(0, prev_w - max_workforce_change)
-                    max_w = min(max_workers, prev_w + max_workforce_change)
-
-                for w in range(min_w, max_w + 1):
-                    capacity = prod_capacity(w, t)
-                    min_safety_stock = safety_stock_ratio * demand[t]
-                    
-                    # Gerekli üretim: talep + güvenlik stoğu - mevcut stok
-                    required_production = demand[t] + min_safety_stock - current_prev_inventory
-                    required_production = max(0, required_production)
-                    
-                    # Gerçek üretim kapasiteyle sınırlandırılır
-                    actual_prod = min(capacity, required_production)
-                    
-                    # Dönem sonu stok hesaplama
-                    ending_inventory = current_prev_inventory + actual_prod - demand[t]
-                    
-                    # Stok ve stockout hesaplama
-                    if ending_inventory >= min_safety_stock:
-                        inventory = ending_inventory
-                        unmet = 0
-                    elif ending_inventory >= 0:
-                        inventory = ending_inventory
-                        unmet = min_safety_stock - ending_inventory
-                    else:
-                        inventory = 0
-                        unmet = abs(ending_inventory) + min_safety_stock
-                    
-                    hire = max(0, w - prev_w) * hiring_cost
-                    fire = max(0, prev_w - w) * firing_cost
-                    holding = max(inventory, 0) * holding_cost
-                    stockout = unmet * stockout_cost
-                    labor = w * working_days[t] * daily_hours * hourly_wage
-                    prod_cost = actual_prod * production_cost
-
-                    total_cost = cost_table[t, prev_w] + hire + fire + holding + stockout + labor + prod_cost
-                    if total_cost < cost_table[t+1, w]:
-                        cost_table[t+1, w] = total_cost
-                        backtrack[t+1, w] = prev_w
-                        inventory_table[t+1, w] = inventory
-
-    # En düşük maliyetli yolun bulunması
-    final_workers = np.argmin(cost_table[months])
-    min_cost = cost_table[months, final_workers]
-
-    # Geriye doğru optimal yolun çıkarılması
+    # Initialize result arrays
     workers_seq = []
-    w = final_workers
-    for t in range(months, 0, -1):
-        workers_seq.append(w)
-        w = backtrack[t, w]
-    workers_seq = workers_seq[::-1]
-
-    # İlk dönemdeki işçi sayısı
-    initial_workers = w
-
-    # Üretim, stok, ve diğer hesaplamalar
     production_seq = []
     inventory_seq = []
     labor_cost_seq = []
@@ -146,65 +71,140 @@ def solve_model(
     prod_cost_seq = []
     hiring_seq = []
     firing_seq = []
-
-    # Başlangıç değerleri
-    prev_inventory = initial_inventory
-    prev_w = 0
     
-    for t, w in enumerate(workers_seq):
-        cap = prod_capacity(w, t)
-        min_safety_stock = safety_stock_ratio * demand[t]
+    # Current state
+    current_workers = workers  # Start with initial workers
+    current_inventory = initial_inventory
+    total_cost = 0
+    
+    # Look-ahead factor for hiring decisions (months to look forward)
+    look_ahead = 2  # Consider current month plus next month
+    
+    # Step through each month, making myopic decisions with some look-ahead
+    for t in range(months):
+        best_cost = float('inf')
+        best_workers = current_workers
+        best_production = 0
+        best_inventory = 0
+        best_unmet = 0
+        best_hire = 0
+        best_fire = 0
         
-        # Gerekli üretim: talep + güvenlik stoğu - mevcut stok
-        required_production = demand[t] + min_safety_stock - prev_inventory
-        required_production = max(0, required_production)
+        # Workforce change constraints
+        min_w = max(0, current_workers - max_workforce_change)
+        max_w = min(max_workers, current_workers + max_workforce_change)
         
-        # Gerçek üretim kapasiteyle sınırlandırılır
-        prod = min(cap, required_production)
-        
-        # Dönem sonu stok hesaplama
-        ending_inventory = prev_inventory + prod - demand[t]
-        
-        # Stok ve stockout hesaplama - tutarlı mantık
-        if ending_inventory >= min_safety_stock:
-            inventory = int(round(ending_inventory))
-            unmet = 0
-        elif ending_inventory >= 0:
-            # Stok pozitif ama güvenlik stoğu altında
-            inventory = int(round(ending_inventory))
-            unmet = int(round(min_safety_stock - ending_inventory))
-        else:
-            # Stok negatif - talep karşılanamadı
-            inventory = 0
-            unmet = int(round(abs(ending_inventory) + min_safety_stock))
+        # Try different worker levels for this month
+        for w in range(min_w, max_w + 1):
+            # Calculate immediate costs for this month
+            capacity = prod_capacity(w, t)
+            min_safety_stock = safety_stock_ratio * demand[t]
             
-        labor_cost = w * working_days[t] * daily_hours * hourly_wage
-        prod_cost = prod * production_cost
-        hire = max(0, w - prev_w) * hiring_cost
-        fire = max(0, prev_w - w) * firing_cost
+            required_production = demand[t] + min_safety_stock - current_inventory
+            required_production = max(0, required_production)
+            
+            actual_prod = min(capacity, required_production)
+            
+            ending_inventory = current_inventory + actual_prod - demand[t]
+            
+            if ending_inventory >= min_safety_stock:
+                inventory = ending_inventory
+                unmet = 0
+            elif ending_inventory >= 0:
+                inventory = ending_inventory
+                unmet = min_safety_stock - ending_inventory
+            else:
+                inventory = 0
+                unmet = abs(ending_inventory) + min_safety_stock
+            
+            hire = max(0, w - current_workers) * hiring_cost
+            fire = max(0, current_workers - w) * firing_cost
+            holding = max(inventory, 0) * holding_cost
+            stockout = unmet * stockout_cost
+            labor = w * working_days[t] * daily_hours * hourly_wage
+            prod_cost = actual_prod * production_cost
+            
+            month_cost = hire + fire + holding + stockout + labor + prod_cost
+            
+            # Look ahead to estimate future costs/benefits if time allows
+            future_cost = 0
+            temp_inventory = inventory
+            
+            # Simple look-ahead to next few months to see impact of this worker level
+            for future_t in range(t + 1, min(t + look_ahead, months)):
+                future_capacity = prod_capacity(w, future_t)
+                future_min_safety = safety_stock_ratio * demand[future_t]
+                
+                future_required = demand[future_t] + future_min_safety - temp_inventory
+                future_required = max(0, future_required)
+                
+                future_prod = min(future_capacity, future_required)
+                future_ending = temp_inventory + future_prod - demand[future_t]
+                
+                if future_ending >= future_min_safety:
+                    future_inv = future_ending
+                    future_unmet = 0
+                elif future_ending >= 0:
+                    future_inv = future_ending
+                    future_unmet = future_min_safety - future_ending
+                else:
+                    future_inv = 0
+                    future_unmet = abs(future_ending) + future_min_safety
+                
+                # Only count stockout costs for future months in our look-ahead
+                future_stockout = future_unmet * stockout_cost
+                future_labor = w * working_days[future_t] * daily_hours * hourly_wage
+                
+                # Discount future costs (give less weight to months further away)
+                discount_factor = 0.8 ** (future_t - t)
+                future_cost += discount_factor * (future_stockout + future_labor)
+                
+                # Update for next iteration
+                temp_inventory = future_inv
+            
+            # Total cost includes current month plus estimated future impact
+            total_monthly_cost = month_cost + future_cost
+            
+            # Select the option with the lowest combined cost
+            if total_monthly_cost < best_cost:
+                best_cost = total_monthly_cost
+                best_workers = w
+                best_production = actual_prod
+                best_inventory = inventory
+                best_unmet = unmet
+                best_hire = hire
+                best_fire = fire
+                best_labor_cost = labor
+                best_prod_cost = prod_cost
         
-        production_seq.append(int(prod))
-        inventory_seq.append(inventory)
-        labor_cost_seq.append(labor_cost)
-        unmet_seq.append(unmet)
-        stockout_cost_seq.append(unmet * stockout_cost)
-        prod_cost_seq.append(prod_cost)
-        hiring_seq.append(hire)
-        firing_seq.append(fire)
+        # Update current state with best decision for this month
+        current_workers = best_workers
+        current_inventory = best_inventory
+        total_cost += best_cost - future_cost  # Only add the actual cost of this month
         
-        prev_inventory = inventory
-        prev_w = w
-
-    # Calculate totals - tam sayıya çevir
+        # Record the decisions and results
+        workers_seq.append(best_workers)
+        production_seq.append(int(best_production))
+        inventory_seq.append(int(best_inventory))
+        unmet_seq.append(int(best_unmet))
+        labor_cost_seq.append(best_labor_cost)
+        prod_cost_seq.append(best_prod_cost)
+        hiring_seq.append(best_hire)
+        firing_seq.append(best_fire)
+    
+    # Calculate totals
     total_labor = sum(labor_cost_seq)
     total_production = sum(prod_cost_seq)
     total_holding = sum(inventory * holding_cost for inventory in inventory_seq)
     total_stockout = sum(unmet * stockout_cost for unmet in unmet_seq)
     total_hiring = sum(hiring_seq)
     total_firing = sum(firing_seq)
-    total_demand = int(sum(demand))  # Tam sayıya çevir
-    total_produced = int(sum(production_seq))  # Tam sayıya çevir
-    total_unfilled = int(sum(unmet_seq))  # Tam sayıya çevir
+    total_demand = int(sum(demand))
+    total_produced = int(sum(production_seq))
+    total_unfilled = int(sum(unmet_seq))
+    
+    # Recalculate total_cost based on actual costs (not including look-ahead estimates)
+    total_cost = total_labor + total_production + total_holding + total_stockout + total_hiring + total_firing
 
     # Create results dataframe
     results = []
@@ -230,7 +230,7 @@ def solve_model(
         'production_seq': production_seq,
         'inventory_seq': inventory_seq,
         'unmet_seq': unmet_seq,
-        'min_cost': min_cost,
+        'min_cost': total_cost,
         'total_labor': total_labor,
         'total_production': total_production,
         'total_holding': total_holding,
@@ -240,7 +240,7 @@ def solve_model(
         'total_demand': total_demand,
         'total_produced': total_produced,
         'total_unfilled': total_unfilled,
-        'initial_workers': initial_workers
+        'initial_workers': workers
     }
 
 def maliyet_analizi(

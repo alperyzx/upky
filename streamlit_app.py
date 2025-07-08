@@ -509,7 +509,7 @@ def select_demand_type_and_workers(model_key):
 
 if model == "Karma Planlama (Model 1)":
     st.header("Karma Planlama (Model 1)")
-    st.info("💡 **Yeni Özellik**: Bu modelde işçi sayısını sabitleyebilirsiniz. Belirlediğiniz işçi sayısı kullanılacak ve model bu kısıt altında en optimal çözümü bulacaktır.")
+    st.info("Hem işgücü esnekliği hem de fason üretim imkânı belirli sınırlarda tanımlanmış bir karma planlama modelidir.")
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m1")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model1.holding_cost), step=1, key="m1_holding")
@@ -629,6 +629,7 @@ if model == "Karma Planlama (Model 1)":
 
 if model == "Fazla Mesaili Üretim (Model 2)":
     st.header("Fazla Mesaili Üretim (Model 2)")
+    st.info("Fazla mesai ile üretim yapan bir modeldir. İşçi sayısı, fazla mesai ve diğer parametreler kullanıcı tarafından belirlenir.")
     with st.sidebar:
         demand, workers_input, working_days, selected_demand_type = select_demand_type_and_workers("m2")
         # Optimal işçi sayısını hesapla
@@ -727,6 +728,7 @@ if model == "Fazla Mesaili Üretim (Model 2)":
 
 if model == "Toplu Üretim ve Stoklama (Model 3)":
     st.header("Toplu Üretim ve Stoklama (Model 3)")
+    st.info("Toplu üretim ve stoklama yapan bir modeldir. İşçi sayısı, stok maliyeti, işçilik maliyeti gibi parametreler kullanıcı tarafından belirlenir.")
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m3")
         holding_cost = st.number_input("Stok Maliyeti (TL)", min_value=1, max_value=100, value=int(model3.holding_cost), key="m3_holding", step=1)
@@ -794,6 +796,7 @@ if model == "Toplu Üretim ve Stoklama (Model 3)":
 
 if model == "Dinamik Programlama (Model 4)":
     st.header("Dinamik Programlama Tabanlı (Model 4)")
+    st.info("Dinamik programlama tabanlı bir modeldir. Her ayın sonunda bir sonraki ayın koşulları öngörülerek karar verilir. İşçi sayısı, stok maliyeti, işçilik maliyeti gibi parametreler kullanıcı tarafından belirlenir.")
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m4")
         holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model4.holding_cost), key="m4_holding")
@@ -870,6 +873,7 @@ if model == "Dinamik Programlama (Model 4)":
 
 if model == "Dış Kaynak Karşılaştırma (Model 5)":
     st.header("Dış Kaynak Kullanımı Karşılaştırma (Model 5)")
+    st.info("Dış kaynak kullanımı ile tedarikçi A ve B'nin maliyetlerini karşılaştıran bir modeldir. Tedarikçi A düşük maliyetli, Tedarikçi B yüksek maliyetli üretim yapar.")
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m5")
         holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model5.holding_cost), key="m5_holding")
@@ -942,7 +946,7 @@ if model == "Dış Kaynak Karşılaştırma (Model 5)":
 
 if model == "Mevsimsellik ve Dalga (Model 6)":
     st.header("Mevsimsel Talep Dalgaları ve Stok Optimizasyonu (Model 6)")
-    st.info("💡 **Yeni Özellik**: Bu modelde işçi sayısını sabitleyebilirsiniz. Belirlediğiniz işçi sayısı kullanılacak ve model bu kısıt altında en optimal çözümü bulacaktır.")
+    st.info("Mevsimsel talep dalgalarını ve stok optimizasyonunu ele alan bir modeldir. İşçi sayısı, stok maliyeti, işçilik maliyeti gibi parametreler kullanıcı tarafından belirlenir.")
     with st.sidebar:
         demand, workers, working_days, selected_demand_type = select_demand_type_and_workers("m6")
         holding_cost = st.number_input("Stok Maliyeti (TL)", 1, 100, int(model6.holding_cost), key="m6_holding")
