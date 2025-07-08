@@ -91,6 +91,7 @@ Proje, tüm modelleri tek bir arayüzde çalıştırmak için bir Streamlit uygu
 ### Model 4: Dinamik Programlama
 - Talebe göre optimum işçi sayısını belirler
 - İlk dönemde sadece ihtiyaç duyulan kadar işçiyi işe alır
+- Her ay gelecek dönemi planlar
 - İşçi değişim kısıtlarını doğru uygular
 - İşçi değişim maliyetlerini ve üretim kapasitesini dengeler
 - Güvenlik stoğu limiti eklendi - stoksuzluk riskini azaltmak için minimum stok seviyesi belirlenir
