@@ -21,8 +21,6 @@ textColor = "#262730"
 [runner]
 # Memory and performance settings
 magicEnabled = true
-installTracer = false
-fixMatplotlib = true
 postScriptGC = true
 fastReruns = true
 enforceSerializableSessionState = true
